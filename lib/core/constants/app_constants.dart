@@ -58,4 +58,9 @@ class AppConstants {
   static const String lastEnhancerResetKey = 'last_enhancer_reset';
   static const int freeEnhancementsPerDay = 5;
   static const int enhancementsPerAdWatch = 5;
+
+  // Chat Limits
+  static const String totalChatsCreatedKey = 'total_chats_created';
+  static const int freeChatsAllowed = 5;
+  static const int chatsPerAdWatch = 5;
 }

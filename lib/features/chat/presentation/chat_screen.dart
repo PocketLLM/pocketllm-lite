@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers.dart';
+import '../../../services/ad_service.dart';
+import '../../../services/usage_limits_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/models_provider.dart';
 
@@ -21,6 +24,59 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
+  final AdService _adService = AdService();
+  bool _isTopBannerLoaded = false;
+  bool _isBottomBannerLoaded = false;
+  BannerAd? _topBannerAd;
+  BannerAd? _bottomBannerAd;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerAds();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _topBannerAd?.dispose();
+    _bottomBannerAd?.dispose();
+    super.dispose();
+  }
+
+  void _loadBannerAds() {
+    // Top banner
+    _topBannerAd = BannerAd(
+      adUnitId: AppConstants.bannerAdUnitId,
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          if (mounted) setState(() => _isTopBannerLoaded = true);
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          if (mounted) setState(() => _isTopBannerLoaded = false);
+        },
+      ),
+    )..load();
+
+    // Bottom banner
+    _bottomBannerAd = BannerAd(
+      adUnitId: AppConstants.bannerAdUnitId,
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          if (mounted) setState(() => _isBottomBannerLoaded = true);
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          if (mounted) setState(() => _isBottomBannerLoaded = false);
+        },
+      ),
+    )..load();
+  }
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
@@ -177,7 +233,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           IconButton(
             icon: const Icon(Icons.add_comment_outlined),
             tooltip: 'New Chat',
-            onPressed: () {
+            onPressed: () async {
               if (ref
                   .read(storageServiceProvider)
                   .getSetting(
@@ -186,6 +242,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   )) {
                 HapticFeedback.selectionClick();
               }
+
+              // Check chat limit
+              final limitsNotifier = ref.read(usageLimitsProvider.notifier);
+              if (!limitsNotifier.canCreateChat()) {
+                await _showChatLimitDialog();
+                return;
+              }
+
+              // Increment chat count and create new chat
+              await limitsNotifier.incrementChatCount();
               ref.read(chatProvider.notifier).newChat();
             },
           ),
@@ -226,6 +292,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Column(
         children: [
+          // Top Banner Ad
+          if (_isTopBannerLoaded && _topBannerAd != null)
+            Container(
+              alignment: Alignment.center,
+              width: double.infinity,
+              height: 50,
+              child: AdWidget(ad: _topBannerAd!),
+            ),
           Expanded(
             child: chatState.messages.isEmpty
                 ? Center(
@@ -261,8 +335,98 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
           ),
           const ChatInput(),
+          // Bottom Banner Ad
+          if (_isBottomBannerLoaded && _bottomBannerAd != null)
+            SafeArea(
+              child: Container(
+                alignment: Alignment.center,
+                width: double.infinity,
+                height: 50,
+                child: AdWidget(ad: _bottomBannerAd!),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  Future<void> _showChatLimitDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Chat Limit Reached'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_outline, size: 48, color: Colors.orange),
+            const SizedBox(height: 16),
+            Text(
+              "You've used your ${AppConstants.freeChatsAllowed} free chats.",
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Watch a short ad to unlock more chats!',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Later'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.play_circle),
+            label: const Text('Watch Ad'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      if (!await _adService.hasInternetConnection()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Connect to WiFi/Data to watch ad and unlock.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      await _adService.showRewardedAd(
+        onUserEarnedReward: (reward) async {
+          await ref
+              .read(usageLimitsProvider.notifier)
+              .addChatCredits(AppConstants.chatsPerAdWatch);
+          if (mounted) {
+            HapticFeedback.heavyImpact();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Unlocked 5 more chats!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        },
+        onFailed: (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Ad failed: $error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
+    }
   }
 }

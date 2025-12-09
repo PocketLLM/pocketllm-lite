@@ -7,12 +7,14 @@ class UsageLimitsState {
   final int totalTokensUsed;
   final int enhancerUsesToday;
   final DateTime? lastEnhancerReset;
+  final int totalChatsCreated;
 
   UsageLimitsState({
     this.tokenBalance = AppConstants.initialTokenBalance,
     this.totalTokensUsed = 0,
     this.enhancerUsesToday = 0,
     this.lastEnhancerReset,
+    this.totalChatsCreated = 0,
   });
 
   UsageLimitsState copyWith({
@@ -20,12 +22,14 @@ class UsageLimitsState {
     int? totalTokensUsed,
     int? enhancerUsesToday,
     DateTime? lastEnhancerReset,
+    int? totalChatsCreated,
   }) {
     return UsageLimitsState(
       tokenBalance: tokenBalance ?? this.tokenBalance,
       totalTokensUsed: totalTokensUsed ?? this.totalTokensUsed,
       enhancerUsesToday: enhancerUsesToday ?? this.enhancerUsesToday,
       lastEnhancerReset: lastEnhancerReset ?? this.lastEnhancerReset,
+      totalChatsCreated: totalChatsCreated ?? this.totalChatsCreated,
     );
   }
 
@@ -35,6 +39,15 @@ class UsageLimitsState {
   bool get hasTokens => remainingTokens > 0;
   bool get hasEnhancerUses =>
       enhancerUsesToday < AppConstants.freeEnhancementsPerDay;
+
+  // Chat limits
+  int get freeChatsRemaining =>
+      (AppConstants.freeChatsAllowed - totalChatsCreated).clamp(
+        0,
+        AppConstants.freeChatsAllowed,
+      );
+  bool get canCreateFreeChat =>
+      totalChatsCreated < AppConstants.freeChatsAllowed;
 
   /// Time until enhancer resets (in hours)
   int get hoursUntilEnhancerReset {
@@ -68,6 +81,10 @@ class UsageLimitsNotifier extends Notifier<UsageLimitsState> {
       AppConstants.enhancerUsesTodayKey,
       defaultValue: 0,
     );
+    final totalChatsCreated = storage.getSetting(
+      AppConstants.totalChatsCreatedKey,
+      defaultValue: 0,
+    );
     final lastResetString = storage.getSetting(
       AppConstants.lastEnhancerResetKey,
       defaultValue: null,
@@ -89,6 +106,7 @@ class UsageLimitsNotifier extends Notifier<UsageLimitsState> {
           totalTokensUsed: totalTokensUsed,
           enhancerUsesToday: 0,
           lastEnhancerReset: now,
+          totalChatsCreated: totalChatsCreated,
         );
         return;
       }
@@ -99,6 +117,7 @@ class UsageLimitsNotifier extends Notifier<UsageLimitsState> {
       totalTokensUsed: totalTokensUsed,
       enhancerUsesToday: enhancerUsesToday,
       lastEnhancerReset: lastEnhancerReset,
+      totalChatsCreated: totalChatsCreated,
     );
   }
 
@@ -194,6 +213,33 @@ class UsageLimitsNotifier extends Notifier<UsageLimitsState> {
     final promptEvalCount = response['prompt_eval_count'] as int? ?? 0;
     final evalCount = response['eval_count'] as int? ?? 0;
     return promptEvalCount + evalCount;
+  }
+
+  /// Check if user can create a new chat
+  bool canCreateChat() {
+    return state.canCreateFreeChat;
+  }
+
+  /// Increment chat count when a new chat is created
+  Future<void> incrementChatCount() async {
+    final newCount = state.totalChatsCreated + 1;
+    state = state.copyWith(totalChatsCreated: newCount);
+
+    final storage = ref.read(storageServiceProvider);
+    await storage.saveSetting(AppConstants.totalChatsCreatedKey, newCount);
+  }
+
+  /// Add chat credits (after watching ad)
+  Future<void> addChatCredits(int count) async {
+    // Reduce the total count to give user more free chats
+    final newCount = (state.totalChatsCreated - count).clamp(
+      0,
+      state.totalChatsCreated,
+    );
+    state = state.copyWith(totalChatsCreated: newCount);
+
+    final storage = ref.read(storageServiceProvider);
+    await storage.saveSetting(AppConstants.totalChatsCreatedKey, newCount);
   }
 
   /// Reload state from storage
