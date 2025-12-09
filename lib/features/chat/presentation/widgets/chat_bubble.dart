@@ -1,0 +1,388 @@
+import 'dart:convert';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../domain/models/chat_message.dart';
+import '../../../settings/presentation/providers/appearance_provider.dart';
+
+class ChatBubble extends ConsumerStatefulWidget {
+  final ChatMessage message;
+
+  const ChatBubble({super.key, required this.message});
+
+  @override
+  ConsumerState<ChatBubble> createState() => _ChatBubbleState();
+}
+
+class _ChatBubbleState extends ConsumerState<ChatBubble> {
+  final GlobalKey _bubbleKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    final message = widget.message;
+    final isUser = message.role == 'user';
+    final theme = Theme.of(context);
+    final appearance = ref.watch(appearanceProvider);
+
+    // Appearance Values
+    final bubbleColor = isUser
+        ? Color(
+            appearance.userMsgColor,
+          ).withValues(alpha: appearance.msgOpacity)
+        : Color(appearance.aiMsgColor).withValues(alpha: appearance.msgOpacity);
+    final radius = appearance.bubbleRadius;
+    final fontSize = appearance.fontSize;
+    final padding = appearance.chatPadding;
+    final showAvatars = appearance.showAvatars;
+    final hasElevation = appearance.bubbleElevation;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isUser && showAvatars) ...[
+            const CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.transparent,
+              child: Icon(
+                Icons.auto_awesome,
+                color: Colors.purpleAccent,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+
+          Flexible(
+            child: GestureDetector(
+              onLongPress: () {
+                HapticFeedback.mediumImpact();
+                _showFocusedMenu(context, isUser);
+              },
+              child: Hero(
+                tag: 'bubble_${message.hashCode}',
+                // Note: Hero helps transition if we pushed a page,
+                // but for overlay we manually position.
+                // Keeping tag just in case or we can remove if unused.
+                child: Container(
+                  key: _bubbleKey,
+                  padding: EdgeInsets.all(padding),
+                  decoration: BoxDecoration(
+                    color: bubbleColor,
+                    borderRadius: BorderRadius.circular(radius).copyWith(
+                      bottomRight: isUser ? const Radius.circular(0) : null,
+                      bottomLeft: !isUser ? const Radius.circular(0) : null,
+                    ),
+                    boxShadow: hasElevation
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 2,
+                              offset: const Offset(0, 1),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (message.images != null && message.images!.isNotEmpty)
+                        ...message.images!.map(
+                          (str) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                base64Decode(str),
+                                height: 150,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (isUser)
+                        Text(
+                          message.content,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: Colors.white,
+                            fontSize: fontSize,
+                          ),
+                        )
+                      else
+                        MarkdownBody(
+                          data: message.content,
+                          onTapLink: (text, href, title) async {
+                            if (href != null) {
+                              final uri = Uri.tryParse(href);
+                              if (uri != null && await canLaunchUrl(uri)) {
+                                await launchUrl(
+                                  uri,
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              }
+                            }
+                          },
+                          styleSheet: MarkdownStyleSheet.fromTheme(theme)
+                              .copyWith(
+                                p: theme.textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontSize: fontSize,
+                                ),
+                                code: theme.textTheme.bodyMedium?.copyWith(
+                                  backgroundColor: Colors.black26,
+                                  fontSize: fontSize * 0.9,
+                                ),
+                              ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (isUser && showAvatars) ...[
+            const SizedBox(width: 8),
+            const CircleAvatar(radius: 16, child: Icon(Icons.person, size: 20)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showFocusedMenu(BuildContext context, bool isUser) {
+    // 1. Calculate Position
+    final RenderBox renderBox =
+        _bubbleKey.currentContext!.findRenderObject() as RenderBox;
+    final size = renderBox.size;
+    final offset = renderBox.localToGlobal(Offset.zero);
+
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black.withValues(
+          alpha: 0.2,
+        ), // Slight dim initially, animated in widget
+        pageBuilder: (context, _, __) => _FocusedMenuOverlay(
+          child: widget, // Pass actual widget or reconstructed bubble
+          message: widget.message,
+          bubbleSize: size,
+          bubbleOffset: offset,
+          isUser: isUser,
+          ref: ref,
+        ),
+        transitionsBuilder: (context, animation, _, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    );
+  }
+}
+
+class _FocusedMenuOverlay extends StatelessWidget {
+  final Widget
+  child; // We will reconstruct visually or use cached image if needed, but easier to rebuild basic container
+  final ChatMessage message;
+  final Size bubbleSize;
+  final Offset bubbleOffset;
+  final bool isUser;
+  final WidgetRef ref;
+
+  const _FocusedMenuOverlay({
+    required this.child,
+    required this.message,
+    required this.bubbleSize,
+    required this.bubbleOffset,
+    required this.isUser,
+    required this.ref,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Reconstruct appearance to match exactly
+    final theme = Theme.of(context);
+    // Use ref to get current snapshot
+    final appearance = ref.read(appearanceProvider);
+
+    final bubbleColor = isUser
+        ? Color(
+            appearance.userMsgColor,
+          ).withValues(alpha: appearance.msgOpacity)
+        : Color(appearance.aiMsgColor).withValues(alpha: appearance.msgOpacity);
+    final radius = appearance.bubbleRadius;
+    final fontSize = appearance.fontSize;
+    final padding = appearance.chatPadding;
+
+    // Determine where to put actions: Above or Below?
+    // If bubble is too low, put above.
+    final screenHeight = MediaQuery.of(context).size.height;
+    final showAbove = bubbleOffset.dy > screenHeight * 0.6;
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // 1. Blur Backdrop
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Container(color: Colors.black.withValues(alpha: 0.4)),
+            ),
+          ),
+
+          // 2. Dismiss logic (tap anywhere)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+
+          // 3. Highlighted Bubble
+          Positioned(
+            top: bubbleOffset.dy,
+            left: bubbleOffset.dx,
+            width: bubbleSize.width,
+            child: Material(
+              color: Colors.transparent,
+              elevation: 8,
+              shadowColor: Colors.black45,
+              child: Container(
+                padding: EdgeInsets.all(padding),
+                decoration: BoxDecoration(
+                  color: bubbleColor,
+                  borderRadius: BorderRadius.circular(radius).copyWith(
+                    bottomRight: isUser ? const Radius.circular(0) : null,
+                    bottomLeft: !isUser ? const Radius.circular(0) : null,
+                  ),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 1.5,
+                  ), // Highlight border
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Same content rendering ... simplified for overlay (no images for brevity if desired, or duplicate)
+                    if (message.images != null)
+                      ...message.images!.map(
+                        (str) => const SizedBox(
+                          height: 100,
+                          child: Center(
+                            child: Icon(Icons.image, color: Colors.white),
+                          ),
+                        ),
+                      ),
+
+                    if (isUser)
+                      Text(
+                        message.content,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: Colors.white,
+                          fontSize: fontSize,
+                        ),
+                      )
+                    else
+                      MarkdownBody(
+                        data: message.content,
+                        styleSheet: MarkdownStyleSheet.fromTheme(theme)
+                            .copyWith(
+                              p: theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.white,
+                                fontSize: fontSize,
+                              ),
+                              code: theme.textTheme.bodyMedium?.copyWith(
+                                backgroundColor: Colors.black26,
+                                fontSize: fontSize * 0.9,
+                              ),
+                            ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 4. Action Icons
+          Positioned(
+            top: showAbove
+                ? bubbleOffset.dy - 70
+                : bubbleOffset.dy + bubbleSize.height + 10,
+            left: isUser ? null : bubbleOffset.dx,
+            right: isUser
+                ? MediaQuery.of(context).size.width -
+                      (bubbleOffset.dx + bubbleSize.width)
+                : null,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildIconBtn(context, Icons.copy, 'Copy', () {
+                  Clipboard.setData(ClipboardData(text: message.content));
+                  Navigator.pop(context);
+                }),
+                const SizedBox(width: 12),
+                _buildIconBtn(context, Icons.share, 'Share', () {
+                  Share.share(message.content);
+                  Navigator.pop(context);
+                }),
+                if (isUser) ...[
+                  const SizedBox(width: 12),
+                  _buildIconBtn(context, Icons.edit, 'Edit', () {
+                    // Edit logic
+                    Navigator.pop(context);
+                  }),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIconBtn(
+    BuildContext context,
+    IconData icon,
+    String tooltip,
+    VoidCallback onTap,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            ),
+            child: Icon(icon, color: Colors.white, size: 24),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          tooltip,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
