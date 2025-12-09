@@ -35,7 +35,6 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
       ),
-      useMaterial3: true,
     );
   }
 
@@ -57,7 +56,6 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
       ),
-      useMaterial3: true,
     );
   }
 }

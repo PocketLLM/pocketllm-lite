@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import '../../../../core/constants/app_constants.dart';
-import '../../../../services/storage_service.dart';
 import '../../../../core/providers.dart';
 import '../providers/chat_provider.dart';
 
@@ -19,7 +17,7 @@ class ChatInput extends ConsumerStatefulWidget {
 class _ChatInputState extends ConsumerState<ChatInput> {
   final _controller = TextEditingController();
   final _picker = ImagePicker();
-  List<String> _selectedImages = [];
+  final List<String> _selectedImages = [];
 
   Future<void> _pickImage() async {
     // Show bottom sheet to choose camera or gallery

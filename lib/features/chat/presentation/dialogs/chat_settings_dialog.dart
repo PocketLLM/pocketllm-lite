@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../services/storage_service.dart';
 import '../../../../core/providers.dart';
 import '../providers/chat_provider.dart';
 
@@ -49,7 +48,7 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               builder: (context, box, _) {
                 final prompts = box.values.toList();
                 return DropdownButtonFormField<String?>(
-                  value: _selectedSystemPromptId,
+                  initialValue: _selectedSystemPromptId,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(horizontal: 12),

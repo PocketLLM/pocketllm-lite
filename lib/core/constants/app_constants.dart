@@ -14,4 +14,8 @@ class AppConstants {
   static const String autoSaveChatsKey = 'auto_save_chats';
   static const String hapticFeedbackKey = 'haptic_feedback';
   static const String defaultModelKey = 'default_model';
+  static const String userMsgColorKey = 'user_msg_color';
+  static const String aiMsgColorKey = 'ai_msg_color';
+  static const String bubbleRadiusKey = 'bubble_radius';
+  static const String fontSizeKey = 'font_size';
 }

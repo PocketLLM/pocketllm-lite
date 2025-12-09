@@ -19,8 +19,9 @@ class OnboardingScreen extends ConsumerWidget {
               onPressed: () async {
                 final storage = ref.read(storageServiceProvider);
                 await storage.saveSetting(AppConstants.isFirstLaunchKey, false);
-                if (context.mounted)
+                if (context.mounted) {
                   context.go('/settings'); // Send to settings to setup Ollama
+                }
               },
               child: const Text('Get Started'),
             ),

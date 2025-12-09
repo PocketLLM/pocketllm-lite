@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/splash/splash_screen.dart';
@@ -8,6 +7,7 @@ import '../features/history/history_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/presentation/screens/prompt_management_screen.dart';
 import '../features/settings/presentation/screens/docs_screen.dart';
+import '../features/settings/presentation/screens/customization_screen.dart';
 import 'widgets/main_scaffold.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -56,6 +56,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'docs',
                     builder: (context, state) => const Docs(),
+                  ),
+                  GoRoute(
+                    path: 'customization',
+                    builder: (context, state) => const CustomizationScreen(),
                   ),
                 ],
               ),

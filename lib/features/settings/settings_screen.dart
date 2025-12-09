@@ -8,7 +8,6 @@ import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme_provider.dart';
 import '../chat/presentation/providers/models_provider.dart';
-import '../chat/presentation/providers/chat_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -44,8 +43,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _loadVersion() async {
     final info = await PackageInfo.fromPlatform();
-    if (mounted)
+    if (mounted) {
       setState(() => _version = '${info.version} (${info.buildNumber})');
+    }
   }
 
   Future<void> _checkConnection() async {
@@ -289,8 +289,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         modelsAsync.when(
           data: (models) {
-            if (models.isEmpty)
+            if (models.isEmpty) {
               return const Text('No models found. Pull one via Termux.');
+            }
             return ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -480,10 +481,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                   if (confirm == true) {
                     await storage.clearAllChats();
-                    if (mounted)
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('History cleared')),
                       );
+                    }
                   }
                 },
               ),
@@ -558,6 +560,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     val,
                   );
                   setState(() {});
+                },
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              ListTile(
+                title: const Text('Chat Customization'),
+                subtitle: const Text('Colors, Fonts, Radius'),
+                trailing: const Icon(Icons.chevron_right),
+                leading: const Icon(Icons.palette_outlined),
+                onTap: () {
+                  context.go('/settings/customization');
                 },
               ),
             ],

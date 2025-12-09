@@ -3,12 +3,13 @@
 ///   directly in the Flutter client.
 /// - Backend Migration: Replace hardcoded markdown with backend-served content
 ///   or deep links to official docs.
+library;
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Docs extends StatelessWidget {
-  const Docs({Key? key}) : super(key: key);
+  const Docs({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +18,7 @@ class Docs extends StatelessWidget {
 }
 
 class DocsPage extends StatefulWidget {
-  const DocsPage({Key? key}) : super(key: key);
+  const DocsPage({super.key});
 
   @override
   _DocsPageState createState() => _DocsPageState();
