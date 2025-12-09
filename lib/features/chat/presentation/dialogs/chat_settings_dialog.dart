@@ -49,33 +49,63 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               valueListenable: storage.promptBoxListenable,
               builder: (context, box, _) {
                 final prompts = box.values.toList();
-                return DropdownButtonFormField<String?>(
-                  initialValue: _selectedSystemPromptId,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                return Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                    color: Theme.of(context).cardColor,
                   ),
-                  hint: const Text('Select a prompt template...'),
-                  items: [
-                    const DropdownMenuItem(
-                      value: null,
-                      child: Text('None (Default)'),
+                  child: DropdownButtonFormField<String?>(
+                    initialValue: _selectedSystemPromptId,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      prefixIcon: Icon(Icons.settings_suggest),
                     ),
-                    ...prompts.map(
-                      (p) =>
-                          DropdownMenuItem(value: p.id, child: Text(p.title)),
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down),
+                    hint: const Text('Select a prompt template...'),
+                    dropdownColor:
+                        Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black
+                        : Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                      fontSize: 16,
                     ),
-                  ],
-                  onChanged: (val) {
-                    final storageRef = ref.read(storageServiceProvider);
-                    if (storageRef.getSetting(
-                      AppConstants.hapticFeedbackKey,
-                      defaultValue: false,
-                    )) {
-                      HapticFeedback.selectionClick();
-                    }
-                    setState(() => _selectedSystemPromptId = val);
-                  },
+                    items: [
+                      DropdownMenuItem(
+                        value: null,
+                        child: Text(
+                          'None (Default)',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      ...prompts.map(
+                        (p) => DropdownMenuItem(
+                          value: p.id,
+                          child: Text(p.title, overflow: TextOverflow.ellipsis),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      final storageRef = ref.read(storageServiceProvider);
+                      if (storageRef.getSetting(
+                        AppConstants.hapticFeedbackKey,
+                        defaultValue: false,
+                      )) {
+                        HapticFeedback.selectionClick();
+                      }
+                      setState(() => _selectedSystemPromptId = val);
+                    },
+                  ),
                 );
               },
             ),

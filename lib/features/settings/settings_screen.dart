@@ -448,7 +448,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   setState(() {}); // Rebuild
                 },
               ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 title: Text(
                   'Clear All History',
@@ -553,7 +552,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
               ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
               SwitchListTile(
                 title: const Text('Haptic Feedback'),
                 value: haptic,
@@ -565,7 +563,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   setState(() {});
                 },
               ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 title: const Text('Chat Customization'),
                 subtitle: const Text('Colors, Fonts, Radius'),
@@ -601,7 +598,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   style: const TextStyle(color: Colors.grey),
                 ),
               ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 title: const Text('Privacy Policy'),
                 leading: const Icon(Icons.privacy_tip_outlined, size: 20),
@@ -612,7 +608,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   LegalConstants.privacyPolicy,
                 ),
               ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 title: const Text('About the App'),
                 leading: const Icon(Icons.info_outline, size: 20),
@@ -623,7 +618,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   LegalConstants.aboutApp,
                 ),
               ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 title: const Text('License'),
                 leading: const Icon(Icons.description_outlined, size: 20),
@@ -634,7 +628,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   LegalConstants.license,
                 ),
               ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 title: const Text('Documentation & Setup'),
                 leading: const Icon(Icons.book_outlined, size: 20),
@@ -643,7 +636,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   context.go('/settings/docs');
                 },
               ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 title: const Text('Source Code'),
                 leading: const Icon(Icons.code, size: 20),
@@ -656,7 +648,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   if (await canLaunchUrl(uri)) await launchUrl(uri);
                 },
               ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 title: const Text('Developer'),
                 leading: const Icon(Icons.person_outline, size: 20),

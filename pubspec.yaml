@@ -53,6 +53,7 @@ dependencies:
 
   hive: any
   flutter_colorpicker: ^1.1.0
+  share_plus: ^12.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/chat_provider.dart';
 import 'providers/models_provider.dart';
@@ -6,6 +7,7 @@ import 'providers/models_provider.dart';
 import 'widgets/chat_bubble.dart';
 import 'widgets/chat_input.dart';
 import 'dialogs/chat_settings_dialog.dart';
+import 'screens/chat_history_screen.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -58,38 +60,69 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
             if (models.isEmpty) return const Text('No Models');
 
-            return Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      value: currentValue,
-                      icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                      style: Theme.of(context).textTheme.titleMedium,
-                      dropdownColor: Theme.of(context).colorScheme.surface,
-                      items: models
-                          .map(
-                            (m) => DropdownMenuItem(
-                              value: m.name,
-                              child: Text(
-                                m.name,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          ref.read(chatProvider.notifier).setModel(val);
-                        }
-                      },
-                    ),
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: false,
+                  value: currentValue,
+                  icon: Icon(
+                    Icons.expand_more,
+                    size: 20,
+                    color: Theme.of(context).iconTheme.color,
                   ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                  dropdownColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  items: models
+                      .map(
+                        (m) => DropdownMenuItem(
+                          value: m.name,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.smart_toy_outlined,
+                                size: 16,
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white70
+                                    : Colors.black87,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  m.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (newModel) {
+                    if (newModel != null &&
+                        newModel != chatState.selectedModel) {
+                      HapticFeedback.selectionClick();
+                      ref.read(chatProvider.notifier).setModel(newModel);
+                    }
+                  },
                 ),
-                const SizedBox(width: 8),
-                // Prompt Dropdown
-              ],
+              ),
             );
           },
           loading: () => const Text('Loading...'),
@@ -97,6 +130,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               const Text('Ollama Disconnected', style: TextStyle(fontSize: 16)),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'History',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ChatHistoryScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.add_comment_outlined),
             tooltip: 'New Chat',

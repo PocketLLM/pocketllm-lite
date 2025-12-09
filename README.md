@@ -1,44 +1,91 @@
 # Pocket LLM Lite
 
-A privacy-first, offline AI chat application for Android/iOS, integrating with Ollama via Termux.
+A premium, privacy-first, offline AI chat application for Android/iOS, integrating with Ollama via Termux. Experience powerful AI models directly on your device with a beautiful, customizable interface.
 
-## Features
-- **Offline AI**: Chats processed locally on-device via Ollama.
-- **Vision Support**: Upload images to compatible models (e.g., Llava) for analysis.
-- **History**: Local chat history storage using Hive NoSQL database.
-- **Privacy**: No data leaves your device.
-- **Settings**: Configure Ollama endpoint (default: `http://localhost:11434`) and manage models.
+## 🚀 Key Features
+*   **Offline AI**: Zero data latency. All chats processed locally via Ollama.
+*   **Multimedia Support**: Vision-capable chat (e.g., Llama 3.2 Vision, Llava).
+*   **Premium Customization**:
+    *   **Live Preview**: Theme your chat bubbles, create presets, and adjust corner radius.
+    *   **Dynamic Chat History**: Rename, bulk delete, and organize chats.
+    *   **System Prompts**: 15+ rich presets (Productivity Coach, Fitness Trainer, etc.).
+*   **Interactive UI**: Haptic feedback, smooth animations, and a focused menu for messages.
+*   **Markdown Support**: Full rendering for code blocks, tables, and links.
+*   **Privacy Centric**: History stored locally using secure Hive database.
 
-## Setup
+## 🛠 Prerequisites
 
-### Prerequisites
-1. **Flutter SDK** installed.
-2. **Android/iOS Device** or Emulator.
-3. For local AI on Android: **Termux** app + **Ollama**.
+1.  **Flutter SDK** (Channel stable).
+2.  **Android Device** (Recommended for Ollama/Termux) or Emulator.
+3.  **Termux** (For running Ollama server on Android).
 
-### Termux Setup (Android)
-1. Install Termux from F-Droid.
-2. Update packages: `pkg update && pkg upgrade`
-3. Install Ollama: `pkg install ollama`
-4. Start Ollama Server: `ollama serve`
-5. In a new Termux session, pull a model (e.g., Llama 3): `ollama run llama3`
-6. Keep `ollama serve` running in the background.
+## 📱 Termux & Ollama Setup (Android)
 
-### Building the App
-1. Clone this repo.
-2. Install dependencies: `flutter pub get`
-3. Generate Hive adapters: `dart run build_runner build --delete-conflicting-outputs`
-4. Run: `flutter run`
-5. Build APK: `flutter build apk --release`
+To run the AI engine locally on your phone:
 
-## Architecture
-- **State Management**: Riverpod (NotifierProvider)
-- **Local Database**: Hive (Persistence)
-- **Routing**: GoRouter (ShellRoute for Bottom Navigation)
-- **Networking**: `http` with Streaming support
-- **UI**: Material 3 with Dark/Light mode support
+1.  **Install Termux**: Download from F-Droid (Google Play version is outdated).
+2.  **Install Ollama**:
+    ```bash
+    pkg update && pkg upgrade
+    pkg install ollama
+    ```
+3.  **Start Server**:
+    ```bash
+    ollama serve
+    ```
+4.  **Download a Model** (Open a new session):
+    ```bash
+    ollama pull llama3.2    # Or any other model
+    ```
 
-## Project Structure
-- `lib/core`: Global constants, theme, router, utilities.
-- `lib/features`: Feature-based folders (chat, history, settings, splash).
-- `lib/services`: External services (Ollama, Storage).
+**Note**: Ensure `ollama serve` is running in the background while using the app.
+
+## 💻 Build Instructions
+
+1.  **Clone Repository**:
+    ```bash
+    git clone https://github.com/PocketLLM/pocketllm-lite.git
+    cd pocketllm-lite
+    ```
+2.  **Install Dependencies**:
+    ```bash
+    flutter pub get
+    ```
+3.  **Generate Code** (required for Hive adapters):
+    ```bash
+    dart run build_runner build --delete-conflicting-outputs
+    ```
+4.  **Run Application**:
+    ```bash
+    flutter run
+    ```
+5.  **Build Release APK**:
+    ```bash
+    flutter build apk --release
+    ```
+
+## 🏗 Architecture & Tech Stack
+
+*   **Framework**: Flutter (Dart)
+*   **State Management**: Riverpod (Providers & Notifiers)
+*   **Storage**: Hive (NoSQL, box-based persistence)
+*   **Navigation**: GoRouter
+*   **Theme**: Material 3 (Dynamic Color Support)
+*   **Integration**: Custom HTTP client for Ollama Streaming API
+
+## 📂 Project Structure
+
+```
+lib/
+├── core/            # Global constants, themes, router
+├── features/        # Feature modules
+│   ├── chat/        # Chat logic, UI, and bubbles
+│   ├── settings/    # Appearance, connection, legal
+│   └── splash/      # Logic for app initialization
+├── services/        # OllamaService, StorageService
+└── main.dart
+```
+
+## 📜 License
+
+This project is licensed under the MIT License - see the `LICENSE` file for details.

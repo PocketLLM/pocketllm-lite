@@ -5,6 +5,7 @@ import '../core/constants/app_constants.dart';
 import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
+import '../core/constants/system_prompt_presets.dart';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
@@ -24,6 +25,14 @@ class StorageService {
       AppConstants.systemPromptsBoxName,
     );
     _settingsBox = await Hive.openBox(AppConstants.settingsBoxName);
+
+    // Seed system prompts if empty
+    if (_systemPromptBox.isEmpty) {
+      final initialPrompts = SystemPromptPresets.getInitialPrompts();
+      for (final prompt in initialPrompts) {
+        await _systemPromptBox.put(prompt.id, prompt);
+      }
+    }
   }
 
   ValueListenable<Box<ChatSession>> get chatBoxListenable =>
