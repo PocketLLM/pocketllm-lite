@@ -51,31 +51,36 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                 final prompts = box.values.toList();
                 return Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(8),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[800]
+                        : Colors.white,
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[700]!
+                          : Colors.grey[300]!,
+                    ),
                   ),
                   child: DropdownButtonFormField<String?>(
                     initialValue: _selectedSystemPromptId,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
+                        horizontal: 12,
                         vertical: 8,
                       ),
-                      prefixIcon: Icon(Icons.settings_suggest),
                     ),
                     isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down),
+                    icon: const Icon(Icons.arrow_drop_down, size: 24),
                     hint: const Text('Select a prompt template...'),
                     dropdownColor:
                         Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black
+                        ? Colors.grey[800]
                         : Colors.white,
                     style: TextStyle(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? Colors.white
-                          : Colors.black, // Explicit black in light mode
+                          : Colors.black,
                       fontSize: 16,
                     ),
                     items: [
@@ -87,7 +92,7 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                             color:
                                 Theme.of(context).brightness == Brightness.dark
                                 ? Colors.white
-                                : Colors.black, // No pink, use black/white
+                                : Colors.black,
                           ),
                         ),
                       ),
@@ -100,20 +105,13 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                             style: TextStyle(
                               color: Theme.of(context).brightness == Brightness.dark
                                   ? Colors.white
-                                  : Colors.black, // Ensure black text in light mode
+                                  : Colors.black,
                             ),
                           ),
                         ),
                       ),
                     ],
                     onChanged: (val) {
-                      final storageRef = ref.read(storageServiceProvider);
-                      if (storageRef.getSetting(
-                        AppConstants.hapticFeedbackKey,
-                        defaultValue: false,
-                      )) {
-                        HapticFeedback.selectionClick();
-                      }
                       setState(() => _selectedSystemPromptId = val);
                     },
                   ),
@@ -158,20 +156,11 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               max: 2.0,
               divisions: 20,
               label: _temp.toStringAsFixed(1),
-              activeColor: Colors.blue, // Remove pink, use blue
+              activeColor: Colors.blue,
               inactiveColor: Theme.of(context).brightness == Brightness.dark
                   ? Colors.grey[700]
                   : Colors.grey[300],
               onChanged: (val) {
-                final storageRef = ref.read(storageServiceProvider);
-                if (storageRef.getSetting(
-                  AppConstants.hapticFeedbackKey,
-                  defaultValue: false,
-                )) {
-                  if ((val - _temp).abs() > 0.1) {
-                    HapticFeedback.selectionClick(); // subtle feedback reduces spam
-                  }
-                }
                 setState(() => _temp = val);
               },
             ),
@@ -209,20 +198,11 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               max: 1.0,
               divisions: 10,
               label: _topP.toStringAsFixed(1),
-              activeColor: Colors.blue, // Remove pink, use blue
+              activeColor: Colors.blue,
               inactiveColor: Theme.of(context).brightness == Brightness.dark
                   ? Colors.grey[700]
                   : Colors.grey[300],
               onChanged: (val) {
-                final storageRef = ref.read(storageServiceProvider);
-                if (storageRef.getSetting(
-                  AppConstants.hapticFeedbackKey,
-                  defaultValue: false,
-                )) {
-                  if ((val - _topP).abs() > 0.1) {
-                    HapticFeedback.selectionClick();
-                  }
-                }
                 setState(() => _topP = val);
               },
             ),
@@ -235,34 +215,6 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                     : Colors.grey[700]
               ),
             ),
-            const SizedBox(height: 16),
-            Consumer(
-              builder: (context, ref, child) {
-                final storage = ref.watch(storageServiceProvider);
-                final hapticEnabled = storage.getSetting(
-                  AppConstants.hapticFeedbackKey,
-                  defaultValue: true,
-                );
-                return SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text(
-                    'Haptic Feedback',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: const Text('Vibrate on interactions and typing'),
-                  value: hapticEnabled,
-                  activeColor: Colors.blue, // Remove pink, use blue
-                  onChanged: (value) async {
-                    if (value) HapticFeedback.lightImpact();
-                    await storage.saveSetting(
-                      AppConstants.hapticFeedbackKey,
-                      value,
-                    );
-                    setState(() {});
-                  },
-                );
-              },
-            ),
           ],
         ),
       ),
@@ -272,7 +224,7 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
           style: TextButton.styleFrom(
             foregroundColor: Theme.of(context).brightness == Brightness.dark
                 ? Colors.white
-                : Colors.black, // Cancel button in black in light mode
+                : Colors.black,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           child: const Text('Cancel'),
@@ -280,12 +232,6 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
         ElevatedButton(
           onPressed: () {
             final storage = ref.read(storageServiceProvider);
-            if (storage.getSetting(
-              AppConstants.hapticFeedbackKey,
-              defaultValue: false,
-            )) {
-              HapticFeedback.mediumImpact();
-            }
 
             String? promptContent;
             if (_selectedSystemPromptId != null) {
@@ -309,7 +255,7 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
             Navigator.pop(context);
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue, // Explicitly blue
+            backgroundColor: Colors.blue,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             elevation: 2,

@@ -5,7 +5,10 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
+import '../../../../services/ad_service.dart';
+import '../../../../services/usage_limits_provider.dart';
 import '../providers/chat_provider.dart';
+import '../providers/prompt_enhancer_provider.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -89,6 +92,175 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     });
   }
 
+  bool _isEnhancing = false;
+
+  Future<void> _enhancePrompt() async {
+    if (_controller.text.trim().isEmpty) return;
+
+    final enhancerState = ref.read(promptEnhancerProvider);
+    if (enhancerState.selectedModelId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select a Prompt Enhancer model in Settings first.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // Check usage limits
+    final limitsNotifier = ref.read(usageLimitsProvider.notifier);
+    if (!limitsNotifier.canUseEnhancer()) {
+      // Show ad dialog
+      await _showEnhancerLimitDialog();
+      return;
+    }
+
+    final storage = ref.read(storageServiceProvider);
+    if (storage.getSetting(
+      AppConstants.hapticFeedbackKey,
+      defaultValue: true,
+    )) {
+      HapticFeedback.lightImpact();
+    }
+
+    setState(() => _isEnhancing = true);
+
+    try {
+      final enhanced = await ref
+          .read(promptEnhancerProvider.notifier)
+          .enhancePrompt(_controller.text);
+
+      if (mounted) {
+        // Consume one enhancer use
+        await limitsNotifier.useEnhancer();
+
+        setState(() {
+          _controller.text = enhanced;
+          _isEnhancing = false;
+        });
+
+        // Haptic success feedback
+        if (storage.getSetting(
+          AppConstants.hapticFeedbackKey,
+          defaultValue: true,
+        )) {
+          HapticFeedback.mediumImpact();
+        }
+
+        final remaining = ref.read(usageLimitsProvider).enhancerRemaining;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Prompt enhanced! ($remaining uses left today)'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isEnhancing = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Enhancement failed—check Ollama.'),
+            duration: Duration(seconds: 3),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showEnhancerLimitDialog() async {
+    final limits = ref.read(usageLimitsProvider);
+    final adService = AdService();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enhancement Limit Reached'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "You've used your ${AppConstants.freeEnhancementsPerDay} free enhancements today.",
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Resets in ~${limits.hoursUntilEnhancerReset} hours.',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            const Text('Watch a short ad to unlock 5 more enhancements?'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Later'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              // Check internet first
+              if (!await adService.hasInternetConnection()) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Connect to WiFi/Data to watch ad and unlock.',
+                      ),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+                return;
+              }
+              if (context.mounted) Navigator.pop(context, true);
+            },
+            icon: const Icon(Icons.play_circle_outline),
+            label: const Text('Watch Ad'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      // Show and handle rewarded ad
+      await adService.showRewardedAd(
+        onUserEarnedReward: (reward) async {
+          await ref
+              .read(usageLimitsProvider.notifier)
+              .addEnhancerUses(AppConstants.enhancementsPerAdWatch);
+          if (mounted) {
+            HapticFeedback.heavyImpact();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Unlocked 5 more enhancements!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        },
+        onFailed: (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Ad failed: $error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -155,45 +327,109 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   ),
                 ),
               ),
-            TextField(
-              controller: _controller,
-              enabled: !isGenerating,
-              textCapitalization: TextCapitalization.sentences,
-              keyboardType: TextInputType.multiline,
-              maxLines: 8,
-              minLines: 1,
-              style: theme.textTheme.bodyLarge,
-              decoration: InputDecoration(
-                hintText: 'Message Pocket LLM...',
-                hintStyle: TextStyle(
-                  color: theme.hintColor.withValues(alpha: 0.7),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: _isEnhancing
+                    ? LinearGradient(
+                        colors: [
+                          Colors.blue.withOpacity(0.1),
+                          Colors.purple.withOpacity(0.1),
+                          Colors.pink.withOpacity(0.1),
+                          Colors.blue.withOpacity(0.1),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                boxShadow: _isEnhancing
+                    ? [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.3),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: TextField(
+                controller: _controller,
+                enabled: !isGenerating && !_isEnhancing,
+                textCapitalization: TextCapitalization.sentences,
+                keyboardType: TextInputType.multiline,
+                maxLines: 8,
+                minLines: 1,
+                style: theme.textTheme.bodyLarge,
+                decoration: InputDecoration(
+                  hintText: _isEnhancing
+                      ? 'Enhancing your prompt...'
+                      : 'Message Pocket LLM...',
+                  hintStyle: TextStyle(
+                    color: _isEnhancing
+                        ? Colors.blue
+                        : theme.hintColor.withValues(alpha: 0.7),
+                    fontStyle: _isEnhancing ? FontStyle.italic : null,
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),
             const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  onPressed: isGenerating ? null : _pickImage,
-                  icon: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isDark ? Colors.grey[800] : Colors.grey[300],
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: isGenerating ? null : _pickImage,
+                      icon: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isDark ? Colors.grey[800] : Colors.grey[300],
+                        ),
+                        child: Icon(
+                          Icons.add,
+                          size: 20,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      tooltip: 'Add Image',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
-                    child: Icon(
-                      Icons.add,
-                      size: 20,
-                      color: theme.colorScheme.onSurface,
+                    const SizedBox(width: 8),
+                    // Enhance Prompt Button - only show if enhancer model selected
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final enhancerState = ref.watch(promptEnhancerProvider);
+                        final hasEnhancer =
+                            enhancerState.selectedModelId != null;
+
+                        if (!hasEnhancer) return const SizedBox.shrink();
+
+                        return IconButton(
+                          onPressed: (isGenerating || _isEnhancing)
+                              ? null
+                              : _enhancePrompt,
+                          icon: Icon(
+                            Icons.auto_awesome,
+                            size: 22,
+                            color: (isGenerating || _isEnhancing)
+                                ? Colors.grey
+                                : (isDark ? Colors.white : Colors.black),
+                          ),
+                          tooltip: 'Enhance Prompt',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        );
+                      },
                     ),
-                  ),
-                  tooltip: 'Add Image',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  ],
                 ),
                 Container(
                   decoration: BoxDecoration(

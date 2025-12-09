@@ -5,6 +5,7 @@ import 'core/router.dart';
 import 'core/providers.dart';
 import 'core/theme/theme_provider.dart';
 import 'services/storage_service.dart';
+import 'services/ad_service.dart';
 
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
@@ -14,6 +15,9 @@ void main() async {
 
   final storageService = StorageService();
   await storageService.init();
+
+  // Initialize AdMob
+  await AdService.initialize();
 
   FlutterNativeSplash.remove();
 

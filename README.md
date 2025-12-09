@@ -119,6 +119,40 @@ lib/
 - Privacy controls
 - Haptic feedback preferences
 
+### Prompt Enhancer
+- AI-powered prompt improvement using any Ollama model
+- Fixed system prompt optimized for best enhancement results
+- 5 free enhancements per 24 hours (watch ad to unlock more)
+
+## 💰 Monetization (AdMob)
+
+The app includes Google AdMob integration for monetization through banner and rewarded ads.
+
+### Setup for Production
+
+1. **Get AdMob IDs**: Create an account at [AdMob Console](https://admob.google.com/)
+2. **Update Constants**: Replace test IDs in `lib/core/constants/app_constants.dart`:
+   ```dart
+   // Replace these with your production AdMob IDs
+   static const String admobAppIdAndroid = 'YOUR_ANDROID_APP_ID';
+   static const String bannerAdUnitId = 'YOUR_BANNER_AD_UNIT_ID';
+   static const String rewardedAdUnitId = 'YOUR_REWARDED_AD_UNIT_ID';
+   ```
+3. **Update AndroidManifest**: Replace the test app ID in `android/app/src/main/AndroidManifest.xml`:
+   ```xml
+   <meta-data
+       android:name="com.google.android.gms.ads.APPLICATION_ID"
+       android:value="YOUR_ANDROID_APP_ID"/>
+   ```
+4. **iOS Setup**: Add `GADApplicationIdentifier` to `ios/Runner/Info.plist`
+
+### Usage Limits
+- **Prompt Enhancements**: 5 free per 24 hours, watch rewarded ad for 5 more
+- **Token System**: 10,000 initial tokens, watch rewarded ad for +10,000
+- **Banner Ads**: Displayed at bottom of Settings screen
+
+**Note**: Test IDs are pre-configured for development. Always use test IDs during development to avoid policy violations.
+
 ## ⚙️ Configuration Options
 
 ### Ollama Connection

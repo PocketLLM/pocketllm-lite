@@ -5,12 +5,16 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../../core/constants/legal_constants.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme_provider.dart';
+import '../../services/ad_service.dart';
+import '../../services/usage_limits_provider.dart';
 import '../chat/presentation/providers/models_provider.dart';
+import '../chat/presentation/providers/prompt_enhancer_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -25,6 +29,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isConnecting = false;
   bool? _isConnected;
 
+  // Banner Ad
+  final AdService _adService = AdService();
+  bool _isBannerLoaded = false;
+
   @override
   void initState() {
     super.initState();
@@ -36,12 +44,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _urlController = TextEditingController(text: url);
     _loadVersion();
     _checkConnection();
+    _loadBannerAd();
   }
 
   @override
   void dispose() {
     _urlController.dispose();
+    _adService.disposeBannerAd();
     super.dispose();
+  }
+
+  void _loadBannerAd() {
+    _adService.loadBannerAd(
+      onLoaded: () {
+        if (mounted) setState(() => _isBannerLoaded = true);
+      },
+      onFailed: (error) {
+        if (mounted) setState(() => _isBannerLoaded = false);
+      },
+    );
   }
 
   Future<void> _loadVersion() async {
@@ -91,21 +112,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           },
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
         children: [
-          _buildConnectionSection(theme),
-          const SizedBox(height: 24),
-          _buildPromptSection(theme),
-          const SizedBox(height: 24),
-          _buildModelsSection(theme),
-          const SizedBox(height: 24),
-          _buildStorageSection(theme, storage),
-          const SizedBox(height: 24),
-          _buildAppearanceSection(theme, storage),
-          const SizedBox(height: 24),
-          _buildAboutSection(theme),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _buildConnectionSection(theme),
+                const SizedBox(height: 24),
+                _buildPromptSection(theme),
+                const SizedBox(height: 24),
+                _buildModelsSection(theme),
+                const SizedBox(height: 24),
+                _buildPromptEnhancerSection(theme),
+                const SizedBox(height: 24),
+                _buildUsageLimitsSection(theme),
+                const SizedBox(height: 24),
+                _buildStorageSection(theme, storage),
+                const SizedBox(height: 24),
+                _buildAppearanceSection(theme, storage),
+                const SizedBox(height: 24),
+                _buildAboutSection(theme),
+                const SizedBox(height: 60), // Space for banner
+              ],
+            ),
+          ),
+          // Banner Ad at bottom
+          _buildBannerAd(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBannerAd() {
+    if (_isBannerLoaded && _adService.bannerAd != null) {
+      return SafeArea(
+        child: Container(
+          alignment: Alignment.center,
+          width: double.infinity,
+          height: 50,
+          child: AdWidget(ad: _adService.bannerAd!),
+        ),
+      );
+    }
+    return Container(
+      height: 50,
+      alignment: Alignment.center,
+      color: Colors.grey[200],
+      child: const Text(
+        'Ad loading...',
+        style: TextStyle(color: Colors.grey, fontSize: 12),
       ),
     );
   }
@@ -434,6 +490,470 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPromptEnhancerSection(ThemeData theme) {
+    final modelsAsync = ref.watch(modelsProvider);
+    final enhancerState = ref.watch(promptEnhancerProvider);
+    final selectedModel = enhancerState.selectedModelId;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Prompt Enhancer'),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              initiallyExpanded: false,
+              title: const Text(
+                'Select Enhancer Model',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                selectedModel ?? 'No model selected',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: selectedModel != null ? Colors.green : Colors.grey,
+                ),
+              ),
+              leading: Icon(
+                Icons.auto_awesome,
+                color: theme.colorScheme.primary,
+              ),
+              children: [
+                // Edit System Prompt Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showEditEnhancerPromptDialog(context),
+                    icon: const Icon(Icons.edit, size: 18),
+                    label: const Text('View/Edit Enhancer Prompt'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 40),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'This model will enhance prompts with best practices like specificity and structure.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue[800],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                modelsAsync.when(
+                  data: (models) {
+                    if (models.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'No models available. Pull one via Termux.',
+                        ),
+                      );
+                    }
+                    return AnimatedOpacity(
+                      opacity: 1.0,
+                      duration: const Duration(milliseconds: 300),
+                      child: Column(
+                        children: [
+                          RadioListTile<String?>(
+                            title: const Text('None (Disabled)'),
+                            value: null,
+                            groupValue: selectedModel,
+                            onChanged: (val) {
+                              HapticFeedback.selectionClick();
+                              ref
+                                  .read(promptEnhancerProvider.notifier)
+                                  .setSelectedModel(null);
+                            },
+                          ),
+                          ...models.map(
+                            (m) => RadioListTile<String>(
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      m.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${(m.size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  if (m.name.toLowerCase().contains('vision') ||
+                                      m.name.toLowerCase().contains('llava'))
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Vision',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.blue,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              value: m.name,
+                              groupValue: selectedModel,
+                              onChanged: (val) {
+                                HapticFeedback.selectionClick();
+                                ref
+                                    .read(promptEnhancerProvider.notifier)
+                                    .setSelectedModel(val);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (e, _) => Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Error: $e',
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showEditEnhancerPromptDialog(BuildContext context) {
+    final controller = TextEditingController(
+      text: AppConstants.promptEnhancerSystemPrompt,
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enhancer System Prompt'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'This prompt instructs the AI how to enhance your prompts:',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 10,
+                readOnly: true, // Read-only for now (fixed prompt)
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Colors.orange[700],
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'This prompt is optimized for best results. Editing is disabled to ensure consistent enhancement quality.',
+                        style: TextStyle(fontSize: 11, color: Colors.orange),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUsageLimitsSection(ThemeData theme) {
+    final limits = ref.watch(usageLimitsProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          'Usage Limits',
+          trailing: IconButton(
+            icon: const Icon(Icons.refresh, size: 20),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              ref.read(usageLimitsProvider.notifier).reload();
+            },
+            style: IconButton.styleFrom(
+              backgroundColor: theme.colorScheme.primaryContainer,
+              padding: const EdgeInsets.all(8),
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              // Prompt Enhancements
+              ListTile(
+                leading: Icon(
+                  Icons.auto_awesome,
+                  color: limits.hasEnhancerUses ? Colors.blue : Colors.orange,
+                ),
+                title: Text(
+                  'Prompt Enhancements: ${limits.enhancerRemaining}/${AppConstants.freeEnhancementsPerDay}',
+                ),
+                subtitle: limits.enhancerRemaining > 0
+                    ? null
+                    : Text(
+                        'Resets in ~${limits.hoursUntilEnhancerReset} hours',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                trailing: limits.hasEnhancerUses
+                    ? null
+                    : TextButton.icon(
+                        onPressed: () => _watchAdForEnhancements(),
+                        icon: const Icon(Icons.play_circle, size: 18),
+                        label: const Text('Watch Ad'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.blue,
+                        ),
+                      ),
+              ),
+              const Divider(height: 1),
+              // Token Balance
+              ListTile(
+                leading: Icon(
+                  Icons.token,
+                  color: limits.remainingTokens > 1000
+                      ? Colors.green
+                      : Colors.orange,
+                ),
+                title: Text(
+                  'Token Balance: ${limits.remainingTokens}/${limits.tokenBalance}',
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(
+                      value: limits.tokenBalance > 0
+                          ? limits.remainingTokens / limits.tokenBalance
+                          : 0,
+                      backgroundColor: Colors.grey[300],
+                      valueColor: AlwaysStoppedAnimation(
+                        limits.remainingTokens > 1000
+                            ? Colors.green
+                            : Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Total used: ${limits.totalTokensUsed}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+                trailing: limits.remainingTokens < 1000
+                    ? TextButton.icon(
+                        onPressed: () => _watchAdForTokens(),
+                        icon: const Icon(Icons.play_circle, size: 18),
+                        label: const Text('+10K'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.green,
+                        ),
+                      )
+                    : null,
+              ),
+              const Divider(height: 1),
+              // Info text
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Ads help support development—thanks!',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _watchAdForEnhancements() async {
+    HapticFeedback.lightImpact();
+
+    if (!await _adService.hasInternetConnection()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Connect to WiFi/Data to watch ad and unlock.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    await _adService.showRewardedAd(
+      onUserEarnedReward: (reward) async {
+        await ref
+            .read(usageLimitsProvider.notifier)
+            .addEnhancerUses(AppConstants.enhancementsPerAdWatch);
+        if (mounted) {
+          HapticFeedback.heavyImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unlocked 5 more enhancements!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      },
+      onFailed: (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ad failed: $error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _watchAdForTokens() async {
+    HapticFeedback.lightImpact();
+
+    if (!await _adService.hasInternetConnection()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Connect to WiFi/Data to watch ad and unlock.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    await _adService.showRewardedAd(
+      onUserEarnedReward: (reward) async {
+        await ref
+            .read(usageLimitsProvider.notifier)
+            .addTokens(AppConstants.tokensPerAdWatch);
+        if (mounted) {
+          HapticFeedback.heavyImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Added 10,000 tokens!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      },
+      onFailed: (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ad failed: $error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
     );
   }
 
