@@ -6,7 +6,6 @@ import 'providers/models_provider.dart';
 import 'widgets/chat_bubble.dart';
 import 'widgets/chat_input.dart';
 import 'dialogs/chat_settings_dialog.dart';
-import '../../../core/providers.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -90,70 +89,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 // Prompt Dropdown
-                Consumer(
-                  builder: (context, ref, _) {
-                    final storage = ref.watch(storageServiceProvider);
-                    return ValueListenableBuilder(
-                      valueListenable: storage.promptBoxListenable,
-                      builder: (context, box, _) {
-                        final prompts = box.values.toList();
-                        // Find prompt ID that matches current system prompt content
-                        // This is tricky because we store content string, but user asked for "Prompt Dropdown".
-                        // We should probably select based on ID if we stored ID, but we only store content in ChatState.
-                        // Let's try to match content.
-                        final currentContent = chatState.systemPrompt;
-                        String? selectedId;
-                        if (currentContent != null) {
-                          try {
-                            final match = prompts.firstWhere(
-                              (p) => p.content == currentContent,
-                            );
-                            selectedId = match.id;
-                          } catch (_) {}
-                        }
-
-                        return DropdownButtonHideUnderline(
-                          child: DropdownButton<String?>(
-                            value: selectedId,
-                            hint: const Text(
-                              'Prompt',
-                              style: TextStyle(fontSize: 14),
-                            ),
-                            icon: const Icon(Icons.edit_note, size: 20),
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            items: [
-                              const DropdownMenuItem(
-                                value: null,
-                                child: Text('None'),
-                              ),
-                              ...prompts.map(
-                                (p) => DropdownMenuItem(
-                                  value: p.id,
-                                  child: Text(
-                                    p.title,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            onChanged: (val) {
-                              String? newContent;
-                              if (val != null) {
-                                final p = prompts.firstWhere(
-                                  (element) => element.id == val,
-                                );
-                                newContent = p.content;
-                              }
-                              ref
-                                  .read(chatProvider.notifier)
-                                  .updateSettings(systemPrompt: newContent);
-                            },
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
               ],
             );
           },

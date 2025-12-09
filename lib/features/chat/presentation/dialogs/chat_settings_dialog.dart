@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
 import '../providers/chat_provider.dart';
 
@@ -65,6 +67,13 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                     ),
                   ],
                   onChanged: (val) {
+                    final storageRef = ref.read(storageServiceProvider);
+                    if (storageRef.getSetting(
+                      AppConstants.hapticFeedbackKey,
+                      defaultValue: false,
+                    )) {
+                      HapticFeedback.selectionClick();
+                    }
                     setState(() => _selectedSystemPromptId = val);
                   },
                 );
@@ -96,7 +105,18 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               max: 2.0,
               divisions: 20,
               label: _temp.toStringAsFixed(1),
-              onChanged: (val) => setState(() => _temp = val),
+              onChanged: (val) {
+                final storageRef = ref.read(storageServiceProvider);
+                if (storageRef.getSetting(
+                  AppConstants.hapticFeedbackKey,
+                  defaultValue: false,
+                )) {
+                  if ((val - _temp).abs() > 0.1) {
+                    HapticFeedback.selectionClick(); // subtle feedback reduces spam
+                  }
+                }
+                setState(() => _temp = val);
+              },
             ),
             const Text(
               'Controls randomness. Higher = more creative.',
@@ -120,7 +140,18 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               max: 1.0,
               divisions: 10,
               label: _topP.toStringAsFixed(1),
-              onChanged: (val) => setState(() => _topP = val),
+              onChanged: (val) {
+                final storageRef = ref.read(storageServiceProvider);
+                if (storageRef.getSetting(
+                  AppConstants.hapticFeedbackKey,
+                  defaultValue: false,
+                )) {
+                  if ((val - _topP).abs() > 0.1) {
+                    HapticFeedback.selectionClick();
+                  }
+                }
+                setState(() => _topP = val);
+              },
             ),
             const Text(
               'Controls diversity via nucleus sampling.',
@@ -132,25 +163,31 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.grey,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
           child: const Text('Cancel'),
         ),
         ElevatedButton(
           onPressed: () {
+            final storage = ref.read(storageServiceProvider);
+            if (storage.getSetting(
+              AppConstants.hapticFeedbackKey,
+              defaultValue: false,
+            )) {
+              HapticFeedback.mediumImpact();
+            }
+
             String? promptContent;
             if (_selectedSystemPromptId != null) {
-              final storage = ref.read(storageServiceProvider);
-              // We need to fetch it. Since we are inside Consumer, we can't easily get it synchronously
-              // from listenable without looking at box directly which is fine since we passed it in build.
-              // But easier is just to use storage methods if we added getSystemPrompt(id).
-              // We didn't add getSystemPrompt(id) to StorageService.
-              // Let's iterate box values from listenable or just trust the list we saw.
-              final box = storage
-                  .promptBoxListenable
-                  .value; // Access the box safely? No, listenable.value is box.
-              final prompt = box.values.firstWhere(
-                (p) => p.id == _selectedSystemPromptId,
-              );
-              promptContent = prompt.content;
+              final box = storage.promptBoxListenable.value;
+              try {
+                final prompt = box.values.firstWhere(
+                  (p) => p.id == _selectedSystemPromptId,
+                );
+                promptContent = prompt.content;
+              } catch (_) {}
             }
 
             ref
@@ -163,7 +200,19 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
 
             Navigator.pop(context);
           },
-          child: const Text('Apply'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).primaryColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text(
+            'Apply Changes',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
       ],
     );
