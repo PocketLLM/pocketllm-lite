@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/legal_constants.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
@@ -600,13 +603,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
-                title: const Text('Privacy'),
+                title: const Text('Privacy Policy'),
+                leading: const Icon(Icons.privacy_tip_outlined, size: 20),
                 trailing: const Icon(Icons.chevron_right, size: 20),
-                onTap: () {},
+                onTap: () => _showMarkdownDialog(
+                  context,
+                  'Privacy Policy',
+                  LegalConstants.privacyPolicy,
+                ),
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              ListTile(
+                title: const Text('About the App'),
+                leading: const Icon(Icons.info_outline, size: 20),
+                trailing: const Icon(Icons.chevron_right, size: 20),
+                onTap: () => _showMarkdownDialog(
+                  context,
+                  'About Pocket LLM Lite',
+                  LegalConstants.aboutApp,
+                ),
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              ListTile(
+                title: const Text('License'),
+                leading: const Icon(Icons.description_outlined, size: 20),
+                trailing: const Icon(Icons.chevron_right, size: 20),
+                onTap: () => _showMarkdownDialog(
+                  context,
+                  'License',
+                  LegalConstants.license,
+                ),
               ),
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 title: const Text('Documentation & Setup'),
+                leading: const Icon(Icons.book_outlined, size: 20),
                 trailing: const Icon(Icons.chevron_right, size: 20),
                 onTap: () {
                   context.go('/settings/docs');
@@ -615,6 +646,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 title: const Text('Source Code'),
+                leading: const Icon(Icons.code, size: 20),
                 subtitle: const Text('github.com/PocketLLM/pocketllm-lite'),
                 trailing: const Icon(Icons.open_in_new, size: 20),
                 onTap: () async {
@@ -627,6 +659,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 title: const Text('Developer'),
+                leading: const Icon(Icons.person_outline, size: 20),
                 subtitle: const Text('github.com/Mr-Dark-debug'),
                 trailing: const Icon(Icons.open_in_new, size: 20),
                 onTap: () async {
@@ -638,6 +671,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showMarkdownDialog(BuildContext context, String title, String content) {
+    HapticFeedback.lightImpact();
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Markdown(
+                data: content,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                onTapLink: (text, href, title) async {
+                  if (href != null) {
+                    final uri = Uri.parse(href);
+                    if (await canLaunchUrl(uri)) await launchUrl(uri);
+                  }
+                },
+                styleSheet: MarkdownStyleSheet.fromTheme(
+                  Theme.of(context),
+                ).copyWith(p: Theme.of(context).textTheme.bodyMedium),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
