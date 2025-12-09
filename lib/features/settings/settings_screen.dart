@@ -552,9 +552,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
-                title: const Text('Help & FAQ'),
+                title: const Text('Documentation & Setup'),
                 trailing: const Icon(Icons.chevron_right, size: 20),
-                onTap: () {},
+                onTap: () {
+                  context.go('/settings/docs');
+                },
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              ListTile(
+                title: const Text('Source Code'),
+                subtitle: const Text('github.com/PocketLLM/pocketllm-lite'),
+                trailing: const Icon(Icons.open_in_new, size: 20),
+                onTap: () async {
+                  final uri = Uri.parse(
+                    'https://github.com/PocketLLM/pocketllm-lite',
+                  );
+                  if (await canLaunchUrl(uri)) await launchUrl(uri);
+                },
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              ListTile(
+                title: const Text('Developer'),
+                subtitle: const Text('github.com/Mr-Dark-debug'),
+                trailing: const Icon(Icons.open_in_new, size: 20),
+                onTap: () async {
+                  final uri = Uri.parse('https://github.com/Mr-Dark-debug');
+                  if (await canLaunchUrl(uri)) await launchUrl(uri);
+                },
               ),
             ],
           ),

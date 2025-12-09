@@ -5,6 +5,7 @@ import 'providers/models_provider.dart';
 
 import 'widgets/chat_bubble.dart';
 import 'widgets/chat_input.dart';
+import 'dialogs/chat_settings_dialog.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -92,6 +93,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             tooltip: 'Refresh Models',
             onPressed: () {
               ref.refresh(modelsProvider);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Chat Settings',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const ChatSettingsDialog(),
+              );
             },
           ),
         ],

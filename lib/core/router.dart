@@ -7,6 +7,7 @@ import '../features/chat/presentation/chat_screen.dart';
 import '../features/history/history_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/presentation/screens/prompt_management_screen.dart';
+import '../features/settings/presentation/screens/docs_screen.dart';
 import 'widgets/main_scaffold.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -51,6 +52,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'prompts',
                     builder: (context, state) => const PromptManagementScreen(),
+                  ),
+                  GoRoute(
+                    path: 'docs',
+                    builder: (context, state) => const Docs(),
                   ),
                 ],
               ),

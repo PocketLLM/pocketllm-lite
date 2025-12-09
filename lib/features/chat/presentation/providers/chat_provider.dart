@@ -9,12 +9,18 @@ class ChatState {
   final bool isGenerating;
   final String? currentSessionId;
   final String selectedModel;
+  final String? systemPrompt;
+  final double temperature;
+  final double topP;
 
   ChatState({
     required this.messages,
     required this.isGenerating,
     this.currentSessionId,
     this.selectedModel = 'llama3',
+    this.systemPrompt,
+    this.temperature = 0.7,
+    this.topP = 0.9,
   });
 
   ChatState copyWith({
@@ -22,12 +28,18 @@ class ChatState {
     bool? isGenerating,
     String? currentSessionId,
     String? selectedModel,
+    String? systemPrompt,
+    double? temperature,
+    double? topP,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
       isGenerating: isGenerating ?? this.isGenerating,
       currentSessionId: currentSessionId ?? this.currentSessionId,
       selectedModel: selectedModel ?? this.selectedModel,
+      systemPrompt: systemPrompt ?? this.systemPrompt,
+      temperature: temperature ?? this.temperature,
+      topP: topP ?? this.topP,
     );
   }
 }
@@ -42,11 +54,26 @@ class ChatNotifier extends Notifier<ChatState> {
     state = state.copyWith(selectedModel: model);
   }
 
+  void updateSettings({
+    String? systemPrompt,
+    double? temperature,
+    double? topP,
+  }) {
+    state = state.copyWith(
+      systemPrompt: systemPrompt,
+      temperature: temperature,
+      topP: topP,
+    );
+  }
+
   void loadSession(ChatSession session) {
     state = state.copyWith(
       messages: session.messages,
       currentSessionId: session.id,
       selectedModel: session.model,
+      systemPrompt: session.systemPrompt,
+      temperature: session.temperature ?? 0.7,
+      topP: session.topP ?? 0.9,
     );
   }
 
@@ -55,6 +82,11 @@ class ChatNotifier extends Notifier<ChatState> {
       messages: [],
       isGenerating: false,
       selectedModel: state.selectedModel,
+      systemPrompt: state
+          .systemPrompt, // Keep preferences if user wants, or reset? Let's reset for fresh start usually, but keeping works too.
+      // Actually let's keep model but maybe reset params if we wanted pure new chat. For now I'll reset params to default.
+      temperature: 0.7,
+      topP: 0.9,
     );
   }
 
@@ -95,7 +127,15 @@ class ChatNotifier extends Notifier<ChatState> {
     );
 
     try {
-      final stream = ollama.generateChatStream(state.selectedModel, history);
+      final options = {"temperature": state.temperature, "top_p": state.topP};
+
+      final stream = ollama.generateChatStream(
+        state.selectedModel,
+        history,
+        options: options,
+        system: state
+            .systemPrompt, // We pass system string, service handles it (conceptually)
+      );
 
       await for (final chunk in stream) {
         assistantContent += chunk;
@@ -140,6 +180,9 @@ class ChatNotifier extends Notifier<ChatState> {
       model: state.selectedModel,
       messages: state.messages,
       createdAt: DateTime.now(),
+      systemPrompt: state.systemPrompt,
+      temperature: state.temperature,
+      topP: state.topP,
     );
 
     await storage.saveChatSession(session);
