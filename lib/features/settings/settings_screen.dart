@@ -298,8 +298,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final model = models[index];
-                // Determine if selected (simple approach: check ChatProvider's current model or default)
-                // For now, let's just make it look selectable
+                final storage = ref.watch(storageServiceProvider);
+                final defaultModel =
+                    storage.getSetting(AppConstants.defaultModelKey) ?? '';
+                final isDefault = defaultModel == model.name;
+
                 return Container(
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerHighest
@@ -349,18 +352,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                       ],
                     ),
-                    trailing: IconButton(
-                      icon: Icon(
-                        Icons.delete_outline,
-                        color: theme.colorScheme.error,
-                      ),
-                      onPressed: () async {
-                        // implement delete logic
-                        await ref
-                            .read(ollamaServiceProvider)
-                            .deleteModel(model.name);
-                        ref.refresh(modelsProvider);
-                      },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Radio<String>(
+                          value: model.name,
+                          groupValue: defaultModel,
+                          onChanged: (val) {
+                            storage.saveSetting(
+                              AppConstants.defaultModelKey,
+                              val,
+                            );
+                            setState(() {});
+                          },
+                          activeColor: Colors.blue,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.edit,
+                            size: 20,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            // Open dialog to set per-model system prompt and settings
+                            // For now just show "feature coming soon" or simple dialog
+                            //    _showModelSettingsDialog(context, model.name);
+                            // We will just show a snackbar since I haven't defined _showModelSettingsDialog yet
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Model specific settings coming soon',
+                                ),
+                              ),
+                            );
+                          },
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.delete_outline,
+                            color: theme.colorScheme.error,
+                          ),
+                          onPressed: () async {
+                            await ref
+                                .read(ollamaServiceProvider)
+                                .deleteModel(model.name);
+                            ref.refresh(modelsProvider);
+                          },
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
                     ),
                   ),
                 );

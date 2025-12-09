@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/services.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../services/storage_service.dart';
+import '../../../../core/providers.dart';
 import '../providers/chat_provider.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
@@ -19,6 +23,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   Future<void> _pickImage() async {
     // Show bottom sheet to choose camera or gallery
+    final storage = ref.read(storageServiceProvider);
+    if (storage.getSetting(
+      AppConstants.hapticFeedbackKey,
+      defaultValue: false,
+    )) {
+      HapticFeedback.selectionClick();
+    }
+
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (context) => SafeArea(
@@ -57,6 +69,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _send() {
     if (_controller.text.trim().isEmpty && _selectedImages.isEmpty) return;
+
+    final storage = ref.read(storageServiceProvider);
+    if (storage.getSetting(
+      AppConstants.hapticFeedbackKey,
+      defaultValue: false,
+    )) {
+      HapticFeedback.lightImpact();
+    }
 
     ref
         .read(chatProvider.notifier)

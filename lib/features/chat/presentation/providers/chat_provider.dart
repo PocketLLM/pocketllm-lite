@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/providers.dart';
 import '../../domain/models/chat_message.dart';
 import '../../domain/models/chat_session.dart';
+import '../../../../core/constants/app_constants.dart';
 
 class ChatState {
   final List<ChatMessage> messages;
@@ -78,13 +79,16 @@ class ChatNotifier extends Notifier<ChatState> {
   }
 
   void newChat() {
+    // Load default model if available
+    final storage = ref.read(storageServiceProvider);
+    final defaultModel = storage.getSetting(AppConstants.defaultModelKey);
+    final modelToUse = defaultModel ?? state.selectedModel;
+
     state = ChatState(
       messages: [],
       isGenerating: false,
-      selectedModel: state.selectedModel,
-      systemPrompt: state
-          .systemPrompt, // Keep preferences if user wants, or reset? Let's reset for fresh start usually, but keeping works too.
-      // Actually let's keep model but maybe reset params if we wanted pure new chat. For now I'll reset params to default.
+      selectedModel: modelToUse,
+      systemPrompt: state.systemPrompt,
       temperature: 0.7,
       topP: 0.9,
     );
