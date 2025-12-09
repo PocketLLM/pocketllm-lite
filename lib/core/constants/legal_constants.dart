@@ -4,7 +4,7 @@ class LegalConstants {
 
 **Effective Date: December 09, 2025**
 
-Pocket LLM Lite ("we," "us," or "our") is an open-source, privacy-focused mobile application developed by Prashant C (contact: prashantc592114@gmail.com) and hosted on GitHub at https://github.com/PocketLLM/pocketllm-lite. The app is designed to run entirely offline on your local device, integrating with Ollama (via Termux) for local AI model interactions. This Privacy Policy describes our policies and procedures on the collection, use, and disclosure of your information when you use the Service and tells you about your privacy rights and how the law protects you.
+Pocket LLM Lite ("we," "us," or "our") is an open-source, privacy-focused mobile application developed by Prashant Choudhary (contact: prashantc592114@gmail.com). The app is designed to run entirely offline on your local device, integrating with Ollama (via Termux) for local AI model interactions. This Privacy Policy describes our policies and procedures on the collection, use, and disclosure of your information when you use the Service and tells you about your privacy rights and how the law protects you.
 
 We emphasize that Pocket LLM Lite is built with privacy as the core principle: **No data ever leaves your device**. All chats, models, images, and settings are stored locally using secure on-device storage (e.g., Hive for chat history). We do not collect, store, or transmit any personal information to servers, third parties, or ourselves. This policy is adapted from standard templates to reflect our offline-only nature, ensuring compliance with laws like GDPR, CCPA, and general data protection principles.
 
@@ -70,13 +70,13 @@ Data is retained indefinitely on your device until you delete it. No automatic d
 The app is not intended for children under 13 (or 16 in some jurisdictions). We do not knowingly collect data from children, and no features target them. Parents: Supervise usage.
 
 #### 9. Changes to This Policy
-We may update this Policy to reflect app changes. Updates will be posted on the GitHub repository (https://github.com/PocketLLM/pocketllm-lite) and in the app's About section. Significant changes (e.g., if we ever add non-local features) will be notified via in-app banner. Check the Effective Date for the latest version.
+We may update this Policy to reflect app changes. 
 
 #### 10. Contact Us
 For questions:
-- Developer: Prashant C
+- Developer: Prashant Choudhary
 - Email: prashantc592114@gmail.com
-- GitHub: https://github.com/PocketLLM/pocketllm-lite (issues) or https://github.com/Mr-Dark-debug (developer profile)
+- GitHub: https://github.com/Mr-Dark-debug (developer profile)
 
 Last Updated: December 09, 2025
 
@@ -89,9 +89,8 @@ This policy is provided for informational purposes and is not legal advice. Cons
 ### About Pocket LLM Lite
 
 **App Version: 1.0.0 (Initial Release)**  
-**Developed By: Prashant C (Mr-Dark-debug on GitHub)**  
+**Developed By: Prashant Choudhary (Mr-Dark-debug on GitHub)**  
 **Email: prashantc592114@gmail.com**  
-**GitHub Repository: https://github.com/PocketLLM/pocketllm-lite**  
 **Developer Profile: https://github.com/Mr-Dark-debug**  
 
 Pocket LLM Lite is a free, open-source, privacy-first mobile application built with Flutter for Android and iOS devices. It empowers users to run AI chat conversations entirely offline on their local devices, without any data leaving the phone. By integrating with Ollama (an open-source local inference engine) via Termux, the app allows you to load and interact with large language models (LLMs) like Llama, Mistral, or vision-capable models like Llava—right in your pocket.
@@ -137,7 +136,7 @@ Thank you for using Pocket LLM Lite—your private AI pocket companion!
 
 **Pocket LLM Lite Non-Commercial Software License Agreement**
 
-This Non-Commercial Software License Agreement (the "Agreement") is between you (the "User" or "Licensee") and Prashant C (the "Developer" or "Licensor"), the sole owner and developer of Pocket LLM Lite (the "Software"). The Software includes the source code, executable files, documentation, and any related materials hosted at https://github.com/PocketLLM/pocketllm-lite. By downloading, installing, or using the Software, you agree to be bound by this Agreement. If you do not agree, do not use the Software.
+This Non-Commercial Software License Agreement (the "Agreement") is between you (the "User" or "Licensee") and Prashant C (the "Developer" or "Licensor"), the sole owner and developer of Pocket LLM Lite (the "Software"). The Software includes the source code, executable files, documentation, and any related materials. By downloading, installing, or using the Software, you agree to be bound by this Agreement. If you do not agree, do not use the Software.
 
 #### 1. Scope
 This Agreement grants a license for non-commercial, personal use only. For commercial use, you must obtain explicit written permission from the Developer at prashantc592114@gmail.com.

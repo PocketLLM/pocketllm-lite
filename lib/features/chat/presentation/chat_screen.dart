@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/providers.dart';
 import 'providers/chat_provider.dart';
 import 'providers/models_provider.dart';
 
@@ -63,9 +66,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                color: Colors.green.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: DropdownButtonHideUnderline(
@@ -83,37 +84,61 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         : Colors.black,
                   ),
                   dropdownColor: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.black
+                      ? const Color(0xFF1E1E1E)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  items: models
-                      .map(
-                        (m) => DropdownMenuItem(
-                          value: m.name,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.smart_toy_outlined,
-                                size: 16,
-                                color:
-                                    Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white70
-                                    : Colors.black87,
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  m.name,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                  elevation: 4,
+                  selectedItemBuilder: (BuildContext context) {
+                    return models.map<Widget>((m) {
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.smart_toy_outlined,
+                            size: 16,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white70
+                                : Colors.black87,
                           ),
-                        ),
-                      )
-                      .toList(),
+                          const SizedBox(width: 8),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 150),
+                            child: Text(
+                              m.name,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList();
+                  },
+                  items: models.map<DropdownMenuItem<String>>((m) {
+                    return DropdownMenuItem<String>(
+                      value: m.name,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.smart_toy_outlined,
+                            size: 16,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white70
+                                : Colors.black87,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            m.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   onChanged: (newModel) {
                     if (newModel != null &&
                         newModel != chatState.selectedModel) {
@@ -134,6 +159,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: const Icon(Icons.history),
             tooltip: 'History',
             onPressed: () {
+              if (ref
+                  .read(storageServiceProvider)
+                  .getSetting(
+                    AppConstants.hapticFeedbackKey,
+                    defaultValue: true,
+                  )) {
+                HapticFeedback.selectionClick();
+              }
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const ChatHistoryScreen(),
@@ -145,20 +178,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: const Icon(Icons.add_comment_outlined),
             tooltip: 'New Chat',
             onPressed: () {
+              if (ref
+                  .read(storageServiceProvider)
+                  .getSetting(
+                    AppConstants.hapticFeedbackKey,
+                    defaultValue: true,
+                  )) {
+                HapticFeedback.selectionClick();
+              }
               ref.read(chatProvider.notifier).newChat();
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh Models',
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
             onPressed: () {
-              ref.refresh(modelsProvider);
+              if (ref
+                  .read(storageServiceProvider)
+                  .getSetting(
+                    AppConstants.hapticFeedbackKey,
+                    defaultValue: true,
+                  )) {
+                HapticFeedback.selectionClick();
+              }
+              context.push('/settings');
             },
           ),
           IconButton(
             icon: const Icon(Icons.tune),
             tooltip: 'Chat Settings',
             onPressed: () {
+              if (ref
+                  .read(storageServiceProvider)
+                  .getSetting(
+                    AppConstants.hapticFeedbackKey,
+                    defaultValue: true,
+                  )) {
+                HapticFeedback.selectionClick();
+              }
               showDialog(
                 context: context,
                 builder: (context) => const ChatSettingsDialog(),

@@ -81,7 +81,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final storage = ref.watch(storageServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            Navigator.pop(context);
+          },
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -265,6 +274,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             trailing: const Icon(Icons.chevron_right),
             leading: const Icon(Icons.edit_note),
             onTap: () {
+              HapticFeedback.lightImpact();
               context.go('/settings/prompts');
             },
           ),
@@ -283,7 +293,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           'Models',
           trailing: IconButton(
             icon: const Icon(Icons.refresh, size: 20),
-            onPressed: () => ref.refresh(modelsProvider),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              ref.refresh(modelsProvider);
+            },
             style: IconButton.styleFrom(
               backgroundColor: theme.colorScheme.primaryContainer,
               padding: const EdgeInsets.all(8),
@@ -399,6 +412,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: theme.colorScheme.error,
                           ),
                           onPressed: () async {
+                            HapticFeedback.mediumImpact();
                             await ref
                                 .read(ollamaServiceProvider)
                                 .deleteModel(model.name);
@@ -444,6 +458,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('Auto-save chats'),
                 value: autoSave,
                 onChanged: (val) async {
+                  HapticFeedback.lightImpact();
                   await storage.saveSetting(AppConstants.autoSaveChatsKey, val);
                   setState(() {}); // Rebuild
                 },
@@ -458,6 +473,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
                 onTap: () async {
+                  HapticFeedback.lightImpact();
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (c) => AlertDialog(
@@ -540,6 +556,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ],
                       selected: {themeMode},
                       onSelectionChanged: (Set<ThemeMode> newSelection) {
+                        HapticFeedback.selectionClick();
                         ref
                             .read(themeProvider.notifier)
                             .setThemeMode(newSelection.first);
@@ -556,6 +573,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('Haptic Feedback'),
                 value: haptic,
                 onChanged: (val) async {
+                  if (val) HapticFeedback.lightImpact();
                   await storage.saveSetting(
                     AppConstants.hapticFeedbackKey,
                     val,
@@ -569,6 +587,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 trailing: const Icon(Icons.chevron_right),
                 leading: const Icon(Icons.palette_outlined),
                 onTap: () {
+                  HapticFeedback.lightImpact();
                   context.go('/settings/customization');
                 },
               ),
@@ -591,13 +610,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           child: Column(
             children: [
-              ListTile(
-                title: const Text('App Version'),
-                trailing: Text(
-                  _version,
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ),
+              // ListTile(
+              //   title: const Text('App Version'),
+              //   trailing: Text(
+              //     _version,
+              //     style: const TextStyle(color: Colors.grey),
+              //   ),
+              // ),
               ListTile(
                 title: const Text('Privacy Policy'),
                 leading: const Icon(Icons.privacy_tip_outlined, size: 20),
@@ -633,30 +652,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 leading: const Icon(Icons.book_outlined, size: 20),
                 trailing: const Icon(Icons.chevron_right, size: 20),
                 onTap: () {
+                  HapticFeedback.lightImpact();
                   context.go('/settings/docs');
                 },
               ),
               ListTile(
-                title: const Text('Source Code'),
-                leading: const Icon(Icons.code, size: 20),
-                subtitle: const Text('github.com/PocketLLM/pocketllm-lite'),
-                trailing: const Icon(Icons.open_in_new, size: 20),
-                onTap: () async {
-                  final uri = Uri.parse(
-                    'https://github.com/PocketLLM/pocketllm-lite',
-                  );
-                  if (await canLaunchUrl(uri)) await launchUrl(uri);
-                },
-              ),
-              ListTile(
-                title: const Text('Developer'),
-                leading: const Icon(Icons.person_outline, size: 20),
-                subtitle: const Text('github.com/Mr-Dark-debug'),
-                trailing: const Icon(Icons.open_in_new, size: 20),
-                onTap: () async {
-                  final uri = Uri.parse('https://github.com/Mr-Dark-debug');
-                  if (await canLaunchUrl(uri)) await launchUrl(uri);
-                },
+                title: const Text('Version'),
+                subtitle: Text(_version),
+                leading: const Icon(Icons.verified_outlined, size: 20),
               ),
             ],
           ),

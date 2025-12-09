@@ -43,24 +43,19 @@ To run the AI engine locally on your phone:
 
 ## 💻 Build Instructions
 
-1.  **Clone Repository**:
-    ```bash
-    git clone https://github.com/PocketLLM/pocketllm-lite.git
-    cd pocketllm-lite
-    ```
-2.  **Install Dependencies**:
+1.  **Install Dependencies**:
     ```bash
     flutter pub get
     ```
-3.  **Generate Code** (required for Hive adapters):
+2.  **Generate Code** (required for Hive adapters):
     ```bash
     dart run build_runner build --delete-conflicting-outputs
     ```
-4.  **Run Application**:
+3.  **Run Application**:
     ```bash
     flutter run
     ```
-5.  **Build Release APK**:
+4.  **Build Release APK**:
     ```bash
     flutter build apk --release
     ```
@@ -207,55 +202,17 @@ Custom HTTP client implementation for:
 - **iOS**: Supported with manual Ollama setup
 - **Desktop**: Experimental support via Flutter desktop
 
-## 🤝 Contributing
-
-We welcome contributions to Pocket LLM Lite! Here's how you can help:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-Please ensure your code follows the existing style and includes appropriate tests.
-
-## 🐛 Known Issues
-
-- iOS requires manual Ollama setup (no Termux equivalent)
-- Large model downloads may timeout on slower connections
-- Some advanced Ollama options are not yet exposed in the UI
-
-## 🔄 Future Enhancements
-
-- Voice input/output capabilities
-- Plugin system for extending functionality
-- Desktop application with enhanced features
-- Multi-modal output (image generation, etc.)
-
 ## 📜 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 The MIT License is a permissive open-source license that allows for commercial use, modification, distribution, and patent use, with the only requirement being that the original copyright notice and license text be included in all copies or substantial portions of the software.
 
-### Third-party Licenses
-
-Pocket LLM Lite uses several open-source packages under various licenses:
-
-- **Flutter**: BSD-style license
-- **Riverpod**: MIT License
-- **Hive**: Apache License 2.0
-- **http**: BSD-style license
-- **go_router**: BSD-style license
-
-For complete license texts of dependencies, please refer to the respective package repositories.
-
 ## 📞 Support
 
 For support, feature requests, or bug reports, please:
-1. Check existing issues on GitHub
-2. Create a new issue with detailed information
-3. Include your platform, Flutter version, and steps to reproduce
+1. Contact the development team
+2. Include your platform, Flutter version, and steps to reproduce
 
 ## 🙏 Acknowledgments
 

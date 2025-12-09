@@ -75,7 +75,7 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                     style: TextStyle(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? Colors.white
-                          : Colors.black,
+                          : Colors.black, // Explicit black in light mode
                       fontSize: 16,
                     ),
                     items: [
@@ -84,14 +84,25 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                         child: Text(
                           'None (Default)',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black, // No pink, use black/white
                           ),
                         ),
                       ),
                       ...prompts.map(
                         (p) => DropdownMenuItem(
                           value: p.id,
-                          child: Text(p.title, overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            p.title, 
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black, // Ensure black text in light mode
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -114,7 +125,12 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
                   'Applying this will set the system prompt context for this chat.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 12, 
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.grey[400] 
+                        : Colors.grey[700]
+                  ),
                 ),
               ),
 
@@ -126,7 +142,14 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                   'Temperature',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text(_temp.toStringAsFixed(1)),
+                Text(
+                  _temp.toStringAsFixed(1),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                ),
               ],
             ),
             Slider(
@@ -135,6 +158,10 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               max: 2.0,
               divisions: 20,
               label: _temp.toStringAsFixed(1),
+              activeColor: Colors.blue, // Remove pink, use blue
+              inactiveColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey[700]
+                  : Colors.grey[300],
               onChanged: (val) {
                 final storageRef = ref.read(storageServiceProvider);
                 if (storageRef.getSetting(
@@ -148,9 +175,14 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                 setState(() => _temp = val);
               },
             ),
-            const Text(
+            Text(
               'Controls randomness. Higher = more creative.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12, 
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.grey[400] 
+                    : Colors.grey[700]
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -161,7 +193,14 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                   'Top P',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text(_topP.toStringAsFixed(1)),
+                Text(
+                  _topP.toStringAsFixed(1),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                ),
               ],
             ),
             Slider(
@@ -170,6 +209,10 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               max: 1.0,
               divisions: 10,
               label: _topP.toStringAsFixed(1),
+              activeColor: Colors.blue, // Remove pink, use blue
+              inactiveColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey[700]
+                  : Colors.grey[300],
               onChanged: (val) {
                 final storageRef = ref.read(storageServiceProvider);
                 if (storageRef.getSetting(
@@ -183,9 +226,42 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                 setState(() => _topP = val);
               },
             ),
-            const Text(
+            Text(
               'Controls diversity via nucleus sampling.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12, 
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.grey[400] 
+                    : Colors.grey[700]
+              ),
+            ),
+            const SizedBox(height: 16),
+            Consumer(
+              builder: (context, ref, child) {
+                final storage = ref.watch(storageServiceProvider);
+                final hapticEnabled = storage.getSetting(
+                  AppConstants.hapticFeedbackKey,
+                  defaultValue: true,
+                );
+                return SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text(
+                    'Haptic Feedback',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text('Vibrate on interactions and typing'),
+                  value: hapticEnabled,
+                  activeColor: Colors.blue, // Remove pink, use blue
+                  onChanged: (value) async {
+                    if (value) HapticFeedback.lightImpact();
+                    await storage.saveSetting(
+                      AppConstants.hapticFeedbackKey,
+                      value,
+                    );
+                    setState(() {});
+                  },
+                );
+              },
             ),
           ],
         ),
@@ -194,7 +270,9 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           style: TextButton.styleFrom(
-            foregroundColor: Colors.grey,
+            foregroundColor: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black, // Cancel button in black in light mode
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           child: const Text('Cancel'),
@@ -231,7 +309,7 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
             Navigator.pop(context);
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).primaryColor,
+            backgroundColor: Colors.blue, // Explicitly blue
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             elevation: 2,

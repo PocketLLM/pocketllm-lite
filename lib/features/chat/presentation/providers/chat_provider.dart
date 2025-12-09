@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/providers.dart';
@@ -141,7 +142,12 @@ class ChatNotifier extends Notifier<ChatState> {
             .systemPrompt, // We pass system string, service handles it (conceptually)
       );
 
+      final hapticEnabled = ref
+          .read(storageServiceProvider)
+          .getSetting(AppConstants.hapticFeedbackKey, defaultValue: true);
+
       await for (final chunk in stream) {
+        if (hapticEnabled) HapticFeedback.lightImpact();
         assistantContent += chunk;
 
         final updatedMessages = List<ChatMessage>.from(state.messages);

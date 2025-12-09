@@ -56,7 +56,13 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   });
                 },
               )
-            : const BackButton(), // Defaults to back arrow
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.pop(context);
+                },
+              ),
       ),
       body: Column(
         children: [

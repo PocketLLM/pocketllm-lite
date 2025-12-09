@@ -93,116 +93,138 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isGenerating = ref.watch(chatProvider.select((s) => s.isGenerating));
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            offset: const Offset(0, -2),
-          ),
-        ],
+        color: theme.colorScheme.surface, // Background of the bar area
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_selectedImages.isNotEmpty)
-            Container(
-              height: 70,
-              padding: const EdgeInsets.only(bottom: 8),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _selectedImages.length,
-                itemBuilder: (c, i) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.memory(
-                          base64Decode(_selectedImages[i]),
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F2F5),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDark ? Colors.grey[800]! : Colors.transparent,
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_selectedImages.isNotEmpty)
+              Container(
+                height: 70,
+                padding: const EdgeInsets.only(bottom: 8, top: 8),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedImages.length,
+                  itemBuilder: (c, i) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            base64Decode(_selectedImages[i]),
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                          ),
                         ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedImages.removeAt(i)),
-                          child: Container(
-                            color: Colors.black54,
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 16,
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: GestureDetector(
+                            onTap: () =>
+                                setState(() => _selectedImages.removeAt(i)),
+                            child: CircleAvatar(
+                              radius: 10,
+                              backgroundColor: Colors.black54,
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 12,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
+              ),
+            TextField(
+              controller: _controller,
+              enabled: !isGenerating,
+              textCapitalization: TextCapitalization.sentences,
+              keyboardType: TextInputType.multiline,
+              maxLines: 8,
+              minLines: 1,
+              style: theme.textTheme.bodyLarge,
+              decoration: InputDecoration(
+                hintText: 'Message Pocket LLM...',
+                hintStyle: TextStyle(
+                  color: theme.hintColor.withValues(alpha: 0.7),
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.add_photo_alternate_outlined),
-                onPressed: isGenerating ? null : _pickImage,
-                color: theme.colorScheme.secondary,
-              ),
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  enabled: !isGenerating,
-                  textCapitalization: TextCapitalization.sentences,
-                  keyboardType: TextInputType.multiline,
-                  maxLines: 5,
-                  minLines: 1,
-                  decoration: InputDecoration(
-                    hintText: 'Message Pocket LLM...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  onPressed: isGenerating ? null : _pickImage,
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark ? Colors.grey[800] : Colors.grey[300],
                     ),
-                    filled: true,
-                    fillColor: theme.colorScheme.surfaceContainerHighest,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
+                    child: Icon(
+                      Icons.add,
+                      size: 20,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
+                  tooltip: 'Add Image',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-              ),
-              const SizedBox(width: 8),
-              CircleAvatar(
-                backgroundColor: isGenerating
-                    ? Colors.grey
-                    : theme.colorScheme.primary,
-                child: IconButton(
-                  icon: isGenerating
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
+                Container(
+                  decoration: BoxDecoration(
+                    color: isGenerating
+                        ? Colors.grey
+                        : theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    onPressed: isGenerating ? null : _send,
+                    icon: isGenerating
+                        ? SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation(Colors.white),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.arrow_upward,
                             color: Colors.white,
-                            strokeWidth: 2,
+                            size: 20,
                           ),
-                        )
-                      : const Icon(Icons.send_rounded, color: Colors.white),
-                  onPressed: isGenerating ? null : _send,
+                    tooltip: 'Send',
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
