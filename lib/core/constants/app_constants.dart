@@ -18,4 +18,12 @@ class AppConstants {
   static const String aiMsgColorKey = 'ai_msg_color';
   static const String bubbleRadiusKey = 'bubble_radius';
   static const String fontSizeKey = 'font_size';
+
+  // New Appearance Keys
+  static const String chatPaddingKey = 'chat_padding';
+  static const String showAvatarsKey = 'show_avatars';
+  static const String bubbleElevationKey =
+      'bubble_elevation'; // Use boolean or double?
+  static const String msgOpacityKey = 'msg_opacity';
+  static const String customBgColorKey = 'custom_bg_color'; // Optional
 }

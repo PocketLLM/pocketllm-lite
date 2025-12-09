@@ -8,7 +8,6 @@ import '../../../settings/presentation/providers/appearance_provider.dart';
 
 class ChatBubble extends ConsumerWidget {
   final ChatMessage message;
-
   const ChatBubble({super.key, required this.message});
 
   @override
@@ -16,14 +15,32 @@ class ChatBubble extends ConsumerWidget {
     final isUser = message.role == 'user';
     final theme = Theme.of(context);
     final appearance = ref.watch(appearanceProvider);
+
+    // Appearance Values
     final bubbleColor = isUser
-        ? Color(appearance.userMsgColor)
-        : Color(appearance.aiMsgColor);
+        ? Color(
+            appearance.userMsgColor,
+          ).withValues(alpha: appearance.msgOpacity)
+        : Color(appearance.aiMsgColor).withValues(alpha: appearance.msgOpacity);
     final radius = appearance.bubbleRadius;
     final fontSize = appearance.fontSize;
+    final padding = appearance.chatPadding; // Use as internal padding
+    final showAvatars = appearance.showAvatars;
+    final hasElevation = appearance.bubbleElevation;
+
+    // Text Color logic: ideally adjust based on background luminance
+    // For now assuming user=white, ai=onSurfaceVariant if light, white if dark bubble
+    // But since colors are custom, we should probably check luminance or stick to simple logic
+    // For this task, keeping existing logic but maybe forcing white if custom color is dark?
+    // Let's stick to existing text style logic for now to avoid breaking changes,
+    // but maybe ensure contrast if possible.
+    // The user requirement didn't explicitly ask for contrast calculation, so I'll leave it simple.
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 4,
+      ), // Fixed vertical spacing between bubbles
       child: Row(
         mainAxisAlignment: isUser
             ? MainAxisAlignment.end
@@ -31,17 +48,21 @@ class ChatBubble extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) ...[
-            const CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.transparent,
-              child: Icon(
-                Icons.auto_awesome,
-                color: Colors.purpleAccent,
-                size: 24,
+            if (showAvatars) ...[
+              const CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.transparent,
+                child: Icon(
+                  Icons.auto_awesome,
+                  color: Colors.purpleAccent,
+                  size: 24,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
+              const SizedBox(width: 8),
+            ] else
+              const SizedBox(width: 0), // No avatar space
           ],
+
           Expanded(
             flex: 0,
             child: GestureDetector(
@@ -50,7 +71,7 @@ class ChatBubble extends ConsumerWidget {
                 _showMessageMenu(context, message);
               },
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(padding),
                 constraints: BoxConstraints(
                   maxWidth: MediaQuery.of(context).size.width * 0.75,
                 ),
@@ -60,6 +81,15 @@ class ChatBubble extends ConsumerWidget {
                     bottomRight: isUser ? const Radius.circular(0) : null,
                     bottomLeft: !isUser ? const Radius.circular(0) : null,
                   ),
+                  boxShadow: hasElevation
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 2,
+                            offset: const Offset(0, 1),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,8 +140,13 @@ class ChatBubble extends ConsumerWidget {
             ),
           ),
           if (isUser) ...[
-            const SizedBox(width: 8),
-            const CircleAvatar(radius: 16, child: Icon(Icons.person, size: 20)),
+            if (showAvatars) ...[
+              const SizedBox(width: 8),
+              const CircleAvatar(
+                radius: 16,
+                child: Icon(Icons.person, size: 20),
+              ),
+            ],
           ],
         ],
       ),
