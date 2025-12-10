@@ -67,7 +67,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
     
     // Refresh the models provider
-    ref.refresh(modelsProvider);
+    ref.invalidate(modelsProvider);
     
     // Small delay to ensure UI updates
     await Future.delayed(const Duration(milliseconds: 500));
@@ -125,7 +125,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     // Test again
     await _checkConnection();
-    ref.refresh(modelsProvider);
+    ref.invalidate(modelsProvider);
   }
 
   @override
@@ -133,8 +133,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final theme = Theme.of(context);
     final storage = ref.watch(storageServiceProvider);
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) async {
         // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
         if (GoRouter.of(context).canPop()) {
           context.pop();
@@ -142,7 +142,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // If we can't pop, go to the chat screen directly
           context.go('/chat');
         }
-        return false; // We handle the pop ourselves
       },
       child: Scaffold(
         appBar: AppBar(
@@ -240,7 +239,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: theme.colorScheme.outlineVariant),
           ),
@@ -258,8 +257,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: (_isConnected ?? false)
-                          ? Colors.green.withOpacity(0.2)
-                          : Colors.red.withOpacity(0.2),
+                          ? Colors.green.withValues(alpha: 0.2)
+                          : Colors.red.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -377,7 +376,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Prompts'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: ListTile(
@@ -438,12 +437,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 final storage = ref.watch(storageServiceProvider);
                 final defaultModel =
                     storage.getSetting(AppConstants.defaultModelKey) ?? '';
-                final isDefault = defaultModel == model.name;
 
                 return Container(
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerHighest
-                        .withOpacity(0.3),
+                        .withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: ListTile(
@@ -466,7 +464,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.2),
+                              color: Colors.blue.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Row(
@@ -543,6 +541,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ],
                     ),
+
                   ),
                 );
               },
@@ -569,7 +568,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Prompt Enhancer'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Theme(
@@ -615,7 +614,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
+                      color: Colors.blue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -689,7 +688,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.blue.withOpacity(0.2),
+                                          color: Colors.blue.withValues(alpha: 0.2),
                                           borderRadius: BorderRadius.circular(
                                             4,
                                           ),
@@ -769,7 +768,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   filled: true,
                   fillColor: Theme.of(
                     context,
-                  ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                 ),
                 style: const TextStyle(fontSize: 13),
               ),
@@ -777,7 +776,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -832,7 +831,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1110,7 +1109,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Chats & Storage'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1188,7 +1187,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Appearance'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1266,7 +1265,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('About'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
