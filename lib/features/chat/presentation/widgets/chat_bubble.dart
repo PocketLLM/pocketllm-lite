@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
+import 'three_dot_loading_indicator.dart';
 
 // Helper class for formatting timestamps
 class TimestampFormatter {
@@ -58,8 +59,39 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final radius = appearance.bubbleRadius;
     final fontSize = appearance.fontSize;
     final padding = appearance.chatPadding;
-    final showAvatars = appearance.showAvatars;
     final hasElevation = appearance.bubbleElevation;
+
+    // Show loading indicator for empty assistant messages (AI is generating)
+    if (!isUser && message.content.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: bubbleColor,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: hasElevation
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: const ThreeDotLoadingIndicator(
+                color: Colors.white,
+                size: 6.0,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -69,19 +101,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
             : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isUser && showAvatars) ...[
-            const CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.transparent,
-              child: Icon(
-                Icons.auto_awesome,
-                color: Colors.purpleAccent,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-
           Flexible(
             child: GestureDetector(
               onLongPress: () {
@@ -182,10 +201,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               ),
             ),
           ),
-          if (isUser && showAvatars) ...[
-            const SizedBox(width: 8),
-            const CircleAvatar(radius: 16, child: Icon(Icons.person, size: 20)),
-          ],
         ],
       ),
     );
