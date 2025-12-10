@@ -13,6 +13,11 @@ class AdService {
   RewardedAd? _rewardedAd;
   bool _isBannerLoaded = false;
   bool _isRewardedLoaded = false;
+  
+  // Add preload management
+  bool _isPreloadingRewardedAd = false;
+  int _rewardedAdRetryCount = 0;
+  static const int maxRetryAttempts = 3;
 
   bool get isBannerLoaded => _isBannerLoaded;
   bool get isRewardedLoaded => _isRewardedLoaded;
@@ -89,7 +94,66 @@ class AdService {
     await _bannerAd?.load();
   }
 
-  /// Load a rewarded ad
+  /// Proactive rewarded ad preloading with retry mechanism
+  Future<void> preloadRewardedAd() async {
+    // Prevent multiple simultaneous preload attempts
+    if (_isPreloadingRewardedAd) return;
+    
+    // If we already have a loaded ad, don't preload another one
+    if (_rewardedAd != null && _isRewardedLoaded) return;
+    
+    _isPreloadingRewardedAd = true;
+    
+    try {
+      if (!await hasInternetConnection()) {
+        _isPreloadingRewardedAd = false;
+        return;
+      }
+
+      await RewardedAd.load(
+        adUnitId: _rewardedAdUnitId,
+        request: const AdRequest(),
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) {
+            // Dispose of any existing ad before setting the new one
+            _rewardedAd?.dispose();
+            
+            _rewardedAd = ad;
+            _isRewardedLoaded = true;
+            _isPreloadingRewardedAd = false;
+            _rewardedAdRetryCount = 0; // Reset retry count on success
+            
+            if (kDebugMode) {
+              // Removed debug print to avoid exposing information in production
+            }
+          },
+          onAdFailedToLoad: (error) {
+            _isRewardedLoaded = false;
+            _isPreloadingRewardedAd = false;
+            
+            // Implement retry mechanism
+            if (_rewardedAdRetryCount < maxRetryAttempts) {
+              _rewardedAdRetryCount++;
+              // Retry after a short delay
+              Future.delayed(const Duration(seconds: 2), preloadRewardedAd);
+            }
+            
+            if (kDebugMode) {
+              // Removed debug print to avoid exposing information in production
+            }
+          },
+        ),
+      );
+    } catch (e) {
+      _isPreloadingRewardedAd = false;
+      if (_rewardedAdRetryCount < maxRetryAttempts) {
+        _rewardedAdRetryCount++;
+        Future.delayed(const Duration(seconds: 2), preloadRewardedAd);
+      }
+    }
+  }
+
+  /// Load a rewarded ad (fallback method)
   Future<void> loadRewardedAd({
     Function()? onLoaded,
     Function(String)? onFailed,
@@ -133,11 +197,14 @@ class AdService {
       return false;
     }
 
+    // If no ad is loaded, try to preload one immediately
     if (_rewardedAd == null || !_isRewardedLoaded) {
       // Try to load first
       await loadRewardedAd();
       if (_rewardedAd == null) {
         onFailed?.call('Ad not ready. Please try again.');
+        // Start preloading for next time
+        preloadRewardedAd();
         return false;
       }
     }
@@ -149,13 +216,15 @@ class AdService {
         _isRewardedLoaded = false;
         onAdDismissed?.call();
         // Preload the next ad
-        loadRewardedAd();
+        preloadRewardedAd();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         ad.dispose();
         _rewardedAd = null;
         _isRewardedLoaded = false;
         onFailed?.call(error.message);
+        // Preload the next ad
+        preloadRewardedAd();
       },
     );
 
@@ -181,5 +250,7 @@ class AdService {
     _rewardedAd?.dispose();
     _rewardedAd = null;
     _isRewardedLoaded = false;
+    _isPreloadingRewardedAd = false;
+    _rewardedAdRetryCount = 0;
   }
 }

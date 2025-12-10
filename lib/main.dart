@@ -18,6 +18,9 @@ void main() async {
 
   // Initialize AdMob
   await AdService.initialize();
+  
+  // Preload rewarded ad in background
+  AdService().preloadRewardedAd();
 
   FlutterNativeSplash.remove();
 
