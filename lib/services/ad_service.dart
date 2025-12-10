@@ -22,7 +22,7 @@ class AdService {
   static Future<void> initialize() async {
     await MobileAds.instance.initialize();
     if (kDebugMode) {
-      print('AdMob initialized successfully');
+      // Removed debug print to avoid exposing information in production
     }
   }
 
@@ -71,13 +71,17 @@ class AdService {
         onAdLoaded: (ad) {
           _isBannerLoaded = true;
           onLoaded?.call();
-          if (kDebugMode) print('Banner ad loaded');
+          if (kDebugMode) {
+            // Removed debug print to avoid exposing information in production
+          }
         },
         onAdFailedToLoad: (ad, error) {
           _isBannerLoaded = false;
           ad.dispose();
           onFailed?.call(error.message);
-          if (kDebugMode) print('Banner ad failed: ${error.message}');
+          if (kDebugMode) {
+            // Removed debug print to avoid exposing information in production
+          }
         },
       ),
     );
@@ -103,12 +107,16 @@ class AdService {
           _rewardedAd = ad;
           _isRewardedLoaded = true;
           onLoaded?.call();
-          if (kDebugMode) print('Rewarded ad loaded');
+          if (kDebugMode) {
+            // Removed debug print to avoid exposing information in production
+          }
         },
         onAdFailedToLoad: (error) {
           _isRewardedLoaded = false;
           onFailed?.call(error.message);
-          if (kDebugMode) print('Rewarded ad failed: ${error.message}');
+          if (kDebugMode) {
+            // Removed debug print to avoid exposing information in production
+          }
         },
       ),
     );

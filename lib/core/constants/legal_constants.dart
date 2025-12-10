@@ -11,13 +11,15 @@ We emphasize that Pocket LLM Lite is built with privacy as the core principle: *
 #### 1. Information We Collect
 Since Pocket LLM Lite operates entirely offline and locally on your device, we do not collect any personal information from you. However, for transparency, here are the types of data handled **exclusively on your device**:
 
-- **Chat History and Messages:** Text messages, timestamps, and any attached images (if using vision-capable models) that you input or generate during AI chats. These are stored locally in an encrypted Hive database in your app's private storage directory.
+- **Chat History and Messages:** Text messages, timestamps, and any attached images (if using vision-capable models) that you input or generate during AI chats. These are stored locally in secure local Hive databases (on-device storage; encryption available via device settings) in your app's private storage directory.
   
 - **Model and Settings Data:** Ollama endpoint URLs (e.g., http://localhost:11434), selected AI models, theme preferences, font sizes, and haptic feedback settings. These are stored using shared_preferences or Hive, all on-device.
 
 - **Device Information (Local Only):** The app may access basic device permissions for functionality, such as camera/gallery for image uploads (via image_picker) or storage for saving chats. No device identifiers (e.g., IP address, advertising ID) are collected or used.
 
 - **Image Data:** If you upload images for vision models, they are converted to base64 strings and appended to local prompts. Images are processed in-memory or via temporary files, which are deleted immediately after use. Base64 strings may be stored in chat history for thumbnail persistence, but this is optional and controlled by you.
+
+Data is stored locally in app sandbox—no encryption by default, but protected by device security.
 
 We do **not** collect:
 - Personal identifiers like name, email, phone number, or location.
@@ -57,7 +59,7 @@ To exercise rights, use in-app tools or contact us (see Section 10).
 
 #### 6. Data Security
 We prioritize security:
-- Data is stored in encrypted local databases (Hive with encryption enabled where possible).
+- Data is stored in secure local Hive databases (on-device storage; encryption available via device settings).
 - Access controls: App data is sandboxed per Android/iOS standards.
 - Images and prompts are processed in-memory to minimize exposure.
 - However, no system is 100% secure—protect your device with passwords and avoid rooting/jailbreaking.
@@ -95,6 +97,8 @@ This policy is provided for informational purposes and is not legal advice. Cons
 
 Pocket LLM Lite is a free, open-source, privacy-first mobile application built with Flutter for Android and iOS devices. It empowers users to run AI chat conversations entirely offline on their local devices, without any data leaving the phone. By integrating with Ollama (an open-source local inference engine) via Termux, the app allows you to load and interact with large language models (LLMs) like Llama, Mistral, or vision-capable models like Llava—right in your pocket.
 
+The app uses HTTP for local Ollama communication (localhost:11434) only—no external data sent. Safe for on-device use.
+
 #### Our Motive and Vision
 In an era where AI tools often rely on cloud servers, raising concerns about data privacy, surveillance, and internet dependency, Pocket LLM Lite was created to democratize AI access while prioritizing user control. The core motive is to provide a **100% local, offline AI companion** that respects your privacy: no tracking, no data sharing, no subscriptions. Whether you're a student experimenting with AI, a professional needing quick offline insights, or someone in a low-connectivity area, this app puts powerful AI in your hands without compromising security.
 
@@ -117,8 +121,32 @@ The project started as a personal tool by Prashant C to explore local AI on mobi
 - State Management: Riverpod with code generation.
 - Local Storage: Hive for chats, shared_preferences for settings.
 - Dependencies: http for Ollama API, image_picker for uploads, etc.
-- Dependencies: http for Ollama API, image_picker for uploads, etc.
 - Compatibility: Requires Termux and Ollama installed on-device.
+
+#### Third-Party Licenses
+- flutter_riverpod: MIT - https://pub.dev/packages/flutter_riverpod/license
+- hive_flutter: Apache 2.0 - https://pub.dev/packages/hive_flutter/license
+- http: BSD-3-Clause - https://pub.dev/packages/http/license
+- image_picker: BSD-3-Clause - https://pub.dev/packages/image_picker/license
+- intl: BSD-3-Clause - https://pub.dev/packages/intl/license
+- shared_preferences: BSD-3-Clause - https://pub.dev/packages/shared_preferences/license
+- path_provider: BSD-3-Clause - https://pub.dev/packages/path_provider/license
+- permission_handler: MIT - https://pub.dev/packages/permission_handler/license
+- go_router: BSD-3-Clause - https://pub.dev/packages/go_router/license
+- google_fonts: Apache 2.0 - https://pub.dev/packages/google_fonts/license
+- flutter_markdown: BSD-3-Clause - https://pub.dev/packages/flutter_markdown/license
+- package_info_plus: BSD-3-Clause - https://pub.dev/packages/package_info_plus/license
+- uuid: MIT - https://pub.dev/packages/uuid/license
+- transparent_image: MIT - https://pub.dev/packages/transparent_image/license
+- flutter_native_splash: MIT - https://pub.dev/packages/flutter_native_splash/license
+- url_launcher: BSD-3-Clause - https://pub.dev/packages/url_launcher/license
+- hive: Apache 2.0 - https://pub.dev/packages/hive/license
+- flutter_colorpicker: MIT - https://pub.dev/packages/flutter_colorpicker/license
+- share_plus: BSD-3-Clause - https://pub.dev/packages/share_plus/license
+- google_mobile_ads: Apache 2.0 - https://pub.dev/packages/google_mobile_ads/license
+- connectivity_plus: BSD-3-Clause - https://pub.dev/packages/connectivity_plus/license
+
+For a complete list of dependencies and their licenses, see the licenses.txt file included with the app.
 
 #### Community and Contributions
 We encourage users to contribute via GitHub issues or pull requests. Report bugs, suggest features, or help with documentation. This app is a community-driven project—your feedback shapes its future!

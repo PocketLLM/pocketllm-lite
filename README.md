@@ -55,10 +55,68 @@ To run the AI engine locally on your phone:
     ```bash
     flutter run
     ```
-4.  **Build Release APK**:
+4.  **Build Release APK** (with ProGuard & Dart obfuscation):
     ```bash
-    flutter build apk --release
+    # Windows
+    build_release.bat
+    
+    # Linux/macOS
+    chmod +x build_release.sh && ./build_release.sh
+    
+    # Or manually:
+    flutter build apk --release --obfuscate --split-debug-info=./debug_symbols
     ```
+
+## 🔒 Security (ProGuard & Obfuscation)
+
+The app uses ProGuard/R8 for Android and Dart obfuscation for enhanced security:
+
+### What's Enabled
+- **Code Shrinking**: Removes unused code, reducing APK size
+- **Optimization**: Optimizes bytecode for better performance
+- **Obfuscation**: Renames classes and methods to make reverse-engineering harder
+- **Resource Shrinking**: Removes unused resources
+
+### Custom ProGuard Rules
+Edit `android/app/proguard-rules.pro` to add custom keep rules if needed.
+
+### Debug Symbols
+The `debug_symbols/` folder contains symbol files for deobfuscating crash reports:
+```bash
+# To symbolicate a stack trace
+flutter symbolize -i <crash_log> -d debug_symbols/
+```
+
+**Important**: Keep the `debug_symbols/` folder for each release to debug production crashes.
+
+## 🔐 Security Fixes
+
+Recent security improvements have been implemented to ensure compliance with Google Play Store policies:
+
+### Debug Logging Removal
+- All debug print statements have been removed or guarded with `kDebugMode` checks
+- No sensitive information is exposed in production builds
+
+### Privacy Policy Updates
+- Clarified that data is stored in secure local Hive databases (on-device storage)
+- Added note that data is stored locally in app sandbox with no encryption by default, but protected by device security
+- Added information that the app uses HTTP for local Ollama communication (localhost:11434) only—no external data sent
+
+### Network Documentation
+- Added clarification that the app uses HTTP for local Ollama communication (localhost:11434) only—no external data sent
+
+### App Signing Fix
+- Implemented proper release signing configuration with keystore.properties template
+- Added fallback to debug signing for development environments
+- Signing configuration loads from keystore.properties if exists, otherwise falls back to debug for dev
+
+### Permissions Review
+- Explicitly declared only needed permissions: INTERNET (for ads/Ollama), CAMERA, and READ_EXTERNAL_STORAGE (for images)
+- Removed any implicit permissions
+
+### License Compliance
+- Added Third-Party Licenses section listing all dependencies with links
+- Added command to generate licenses.txt: `flutter pub deps --style=compact > licenses.txt`
 
 ## 🏗 Architecture & Tech Stack
 

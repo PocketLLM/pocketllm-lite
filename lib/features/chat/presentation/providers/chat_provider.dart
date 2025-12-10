@@ -175,8 +175,7 @@ class ChatNotifier extends Notifier<ChatState> {
       // Consume tokens
       await ref.read(usageLimitsProvider.notifier).consumeTokens(totalTokens);
     } catch (e) {
-      // Normally show snackbar or add error message
-      // print(e);
+      // Removed debug print to avoid exposing information in production
     } finally {
       state = state.copyWith(isGenerating: false);
       _saveSession();
