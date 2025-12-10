@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers.dart';
-import '../../../services/ad_service.dart';
 import '../../../services/usage_limits_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/models_provider.dart';
@@ -24,58 +22,16 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
-  final AdService _adService = AdService();
-  bool _isTopBannerLoaded = false;
-  bool _isBottomBannerLoaded = false;
-  BannerAd? _topBannerAd;
-  BannerAd? _bottomBannerAd;
 
   @override
   void initState() {
     super.initState();
-    _loadBannerAds();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    _topBannerAd?.dispose();
-    _bottomBannerAd?.dispose();
     super.dispose();
-  }
-
-  void _loadBannerAds() {
-    // Top banner
-    _topBannerAd = BannerAd(
-      adUnitId: AppConstants.bannerAdUnitId,
-      size: AdSize.banner,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (mounted) setState(() => _isTopBannerLoaded = true);
-        },
-        onAdFailedToLoad: (ad, error) {
-          ad.dispose();
-          if (mounted) setState(() => _isTopBannerLoaded = false);
-        },
-      ),
-    )..load();
-
-    // Bottom banner
-    _bottomBannerAd = BannerAd(
-      adUnitId: AppConstants.bannerAdUnitId,
-      size: AdSize.banner,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (mounted) setState(() => _isBottomBannerLoaded = true);
-        },
-        onAdFailedToLoad: (ad, error) {
-          ad.dispose();
-          if (mounted) setState(() => _isBottomBannerLoaded = false);
-        },
-      ),
-    )..load();
   }
 
   void _scrollToBottom() {
@@ -292,14 +248,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Column(
         children: [
-          // Top Banner Ad
-          if (_isTopBannerLoaded && _topBannerAd != null)
-            Container(
-              alignment: Alignment.center,
-              width: double.infinity,
-              height: 50,
-              child: AdWidget(ad: _topBannerAd!),
-            ),
           Expanded(
             child: chatState.messages.isEmpty
                 ? Center(
@@ -335,16 +283,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
           ),
           const ChatInput(),
-          // Bottom Banner Ad
-          if (_isBottomBannerLoaded && _bottomBannerAd != null)
-            SafeArea(
-              child: Container(
-                alignment: Alignment.center,
-                width: double.infinity,
-                height: 50,
-                child: AdWidget(ad: _bottomBannerAd!),
-              ),
-            ),
         ],
       ),
     );
@@ -389,44 +327,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
 
     if (result == true && mounted) {
-      if (!await _adService.hasInternetConnection()) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Connect to WiFi/Data to watch ad and unlock.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
+      // Since we've removed ads from the chat screen, we'll redirect to settings
+      // where users can watch an ad to unlock more chats
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please go to Settings to watch an ad and unlock more chats'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+        
+        // Optionally navigate to settings
+        // Future.microtask(() => context.push('/settings'));
       }
-
-      await _adService.showRewardedAd(
-        onUserEarnedReward: (reward) async {
-          await ref
-              .read(usageLimitsProvider.notifier)
-              .addChatCredits(AppConstants.chatsPerAdWatch);
-          if (mounted) {
-            HapticFeedback.heavyImpact();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Unlocked 5 more chats!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-        onFailed: (error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Ad failed: $error'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-      );
     }
   }
 }

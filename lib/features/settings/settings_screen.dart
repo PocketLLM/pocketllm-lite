@@ -28,6 +28,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _version = 'Loading...';
   bool _isConnecting = false;
   bool? _isConnected;
+  bool _isRefreshingModels = false; // Add this to track refresh state
 
   // Banner Ad
   final AdService _adService = AdService();
@@ -45,6 +46,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _loadVersion();
     _checkConnection();
     _loadBannerAd();
+    
+    // Automatically refresh usage limits and models when settings page is opened
+    // Use Future.delayed to avoid modifying providers during widget build
+    Future.delayed(Duration.zero, () {
+      _refreshUsageLimits();
+      _refreshModels();
+    });
+  }
+
+  // Add this method to refresh usage limits
+  void _refreshUsageLimits() {
+    ref.read(usageLimitsProvider.notifier).reload();
+  }
+
+  // Add this method to refresh models
+  Future<void> _refreshModels() async {
+    setState(() {
+      _isRefreshingModels = true;
+    });
+    
+    // Refresh the models provider
+    ref.refresh(modelsProvider);
+    
+    // Small delay to ensure UI updates
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (mounted) {
+      setState(() {
+        _isRefreshingModels = false;
+      });
+    }
   }
 
   @override
@@ -101,45 +133,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final theme = Theme.of(context);
     final storage = ref.watch(storageServiceProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            HapticFeedback.selectionClick();
-            Navigator.pop(context);
-          },
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildConnectionSection(theme),
-                const SizedBox(height: 24),
-                _buildPromptSection(theme),
-                const SizedBox(height: 24),
-                _buildModelsSection(theme),
-                const SizedBox(height: 24),
-                _buildPromptEnhancerSection(theme),
-                const SizedBox(height: 24),
-                _buildUsageLimitsSection(theme),
-                const SizedBox(height: 24),
-                _buildStorageSection(theme, storage),
-                const SizedBox(height: 24),
-                _buildAppearanceSection(theme, storage),
-                const SizedBox(height: 24),
-                _buildAboutSection(theme),
-                const SizedBox(height: 60), // Space for banner
-              ],
-            ),
+    return WillPopScope(
+      onWillPop: () async {
+        // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+        if (GoRouter.of(context).canPop()) {
+          context.pop();
+        } else {
+          // If we can't pop, go to the chat screen directly
+          context.go('/chat');
+        }
+        return false; // We handle the pop ourselves
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Settings'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+              if (GoRouter.of(context).canPop()) {
+                context.pop();
+              } else {
+                // If we can't pop, go to the chat screen directly
+                context.go('/chat');
+              }
+            },
           ),
-          // Banner Ad at bottom
-          _buildBannerAd(),
-        ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _buildConnectionSection(theme),
+                  const SizedBox(height: 24),
+                  _buildPromptSection(theme),
+                  const SizedBox(height: 24),
+                  _buildModelsSection(theme),
+                  const SizedBox(height: 24),
+                  _buildPromptEnhancerSection(theme),
+                  const SizedBox(height: 24),
+                  _buildUsageLimitsSection(theme),
+                  const SizedBox(height: 24),
+                  _buildStorageSection(theme, storage),
+                  const SizedBox(height: 24),
+                  _buildAppearanceSection(theme, storage),
+                  const SizedBox(height: 24),
+                  _buildAboutSection(theme),
+                  const SizedBox(height: 60), // Space for banner
+                ],
+              ),
+            ),
+            // Banner Ad at bottom
+            _buildBannerAd(),
+          ],
+        ),
       ),
     );
   }
@@ -271,6 +321,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ? null
                           : () async {
                               await _saveUrl(); // Save and test
+                              // Also refresh models after connection test
+                              await _refreshModels();
                             },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
@@ -295,7 +347,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => _saveUrl(),
+                      onPressed: () async {
+                        await _saveUrl();
+                        // Also refresh models after saving URL
+                        await _refreshModels();
+                      },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -348,11 +404,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader(
           'Models',
           trailing: IconButton(
-            icon: const Icon(Icons.refresh, size: 20),
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              ref.refresh(modelsProvider);
-            },
+            icon: _isRefreshingModels
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh, size: 20),
+            onPressed: _isRefreshingModels
+                ? null
+                : () async {
+                    HapticFeedback.lightImpact();
+                    await _refreshModels();
+                  },
             style: IconButton.styleFrom(
               backgroundColor: theme.colorScheme.primaryContainer,
               padding: const EdgeInsets.all(8),
@@ -472,7 +536,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             await ref
                                 .read(ollamaServiceProvider)
                                 .deleteModel(model.name);
-                            ref.refresh(modelsProvider);
+                            // Use our refresh method to show loading indicator
+                            await _refreshModels();
                           },
                           visualDensity: VisualDensity.compact,
                         ),
@@ -772,6 +837,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           child: Column(
             children: [
+              // Chat Creation Metrics
+              ListTile(
+                leading: Icon(
+                  Icons.chat_bubble_outline,
+                  color: limits.canCreateFreeChat ? Colors.blue : Colors.red,
+                ),
+                title: Text(
+                  'Chats Created: ${limits.totalChatsCreated}/${AppConstants.freeChatsAllowed}',
+                ),
+                subtitle: limits.canCreateFreeChat
+                    ? null
+                    : const Text(
+                        'Limit reached - Watch ad to unlock more chats',
+                        style: TextStyle(fontSize: 12, color: Colors.red),
+                      ),
+                trailing: !limits.canCreateFreeChat
+                    ? TextButton.icon(
+                        onPressed: () => _watchAdForChats(),
+                        icon: const Icon(Icons.play_circle, size: 18),
+                        label: const Text('Watch Ad'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.blue,
+                        ),
+                      )
+                    : null,
+              ),
+              const Divider(height: 1),
               // Prompt Enhancements
               ListTile(
                 leading: Icon(
@@ -861,6 +953,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.info, size: 16),
+                      onPressed: _showAdsInfoDialog,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                    ),
                   ],
                 ),
               ),
@@ -868,6 +966,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _watchAdForChats() async {
+    HapticFeedback.lightImpact();
+
+    if (!await _adService.hasInternetConnection()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Connect to WiFi/Data to watch ad and unlock.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    await _adService.showRewardedAd(
+      onUserEarnedReward: (reward) async {
+        await ref
+            .read(usageLimitsProvider.notifier)
+            .addChatCredits(AppConstants.chatsPerAdWatch);
+        if (mounted) {
+          HapticFeedback.heavyImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unlocked 5 more chats!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      },
+      onFailed: (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ad failed: $error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
     );
   }
 
@@ -1185,6 +1326,102 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showAdsInfoDialog() {
+    HapticFeedback.lightImpact();
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Why Ads?',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Supporting Development',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Even though Pocket LLM Lite works completely offline, '
+                    'there are still costs associated with developing and maintaining the app:',
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '• Development time and effort',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const Text(
+                    '• Testing across devices and platforms',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const Text(
+                    '• App store fees and platform costs',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const Text(
+                    '• Ongoing maintenance and updates',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Ads help us continue improving the app and adding new features '
+                    'while keeping it free to use. Thank you for your support!',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                  child: const Text('Got it'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

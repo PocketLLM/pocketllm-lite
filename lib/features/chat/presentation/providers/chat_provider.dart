@@ -5,6 +5,7 @@ import '../../../../core/providers.dart';
 import '../../domain/models/chat_message.dart';
 import '../../domain/models/chat_session.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../services/usage_limits_provider.dart';
 
 class ChatState {
   final List<ChatMessage> messages;
@@ -95,6 +96,12 @@ class ChatNotifier extends Notifier<ChatState> {
     );
   }
 
+  /// Estimate tokens from text (rough approximation: words * 1.3)
+  static int _estimateTokens(String text) {
+    final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+    return (words * 1.3).ceil();
+  }
+
   Future<void> sendMessage(String text, {List<String>? images}) async {
     if (state.isGenerating) return;
 
@@ -117,7 +124,7 @@ class ChatNotifier extends Notifier<ChatState> {
           (m) => {
             "role": m.role,
             "content": m.content,
-            if (m.images != null) "images": m.images,
+            "images": m.images,
           },
         )
         .toList();
@@ -158,6 +165,15 @@ class ChatNotifier extends Notifier<ChatState> {
           state = state.copyWith(messages: updatedMessages);
         }
       }
+      
+      // Estimate and consume tokens after the response is complete
+      // Estimate tokens for both user input and AI response
+      final userTokens = _estimateTokens(text);
+      final aiTokens = _estimateTokens(assistantContent);
+      final totalTokens = userTokens + aiTokens;
+      
+      // Consume tokens
+      await ref.read(usageLimitsProvider.notifier).consumeTokens(totalTokens);
     } catch (e) {
       // Normally show snackbar or add error message
       // print(e);

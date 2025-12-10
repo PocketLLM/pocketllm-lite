@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/providers.dart';
 import '../../../../services/storage_service.dart';
 import '../../../chat/domain/models/system_prompt.dart';
@@ -14,76 +15,100 @@ class PromptManagementScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final storage = ref.watch(storageServiceProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('System Prompts Library'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
+    return WillPopScope(
+      onWillPop: () async {
+        // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+        if (GoRouter.of(context).canPop()) {
+          context.pop();
+        } else {
+          // If we can't pop, go to the settings screen directly
+          context.go('/settings');
+        }
+        return false; // We handle the pop ourselves
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('System Prompts Library'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              HapticFeedback.lightImpact();
-              _showEditDialog(context, storage, null);
+              // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+              if (GoRouter.of(context).canPop()) {
+                context.pop();
+              } else {
+                // If we can't pop, go to the settings screen directly
+                context.go('/settings');
+              }
             },
           ),
-        ],
-      ),
-      body: ValueListenableBuilder<Box<SystemPrompt>>(
-        valueListenable: storage.promptBoxListenable,
-        builder: (context, box, _) {
-          final prompts = box.values.toList();
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _showEditDialog(context, storage, null);
+              },
+            ),
+          ],
+        ),
+        body: ValueListenableBuilder<Box<SystemPrompt>>(
+          valueListenable: storage.promptBoxListenable,
+          builder: (context, box, _) {
+            final prompts = box.values.toList();
 
-          if (prompts.isEmpty) {
-            return const Center(child: Text('No saved prompts. Add one!'));
-          }
+            if (prompts.isEmpty) {
+              return const Center(child: Text('No saved prompts. Add one!'));
+            }
 
-          return ListView.builder(
-            itemCount: prompts.length,
-            itemBuilder: (context, index) {
-              final prompt = prompts[index];
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Theme.of(context).dividerColor.withOpacity(0.1),
-                  ),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  title: Text(
-                    prompt.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+            return ListView.builder(
+              itemCount: prompts.length,
+              itemBuilder: (context, index) {
+                final prompt = prompts[index];
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).dividerColor.withOpacity(0.1),
                     ),
                   ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      prompt.content,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    title: Text(
+                      prompt.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        prompt.content,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                        ),
+                      ),
+                    ),
+                    onTap: () => _showEditDialog(context, storage, prompt),
+                    // trailing: IconButton(
+                    //   icon: const Icon(Icons.delete_outline),
+                    //   onPressed: () => storage.deleteSystemPrompt(prompt.id),
+                    // ), // Removed trailing logic to match image, or maybe specific edit flow? The request says "list of cards".
+                    // Let's keep it clean as per image which shows cards. Maybe edit/delete inside dialog?
                   ),
-                  onTap: () => _showEditDialog(context, storage, prompt),
-                  // trailing: IconButton(
-                  //   icon: const Icon(Icons.delete_outline),
-                  //   onPressed: () => storage.deleteSystemPrompt(prompt.id),
-                  // ), // Removed trailing logic to match image, or maybe specific edit flow? The request says "list of cards".
-                  // Let's keep it clean as per image which shows cards. Maybe edit/delete inside dialog?
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -158,7 +183,15 @@ class PromptManagementScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+                      if (GoRouter.of(context).canPop()) {
+                        Navigator.pop(context);
+                      } else {
+                        // If we can't pop, go to the settings screen directly
+                        context.go('/settings');
+                      }
+                    },
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.grey,
                       padding: const EdgeInsets.symmetric(
@@ -185,7 +218,15 @@ class PromptManagementScreen extends ConsumerWidget {
                         content: contentCtrl.text.trim(),
                       );
                       await storage.saveSystemPrompt(newPrompt);
-                      if (context.mounted) Navigator.pop(context);
+                      if (context.mounted) {
+                        // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+                        if (GoRouter.of(context).canPop()) {
+                          Navigator.pop(context);
+                        } else {
+                          // If we can't pop, go to the settings screen directly
+                          context.go('/settings');
+                        }
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
@@ -202,27 +243,6 @@ class PromptManagementScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              if (prompt != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: Center(
-                    child: TextButton.icon(
-                      onPressed: () async {
-                        await storage.deleteSystemPrompt(prompt.id);
-                        if (context.mounted) Navigator.pop(context);
-                      },
-                      icon: const Icon(
-                        Icons.delete,
-                        color: Colors.red,
-                        size: 18,
-                      ),
-                      label: const Text(
-                        'Delete Prompt',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),

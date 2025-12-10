@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:go_router/go_router.dart';
 import '../../../chat/domain/models/chat_message.dart';
 import '../../../chat/presentation/widgets/chat_bubble.dart';
 import '../providers/appearance_provider.dart';
@@ -124,58 +125,84 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
     final appearance = ref.watch(appearanceProvider);
     final notifier = ref.read(appearanceProvider.notifier);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Chat Appearance')),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Live Preview Card
-            _buildLivePreview(context, appearance),
+    return WillPopScope(
+      onWillPop: () async {
+        // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+        if (GoRouter.of(context).canPop()) {
+          context.pop();
+        } else {
+          // If we can't pop, go to the settings screen directly
+          context.go('/settings');
+        }
+        return false; // We handle the pop ourselves
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Chat Appearance'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+              if (GoRouter.of(context).canPop()) {
+                context.pop();
+              } else {
+                // If we can't pop, go to the settings screen directly
+                context.go('/settings');
+              }
+            },
+          ),
+        ),
+        body: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Live Preview Card
+              _buildLivePreview(context, appearance),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // 2. Presets
-            _buildSectionTitle('Theme Presets'),
-            _buildPresetsList(appearance, notifier),
+              // 2. Presets
+              _buildSectionTitle('Theme Presets'),
+              _buildPresetsList(appearance, notifier),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // 3. Colour Pickers
-            _buildSectionTitle('Message Colours'),
-            _buildColorPickerSection(
-              context,
-              'You',
-              Color(appearance.userMsgColor),
-              (c) => notifier.updateUserMsgColor(c.value),
-            ),
-            const SizedBox(height: 12),
-            _buildColorPickerSection(
-              context,
-              'AI',
-              Color(appearance.aiMsgColor),
-              (c) => notifier.updateAiMsgColor(c.value),
-            ),
+              // 3. Colour Pickers
+              _buildSectionTitle('Message Colours'),
+              _buildColorPickerSection(
+                context,
+                'You',
+                Color(appearance.userMsgColor),
+                (c) => notifier.updateUserMsgColor(c.value),
+              ),
+              const SizedBox(height: 12),
+              _buildColorPickerSection(
+                context,
+                'AI',
+                Color(appearance.aiMsgColor),
+                (c) => notifier.updateAiMsgColor(c.value),
+              ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // 4. Bubble Shape (Corner Style)
-            _buildSectionTitle('Corner Style'),
-            _buildCornerStyleSection(appearance, notifier),
+              // 4. Bubble Shape (Corner Style)
+              _buildSectionTitle('Corner Style'),
+              _buildCornerStyleSection(appearance, notifier),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // 5. Typography & Spacing
-            _buildSectionTitle('Typography & Spacing'),
-            _buildTypographySection(appearance, notifier),
+              // 5. Typography & Spacing
+              _buildSectionTitle('Typography & Spacing'),
+              _buildTypographySection(appearance, notifier),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // 6. Advanced
-            _buildAdvancedSection(appearance, notifier),
+              // 6. Advanced
+              _buildAdvancedSection(appearance, notifier),
 
-            const SizedBox(height: 50),
-          ],
+              const SizedBox(height: 50),
+            ],
+          ),
         ),
       ),
     );
