@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
+import 'three_dot_loading_indicator.dart';
 
 // Helper class for formatting timestamps
 class TimestampFormatter {
@@ -58,7 +59,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final radius = appearance.bubbleRadius;
     final fontSize = appearance.fontSize;
     final padding = appearance.chatPadding;
-    final showAvatars = appearance.showAvatars;
     final hasElevation = appearance.bubbleElevation;
 
     return Padding(
@@ -69,19 +69,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
             : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isUser && showAvatars) ...[
-            const CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.transparent,
-              child: Icon(
-                Icons.auto_awesome,
-                color: Colors.purpleAccent,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-
           Flexible(
             child: GestureDetector(
               onLongPress: () {
@@ -130,7 +117,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                             ),
                           ),
                         ),
-                      if (isUser)
+                      // Show loading indicator for empty assistant messages (AI is generating)
+                      if (!isUser && message.content.isEmpty)
+                        const Center(
+                          child: ThreeDotLoadingIndicator(
+                            color: Colors.white,
+                            size: 6.0,
+                          ),
+                        )
+                      else if (isUser)
                         Text(
                           message.content,
                           style: theme.textTheme.bodyLarge?.copyWith(
@@ -182,10 +177,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               ),
             ),
           ),
-          if (isUser && showAvatars) ...[
-            const SizedBox(width: 8),
-            const CircleAvatar(radius: 16, child: Icon(Icons.person, size: 20)),
-          ],
         ],
       ),
     );
