@@ -66,6 +66,14 @@ To run the AI engine locally on your phone:
     # Or manually:
     flutter build apk --release --obfuscate --split-debug-info=./debug_symbols
     ```
+5.  **Build Release App Bundle** (for Google Play Store):
+    ```bash
+    flutter build appbundle \
+    --release \
+    --obfuscate \
+    --split-debug-info=./debug_symbols \
+    --no-tree-shake-icons
+    ```
 
 ## 🔒 Security (ProGuard & Obfuscation)
 
