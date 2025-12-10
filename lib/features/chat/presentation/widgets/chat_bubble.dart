@@ -61,6 +61,38 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final padding = appearance.chatPadding;
     final hasElevation = appearance.bubbleElevation;
 
+    // Show loading indicator for empty assistant messages (AI is generating)
+    if (!isUser && message.content.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: bubbleColor,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: hasElevation
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: const ThreeDotLoadingIndicator(
+                color: Colors.white,
+                size: 6.0,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
@@ -117,15 +149,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                             ),
                           ),
                         ),
-                      // Show loading indicator for empty assistant messages (AI is generating)
-                      if (!isUser && message.content.isEmpty)
-                        const Center(
-                          child: ThreeDotLoadingIndicator(
-                            color: Colors.white,
-                            size: 6.0,
-                          ),
-                        )
-                      else if (isUser)
+                      if (isUser)
                         Text(
                           message.content,
                           style: theme.textTheme.bodyLarge?.copyWith(
