@@ -32,6 +32,8 @@ dependencies:
   hive: any
   flutter_colorpicker: ^1.1.0
   share_plus: ^12.0.1
+  google_mobile_ads: ^5.3.0
+  connectivity_plus: ^6.1.4
 
 dev_dependencies:
   flutter_test:
@@ -46,6 +48,7 @@ flutter_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/logo.png"
+  adaptive_icon_background: "#ffffff"
 
 flutter_native_splash:
   color: "#ffffff"

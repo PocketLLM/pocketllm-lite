@@ -43,27 +43,80 @@ To run the AI engine locally on your phone:
 
 ## 💻 Build Instructions
 
-1.  **Clone Repository**:
-    ```bash
-    git clone https://github.com/PocketLLM/pocketllm-lite.git
-    cd pocketllm-lite
-    ```
-2.  **Install Dependencies**:
+1.  **Install Dependencies**:
     ```bash
     flutter pub get
     ```
-3.  **Generate Code** (required for Hive adapters):
+2.  **Generate Code** (required for Hive adapters):
     ```bash
     dart run build_runner build --delete-conflicting-outputs
     ```
-4.  **Run Application**:
+3.  **Run Application**:
     ```bash
     flutter run
     ```
-5.  **Build Release APK**:
+4.  **Build Release APK** (with ProGuard & Dart obfuscation):
     ```bash
-    flutter build apk --release
+    # Windows
+    build_release.bat
+    
+    # Linux/macOS
+    chmod +x build_release.sh && ./build_release.sh
+    
+    # Or manually:
+    flutter build apk --release --obfuscate --split-debug-info=./debug_symbols
     ```
+
+## 🔒 Security (ProGuard & Obfuscation)
+
+The app uses ProGuard/R8 for Android and Dart obfuscation for enhanced security:
+
+### What's Enabled
+- **Code Shrinking**: Removes unused code, reducing APK size
+- **Optimization**: Optimizes bytecode for better performance
+- **Obfuscation**: Renames classes and methods to make reverse-engineering harder
+- **Resource Shrinking**: Removes unused resources
+
+### Custom ProGuard Rules
+Edit `android/app/proguard-rules.pro` to add custom keep rules if needed.
+
+### Debug Symbols
+The `debug_symbols/` folder contains symbol files for deobfuscating crash reports:
+```bash
+# To symbolicate a stack trace
+flutter symbolize -i <crash_log> -d debug_symbols/
+```
+
+**Important**: Keep the `debug_symbols/` folder for each release to debug production crashes.
+
+## 🔐 Security Fixes
+
+Recent security improvements have been implemented to ensure compliance with Google Play Store policies:
+
+### Debug Logging Removal
+- All debug print statements have been removed or guarded with `kDebugMode` checks
+- No sensitive information is exposed in production builds
+
+### Privacy Policy Updates
+- Clarified that data is stored in secure local Hive databases (on-device storage)
+- Added note that data is stored locally in app sandbox with no encryption by default, but protected by device security
+- Added information that the app uses HTTP for local Ollama communication (localhost:11434) only—no external data sent
+
+### Network Documentation
+- Added clarification that the app uses HTTP for local Ollama communication (localhost:11434) only—no external data sent
+
+### App Signing Fix
+- Implemented proper release signing configuration with keystore.properties template
+- Added fallback to debug signing for development environments
+- Signing configuration loads from keystore.properties if exists, otherwise falls back to debug for dev
+
+### Permissions Review
+- Explicitly declared only needed permissions: INTERNET (for ads/Ollama), CAMERA, and READ_EXTERNAL_STORAGE (for images)
+- Removed any implicit permissions
+
+### License Compliance
+- Added Third-Party Licenses section listing all dependencies with links
+- Added command to generate licenses.txt: `flutter pub deps --style=compact > licenses.txt`
 
 ## 🏗 Architecture & Tech Stack
 
@@ -123,6 +176,40 @@ lib/
 - System prompt management
 - Privacy controls
 - Haptic feedback preferences
+
+### Prompt Enhancer
+- AI-powered prompt improvement using any Ollama model
+- Fixed system prompt optimized for best enhancement results
+- 5 free enhancements per 24 hours (watch ad to unlock more)
+
+## 💰 Monetization (AdMob)
+
+The app includes Google AdMob integration for monetization through banner and rewarded ads.
+
+### Setup for Production
+
+1. **Get AdMob IDs**: Create an account at [AdMob Console](https://admob.google.com/)
+2. **Update Constants**: Replace test IDs in `lib/core/constants/app_constants.dart`:
+   ```dart
+   // Replace these with your production AdMob IDs
+   static const String admobAppIdAndroid = 'YOUR_ANDROID_APP_ID';
+   static const String bannerAdUnitId = 'YOUR_BANNER_AD_UNIT_ID';
+   static const String rewardedAdUnitId = 'YOUR_REWARDED_AD_UNIT_ID';
+   ```
+3. **Update AndroidManifest**: Replace the test app ID in `android/app/src/main/AndroidManifest.xml`:
+   ```xml
+   <meta-data
+       android:name="com.google.android.gms.ads.APPLICATION_ID"
+       android:value="YOUR_ANDROID_APP_ID"/>
+   ```
+4. **iOS Setup**: Add `GADApplicationIdentifier` to `ios/Runner/Info.plist`
+
+### Usage Limits
+- **Prompt Enhancements**: 5 free per 24 hours, watch rewarded ad for 5 more
+- **Token System**: 10,000 initial tokens, watch rewarded ad for +10,000
+- **Banner Ads**: Displayed at bottom of Settings screen
+
+**Note**: Test IDs are pre-configured for development. Always use test IDs during development to avoid policy violations.
 
 ## ⚙️ Configuration Options
 
@@ -207,55 +294,17 @@ Custom HTTP client implementation for:
 - **iOS**: Supported with manual Ollama setup
 - **Desktop**: Experimental support via Flutter desktop
 
-## 🤝 Contributing
-
-We welcome contributions to Pocket LLM Lite! Here's how you can help:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-Please ensure your code follows the existing style and includes appropriate tests.
-
-## 🐛 Known Issues
-
-- iOS requires manual Ollama setup (no Termux equivalent)
-- Large model downloads may timeout on slower connections
-- Some advanced Ollama options are not yet exposed in the UI
-
-## 🔄 Future Enhancements
-
-- Voice input/output capabilities
-- Plugin system for extending functionality
-- Desktop application with enhanced features
-- Multi-modal output (image generation, etc.)
-
 ## 📜 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 The MIT License is a permissive open-source license that allows for commercial use, modification, distribution, and patent use, with the only requirement being that the original copyright notice and license text be included in all copies or substantial portions of the software.
 
-### Third-party Licenses
-
-Pocket LLM Lite uses several open-source packages under various licenses:
-
-- **Flutter**: BSD-style license
-- **Riverpod**: MIT License
-- **Hive**: Apache License 2.0
-- **http**: BSD-style license
-- **go_router**: BSD-style license
-
-For complete license texts of dependencies, please refer to the respective package repositories.
-
 ## 📞 Support
 
 For support, feature requests, or bug reports, please:
-1. Check existing issues on GitHub
-2. Create a new issue with detailed information
-3. Include your platform, Flutter version, and steps to reproduce
+1. Contact the development team
+2. Include your platform, Flutter version, and steps to reproduce
 
 ## 🙏 Acknowledgments
 

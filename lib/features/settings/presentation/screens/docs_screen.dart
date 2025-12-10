@@ -1,232 +1,18 @@
-/// File Overview:
-/// - Purpose: In-app documentation tabs for Termux and Ollama setup rendered
-///   directly in the Flutter client.
-library;
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
-class Docs extends StatelessWidget {
+class Docs extends StatefulWidget {
   const Docs({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const DocsPage();
-  }
+  State<Docs> createState() => _DocsState();
 }
 
-class DocsPage extends StatefulWidget {
-  const DocsPage({super.key});
-
-  @override
-  _DocsPageState createState() => _DocsPageState();
-}
-
-class _DocsPageState extends State<DocsPage>
-    with SingleTickerProviderStateMixin {
+class _DocsState extends State<Docs> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  final String termuxDocs = '''
-# Termux Setup Guide
-
-## What is Termux?
-Termux is an Android terminal emulator and Linux environment app that works directly with no rooting required. It provides a powerful command-line experience and allows you to run Linux tools on your Android device.
-
-## Installation Methods
-
-### Method 1: F-Droid (Recommended)
-1. Visit [F-Droid website](https://f-droid.org)
-2. Download and install F-Droid
-3. Search for "Termux" in F-Droid
-4. Install the latest version
-
-### Method 2: GitHub Release
-If F-Droid is not accessible:
-1. Go to [Termux GitHub releases](https://github.com/termux/termux-app/releases)
-2. Download `termux-app_v0.119.0-beta.1+apt-android-7-github-debug_arm64-v8a.apk`
-3. Install the downloaded APK
-
-## Initial Setup
-
-1. **Grant Storage Permission**
-   ```bash
-   termux-setup-storage
-   ```
-   - This will prompt for storage access permission
-   - Required for accessing device storage
-
-2. **Update Package Repository**
-   ```bash
-   pkg update
-   pkg upgrade
-   ```
-   - Always run this after fresh installation
-   - Type 'y' when prompted
-
-3. **Install Essential Packages**
-   ```bash
-   pkg install git cmake golang
-   ```
-   These are required for building Ollama
-
-## Basic Termux Usage
-
-### Package Management
-- Install package: `pkg install <package-name>`
-- Update packages: `pkg upgrade`
-- Search packages: `pkg search <query>`
-- Remove package: `pkg remove <package-name>`
-
-### File Navigation
-- Current directory: `pwd`
-- List files: `ls`
-- Change directory: `cd <directory>`
-- Create directory: `mkdir <name>`
-- Remove directory: `rm -r <directory>`
-
-### Tips & Best Practices
-
-1. **Performance**
-   - Keep packages updated
-   - Remove unused packages
-   - Clear package cache: `pkg clean`
-
-2. **Storage**
-   - Regular cleanup of downloaded files
-   - Monitor storage usage: `df -h`
-   - Use `termux-setup-storage` for external storage
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Package Installation Fails**
-   ```bash
-   pkg update
-   pkg upgrade
-   ```
-   If still failing, try:
-   ```bash
-   termux-change-repo
-   ```
-
-2. **Storage Access Issues**
-   - Check app permissions in Android settings
-   - Run `termux-setup-storage`
-   - Restart Termux
-''';
-
-  final String ollamaDocs = '''
-# Ollama Setup Guide
-
-## What is Ollama?
-Ollama is an open-source tool that allows you to run large language models locally on your Android device through Termux, without requiring cloud services.
-
-## Prerequisites
-- Termux installed and configured
-- Git, CMake, and Golang installed
-- Sufficient storage space (varies by model)
-- Android device with good processing power
-
-## Installation Steps
-
-### 1. Install Dependencies
-```bash
-pkg upgrade
-pkg install git cmake golang
-```
-
-### 2. Build from Source
-```bash
-# Clone Ollama repository
-git clone --depth 1 https://github.com/ollama/ollama.git
-
-# Navigate to ollama directory
-cd ollama
-
-# Generate and build
-go generate ./...
-go build .
-```
-
-### 3. Start Ollama Server
-```bash
-# Run server in background
-./ollama serve &
-```
-
-### 4. Run a Model
-```bash
-# Example with Phi model
-./ollama run phi
-```
-
-## Basic Commands
-
-### Model Management
-- Start server: `./ollama serve &`
-- Run model: `./ollama run <model-name>`
-- List models: `./ollama list`
-- Remove model: `./ollama rm <model-name>`
-- Pull model: `./ollama pull <model-name>`
-
-### Recommended Models for Mobile
-1. **Small Models (Best Performance)**
-   - phi-2
-   - deepseek-r1:1.5b
-   - neural-chat:3b
-   - mistral:7b
-
-2. **Model Size Guidelines**
-   - 1.5B-3B: Good performance on phones
-   - 7B-13B: May be slower but usable
-   - >30B: Not recommended for mobile
-
-## Cleanup and Maintenance
-
-### Remove Build Files
-```bash
-# Clean up Go directory
-chmod -R 700 ~/go
-rm -r ~/go
-```
-
-### System-wide Installation
-```bash
-# Move to bin for system-wide access
-cp ollama/ollama /data/data/com.termux/files/usr/bin/
-```
-
-## Performance Tips
-
-1. **Device Preparation**
-   - Close background apps
-   - Ensure sufficient free RAM
-   - Connect to power source
-   - Use in a cool environment
-
-2. **Best Practices**
-   - Start with smaller models
-   - Monitor device temperature
-   - Keep sessions reasonable length
-   - Regular cleanup of unused models
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Build Failures**
-   - Check Go installation
-   - Update all packages
-   - Ensure sufficient storage
-
-2. **Performance Issues**
-   - Try smaller models
-   - Check RAM usage
-   - Monitor CPU temperature
-   - Close background apps
-''';
 
   @override
   void initState() {
@@ -241,56 +27,153 @@ cp ollama/ollama /data/data/com.termux/files/usr/bin/
   }
 
   Future<void> _launchUrl(String url) async {
-    final Uri uri = Uri.parse(url);
+    final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Determine if we are in dark mode to adjust the hardcoded colors if needed,
-    // or just stick to the user's design. The user requested "add these", so we'll
-    // try to respect the design but make sure text is visible.
-    // The user's design uses hardcoded black/grey colors which implies a light theme design.
-    // We will wrap it to ensure it looks okay or override with theme colors if possible,
-    // but the request was specific. Let's use the code but maybe use Theme colors for background
-    // if we want it to adapt, BUT the user set backgroundColor: Colors.grey[50].
+    // Hardcoded markdown content for Termux and Ollama setup
+    const termuxDocs = '''
+# Termux Setup Guide
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50], // User specified
-      appBar: AppBar(
-        backgroundColor: Colors.grey[50],
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black, size: 28),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Documentation',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
+## Install Termux
+Download Termux from F-Droid for the latest version:
+[F-Droid Termux](https://f-droid.org/en/packages/com.termux/)
+
+## Basic Setup
+Open Termux and run these commands:
+
+```
+pkg update && pkg upgrade
+pkg install curl
+```
+
+## Install Ollama
+```
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+## Start Ollama Service
+```
+ollama serve
+```
+
+Keep Termux running in the background. You can minimize it, but don't swipe it away from recent apps.
+
+## Pull a Model (Example)
+```
+ollama pull llama3
+```
+
+## Troubleshooting Tips
+- If you get "connection refused" errors, make sure ollama serve is still running
+- Some models require significant RAM. If downloads fail, try simpler models like "tinyllama"
+- Use `termux-wake-lock` to prevent Termux from sleeping (optional but recommended)
+''';
+
+    const ollamaDocs = '''
+# Ollama Setup Guide
+
+## What is Ollama?
+Ollama allows you to run large language models locally on your device. It's the backbone of Pocket LLM Lite.
+
+## Installation
+Visit [Ollama.com](https://ollama.com) and download the appropriate version for your system:
+- Windows: Download the .exe installer
+- macOS: Download the .app bundle
+- Linux: Use the installation script
+
+## Running Ollama
+After installation, Ollama runs as a service:
+- Windows: Runs as a background service automatically
+- macOS: Runs as a background service automatically
+- Linux: Start with `systemctl start ollama` or run `ollama serve` manually
+
+## Pulling Models
+Use the command line to pull models:
+```
+ollama pull llama3
+ollama pull mistral
+ollama pull tinyllama
+```
+
+## Model Directory
+Models are stored in:
+- Windows: `C:\\Users\\<username>\\.ollama\\models`
+- macOS: `~/.ollama/models`
+- Linux: `/usr/share/ollama/.ollama/models`
+
+## API Endpoint
+Pocket LLM Lite connects to Ollama at:
+```
+http://localhost:11434
+```
+
+This is usually detected automatically. If not, enter it manually in Settings.
+
+## Troubleshooting
+- Firewall issues: Make sure port 11434 is not blocked
+- Model loading: Large models may take time to load on first use
+- Memory errors: Try smaller models if you have limited RAM
+''';
+
+    return WillPopScope(
+      onWillPop: () async {
+        // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+        if (GoRouter.of(context).canPop()) {
+          context.pop();
+        } else {
+          // If we can't pop, go to the settings screen directly
+          context.go('/settings');
+        }
+        return false; // We handle the pop ourselves
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[50], // User specified
+        appBar: AppBar(
+          backgroundColor: Colors.grey[50],
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black, size: 28),
+            onPressed: () {
+              // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+              if (GoRouter.of(context).canPop()) {
+                context.pop();
+              } else {
+                // If we can't pop, go to the settings screen directly
+                context.go('/settings');
+              }
+            },
+          ),
+          title: const Text(
+            'Documentation',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          bottom: TabBar(
+            controller: _tabController,
+            labelColor: const Color(0xFF8B5CF6),
+            unselectedLabelColor: Colors.grey[600],
+            indicatorColor: const Color(0xFF8B5CF6),
+            tabs: const [
+              Tab(text: 'Termux'),
+              Tab(text: 'Ollama'),
+            ],
           ),
         ),
-        bottom: TabBar(
+        body: TabBarView(
           controller: _tabController,
-          labelColor: const Color(0xFF8B5CF6),
-          unselectedLabelColor: Colors.grey[600],
-          indicatorColor: const Color(0xFF8B5CF6),
-          tabs: const [
-            Tab(text: 'Termux'),
-            Tab(text: 'Ollama'),
+          children: [
+            _buildMarkdownTab(termuxDocs),
+            _buildMarkdownTab(ollamaDocs),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildMarkdownTab(termuxDocs),
-          _buildMarkdownTab(ollamaDocs),
-        ],
       ),
     );
   }

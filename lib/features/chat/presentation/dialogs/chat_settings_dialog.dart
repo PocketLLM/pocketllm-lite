@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
 import '../providers/chat_provider.dart';
 
@@ -51,26 +50,31 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                 final prompts = box.values.toList();
                 return Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(8),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[800]
+                        : Colors.white,
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[700]!
+                          : Colors.grey[300]!,
+                    ),
                   ),
                   child: DropdownButtonFormField<String?>(
                     initialValue: _selectedSystemPromptId,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
+                        horizontal: 12,
                         vertical: 8,
                       ),
-                      prefixIcon: Icon(Icons.settings_suggest),
                     ),
                     isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down),
+                    icon: const Icon(Icons.arrow_drop_down, size: 24),
                     hint: const Text('Select a prompt template...'),
                     dropdownColor:
                         Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black
+                        ? Colors.grey[800]
                         : Colors.white,
                     style: TextStyle(
                       color: Theme.of(context).brightness == Brightness.dark
@@ -84,25 +88,29 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                         child: Text(
                           'None (Default)',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
                           ),
                         ),
                       ),
                       ...prompts.map(
                         (p) => DropdownMenuItem(
                           value: p.id,
-                          child: Text(p.title, overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            p.title, 
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                     onChanged: (val) {
-                      final storageRef = ref.read(storageServiceProvider);
-                      if (storageRef.getSetting(
-                        AppConstants.hapticFeedbackKey,
-                        defaultValue: false,
-                      )) {
-                        HapticFeedback.selectionClick();
-                      }
                       setState(() => _selectedSystemPromptId = val);
                     },
                   ),
@@ -114,7 +122,12 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
                   'Applying this will set the system prompt context for this chat.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 12, 
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.grey[400] 
+                        : Colors.grey[700]
+                  ),
                 ),
               ),
 
@@ -126,7 +139,14 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                   'Temperature',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text(_temp.toStringAsFixed(1)),
+                Text(
+                  _temp.toStringAsFixed(1),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                ),
               ],
             ),
             Slider(
@@ -135,22 +155,22 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               max: 2.0,
               divisions: 20,
               label: _temp.toStringAsFixed(1),
+              activeColor: Colors.blue,
+              inactiveColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey[700]
+                  : Colors.grey[300],
               onChanged: (val) {
-                final storageRef = ref.read(storageServiceProvider);
-                if (storageRef.getSetting(
-                  AppConstants.hapticFeedbackKey,
-                  defaultValue: false,
-                )) {
-                  if ((val - _temp).abs() > 0.1) {
-                    HapticFeedback.selectionClick(); // subtle feedback reduces spam
-                  }
-                }
                 setState(() => _temp = val);
               },
             ),
-            const Text(
+            Text(
               'Controls randomness. Higher = more creative.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12, 
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.grey[400] 
+                    : Colors.grey[700]
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -161,7 +181,14 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                   'Top P',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text(_topP.toStringAsFixed(1)),
+                Text(
+                  _topP.toStringAsFixed(1),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                ),
               ],
             ),
             Slider(
@@ -170,22 +197,22 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               max: 1.0,
               divisions: 10,
               label: _topP.toStringAsFixed(1),
+              activeColor: Colors.blue,
+              inactiveColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey[700]
+                  : Colors.grey[300],
               onChanged: (val) {
-                final storageRef = ref.read(storageServiceProvider);
-                if (storageRef.getSetting(
-                  AppConstants.hapticFeedbackKey,
-                  defaultValue: false,
-                )) {
-                  if ((val - _topP).abs() > 0.1) {
-                    HapticFeedback.selectionClick();
-                  }
-                }
                 setState(() => _topP = val);
               },
             ),
-            const Text(
+            Text(
               'Controls diversity via nucleus sampling.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12, 
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.grey[400] 
+                    : Colors.grey[700]
+              ),
             ),
           ],
         ),
@@ -194,7 +221,9 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           style: TextButton.styleFrom(
-            foregroundColor: Colors.grey,
+            foregroundColor: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           child: const Text('Cancel'),
@@ -202,12 +231,6 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
         ElevatedButton(
           onPressed: () {
             final storage = ref.read(storageServiceProvider);
-            if (storage.getSetting(
-              AppConstants.hapticFeedbackKey,
-              defaultValue: false,
-            )) {
-              HapticFeedback.mediumImpact();
-            }
 
             String? promptContent;
             if (_selectedSystemPromptId != null) {
@@ -231,7 +254,7 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
             Navigator.pop(context);
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).primaryColor,
+            backgroundColor: Colors.blue,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             elevation: 2,

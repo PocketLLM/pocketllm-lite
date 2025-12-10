@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
+import '../../../../services/ad_service.dart';
 import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
 
@@ -16,6 +19,54 @@ class ChatHistoryScreen extends ConsumerStatefulWidget {
 class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   bool _isSelectionMode = false;
   final Set<String> _selectedIds = {};
+  final AdService _adService = AdService();
+  bool _isTopBannerLoaded = false;
+  bool _isBottomBannerLoaded = false;
+  BannerAd? _topBannerAd;
+  BannerAd? _bottomBannerAd;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerAds();
+  }
+
+  @override
+  void dispose() {
+    _topBannerAd?.dispose();
+    _bottomBannerAd?.dispose();
+    super.dispose();
+  }
+
+  void _loadBannerAds() {
+    _topBannerAd = BannerAd(
+      adUnitId: AppConstants.bannerAdUnitId,
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          if (mounted) setState(() => _isTopBannerLoaded = true);
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+        },
+      ),
+    )..load();
+
+    _bottomBannerAd = BannerAd(
+      adUnitId: AppConstants.bannerAdUnitId,
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          if (mounted) setState(() => _isBottomBannerLoaded = true);
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+        },
+      ),
+    )..load();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,10 +107,24 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   });
                 },
               )
-            : const BackButton(), // Defaults to back arrow
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.pop(context);
+                },
+              ),
       ),
       body: Column(
         children: [
+          // Top Banner Ad
+          if (_isTopBannerLoaded && _topBannerAd != null)
+            Container(
+              alignment: Alignment.center,
+              width: double.infinity,
+              height: 50,
+              child: AdWidget(ad: _topBannerAd!),
+            ),
           if (_isSelectionMode)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -199,6 +264,16 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               },
             ),
           ),
+          // Bottom Banner Ad
+          if (_isBottomBannerLoaded && _bottomBannerAd != null)
+            SafeArea(
+              child: Container(
+                alignment: Alignment.center,
+                width: double.infinity,
+                height: 50,
+                child: AdWidget(ad: _bottomBannerAd!),
+              ),
+            ),
         ],
       ),
       floatingActionButton: _isSelectionMode
@@ -293,9 +368,91 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   }
 
   Future<void> _deleteSession(String id) async {
-    final storage = ref.read(storageServiceProvider);
-    await storage.deleteChatSession(id);
-    HapticFeedback.mediumImpact();
+    // Show confirmation with ad requirement
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Chat?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('This chat will be permanently deleted.'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.play_circle, size: 18, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Watch a short ad to confirm',
+                      style: TextStyle(fontSize: 12, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.play_circle, size: 18),
+            label: const Text('Watch Ad & Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      if (!await _adService.hasInternetConnection()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Connect to internet to watch ad and delete.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      await _adService.showRewardedAd(
+        onUserEarnedReward: (reward) async {
+          final storage = ref.read(storageServiceProvider);
+          await storage.deleteChatSession(id);
+          if (mounted) {
+            HapticFeedback.heavyImpact();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Chat deleted!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        },
+        onFailed: (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Ad failed: $error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
+    }
   }
 
   Future<void> _deleteSelected() async {
@@ -305,33 +462,92 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Selected?'),
-        content: Text(
-          'Delete ${_selectedIds.length} chats? This cannot be undone.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Delete ${_selectedIds.length} chats? This cannot be undone.'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.play_circle, size: 18, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Watch a short ad to confirm deletion',
+                      style: TextStyle(fontSize: 12, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          FilledButton(
+          FilledButton.icon(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            icon: const Icon(Icons.play_circle, size: 18),
+            label: const Text('Watch Ad & Delete'),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
-      final storage = ref.read(storageServiceProvider);
-      for (final id in _selectedIds) {
-        await storage.deleteChatSession(id);
+    if (confirm == true && mounted) {
+      // Check internet and show rewarded ad
+      if (!await _adService.hasInternetConnection()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Connect to internet to watch ad and delete.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
       }
-      setState(() {
-        _selectedIds.clear();
-        _isSelectionMode = false;
-      });
-      HapticFeedback.heavyImpact();
+
+      await _adService.showRewardedAd(
+        onUserEarnedReward: (reward) async {
+          final storage = ref.read(storageServiceProvider);
+          for (final id in _selectedIds) {
+            await storage.deleteChatSession(id);
+          }
+          if (mounted) {
+            setState(() {
+              _selectedIds.clear();
+              _isSelectionMode = false;
+            });
+            HapticFeedback.heavyImpact();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Chats deleted successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        },
+        onFailed: (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Ad failed: $error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
     }
   }
 }

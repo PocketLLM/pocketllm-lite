@@ -9,6 +9,27 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 
+// Helper class for formatting timestamps
+class TimestampFormatter {
+  static String format(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inDays < 1) {
+      // Format as HH:MM AM/PM
+      final hour = timestamp.hour;
+      final minute = timestamp.minute.toString().padLeft(2, '0');
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final formattedHour = hour % 12 == 0 ? 12 : hour % 12;
+      return '$formattedHour:$minute $period';
+    } else if (difference.inDays < 2) {
+      return 'Yesterday';
+    } else {
+      return '${timestamp.month}/${timestamp.day}/${timestamp.year}';
+    }
+  }
+}
+
 class ChatBubble extends ConsumerStatefulWidget {
   final ChatMessage message;
 
@@ -143,6 +164,18 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                 ),
                               ),
                         ),
+                      // Timestamp display
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          TimestampFormatter.format(message.timestamp),
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: fontSize * 0.7,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -306,6 +339,18 @@ class _FocusedMenuOverlay extends StatelessWidget {
                               ),
                             ),
                       ),
+                    // Timestamp display in overlay
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        TimestampFormatter.format(message.timestamp),
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: fontSize * 0.7,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

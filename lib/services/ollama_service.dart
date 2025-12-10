@@ -117,4 +117,52 @@ class OllamaService {
     final url = Uri.parse('$_baseUrl/api/delete');
     await http.delete(url, body: jsonEncode({"name": modelName}));
   }
+
+  /// Non-streaming prompt enhancement using /api/chat
+  /// Returns the enhanced prompt text or throws on error
+  Future<String> enhancePrompt({
+    required String model,
+    required String userInput,
+    required String systemPrompt,
+  }) async {
+    final url = Uri.parse('$_baseUrl/api/chat');
+
+    // Truncate input to 2000 chars max
+    final truncatedInput = userInput.length > 2000
+        ? userInput.substring(0, 2000)
+        : userInput;
+
+    final body = {
+      "model": model,
+      "messages": [
+        {"role": "system", "content": systemPrompt},
+        {"role": "user", "content": truncatedInput},
+      ],
+      "stream": false, // Non-streaming for quick response
+    };
+
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final content = data['message']?['content'] as String?;
+        if (content != null && content.isNotEmpty) {
+          // Trim any extra whitespace or accidental preambles
+          return content.trim();
+        }
+        throw Exception('Empty response from model');
+      } else {
+        throw Exception('API error: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Enhancement failed: $e');
+    }
+  }
 }
