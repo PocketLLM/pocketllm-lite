@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
+import 'widgets/offline_notification_popup.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -140,8 +141,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _finishOnboarding() async {
     final storage = ref.read(storageServiceProvider);
     await storage.saveSetting(AppConstants.isFirstLaunchKey, false);
+    
     if (mounted) {
-      context.go('/chat');
+      // Show the offline notification popup
+      await showDialog(
+        context: context,
+        barrierDismissible: false, // User must tap button to dismiss
+        builder: (BuildContext context) {
+          return const OfflineNotificationPopup();
+        },
+      );
+      
+      // Navigate to chat screen after popup is dismissed
+      if (mounted) {
+        context.go('/chat');
+      }
     }
   }
 }

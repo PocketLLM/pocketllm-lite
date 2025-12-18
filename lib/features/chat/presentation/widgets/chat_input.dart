@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
 import '../../../../services/ad_service.dart';
 import '../../../../services/usage_limits_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/prompt_enhancer_provider.dart';
+import '../providers/connection_status_provider.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -68,8 +70,53 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
   }
 
-  void _send() {
+  void _send() async {
     if (_controller.text.trim().isEmpty && _selectedImages.isEmpty) return;
+
+    // Check connection status before sending using the auto-refreshing provider
+    final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
+    await connectionChecker.refresh(); // Force a refresh before checking
+    final connectionState = await ref.read(autoConnectionStatusProvider.future);
+    final isConnected = connectionState;
+    
+    if (!isConnected) {
+      // Show dialog prompting user to connect Ollama with improved button design
+      if (mounted) {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Ollama Not Connected'),
+            content: const Text(
+              'Please ensure Ollama is running and connected. '
+              'Check your setup and try again.'
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Navigate to settings for connection configuration
+                  context.push('/settings');
+                },
+                child: const Text('Settings'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Navigate to docs for setup instructions
+                  context.push('/settings/docs');
+                },
+                child: const Text('Docs'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
 
     final storage = ref.read(storageServiceProvider);
     if (storage.getSetting(
@@ -96,6 +143,24 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   Future<void> _enhancePrompt() async {
     if (_controller.text.trim().isEmpty) return;
+
+    // Check connection status before enhancing using the auto-refreshing provider
+    final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
+    await connectionChecker.refresh(); // Force a refresh before checking
+    final connectionState = await ref.read(autoConnectionStatusProvider.future);
+    final isConnected = connectionState;
+    
+    if (!isConnected) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cannot enhance prompt: Ollama not connected'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
 
     final enhancerState = ref.read(promptEnhancerProvider);
     if (enhancerState.selectedModelId == null) {
@@ -201,7 +266,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Later'),
           ),
-          ElevatedButton.icon(
+          ElevatedButton(
             onPressed: () async {
               // Check internet first
               if (!await adService.hasInternetConnection()) {
@@ -219,12 +284,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               }
               if (context.mounted) Navigator.pop(context, true);
             },
-            icon: const Icon(Icons.play_circle_outline),
-            label: const Text('Watch Ad'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
+              backgroundColor: Colors.blue, // Blue background
+              foregroundColor: Colors.white, // White text
             ),
+            child: const Text('Watch Ad'),
           ),
         ],
       ),
