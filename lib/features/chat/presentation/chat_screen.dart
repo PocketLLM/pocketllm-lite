@@ -7,6 +7,7 @@ import '../../../core/providers.dart';
 import '../../../services/usage_limits_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/models_provider.dart';
+import 'providers/connection_status_provider.dart';
 
 import 'widgets/chat_bubble.dart';
 import 'widgets/chat_input.dart';
@@ -48,6 +49,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
     final modelsAsync = ref.watch(modelsProvider);
+    // Use the auto-connection status provider that automatically refreshes
+    final connectionStatusAsync = ref.watch(autoConnectionStatusProvider);
 
     // Auto-scroll when messages change (especially when generating)
     ref.listen(chatProvider, (prev, next) {
@@ -60,111 +63,134 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: modelsAsync.when(
-          data: (models) {
-            String? currentValue = chatState.selectedModel;
-            // Check if current value is valid, if not, pick first
-            if (models.isNotEmpty &&
-                !models.any((m) => m.name == currentValue)) {
-              currentValue = models.first.name;
-              // defer update
-              Future.microtask(
-                () => ref.read(chatProvider.notifier).setModel(currentValue!),
-              );
-            }
-
-            if (models.isEmpty) return const Text('No Models');
-
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.4),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: false,
-                  value: currentValue,
-                  icon: Icon(
-                    Icons.expand_more,
-                    size: 20,
-                    color: Theme.of(context).iconTheme.color,
-                  ),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black,
-                  ),
-                  dropdownColor: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF1E1E1E)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  elevation: 4,
-                  selectedItemBuilder: (BuildContext context) {
-                    return models.map<Widget>((m) {
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.smart_toy_outlined,
-                            size: 16,
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white70
-                                : Colors.black87,
-                          ),
-                          const SizedBox(width: 8),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 150),
-                            child: Text(
-                              m.name,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList();
-                  },
-                  items: models.map<DropdownMenuItem<String>>((m) {
-                    return DropdownMenuItem<String>(
-                      value: m.name,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.smart_toy_outlined,
-                            size: 16,
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white70
-                                : Colors.black87,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            m.name,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
+        title: Row(
+          children: [
+            Expanded(
+              child: connectionStatusAsync.when(
+                data: (isConnected) {
+                  if (!isConnected) {
+                    // When not connected, show a clear disconnected message instead of models
+                    return const Text(
+                      'Not Connected',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
                       ),
                     );
-                  }).toList(),
-                  onChanged: (newModel) {
-                    if (newModel != null &&
-                        newModel != chatState.selectedModel) {
-                      HapticFeedback.selectionClick();
-                      ref.read(chatProvider.notifier).setModel(newModel);
-                    }
-                  },
-                ),
+                  }
+                  
+                  // When connected, show models as usual
+                  return modelsAsync.when(
+                    data: (models) {
+                      String? currentValue = chatState.selectedModel;
+                      // Check if current value is valid, if not, pick first
+                      if (models.isNotEmpty &&
+                          !models.any((m) => m.name == currentValue)) {
+                        currentValue = models.first.name;
+                        // defer update
+                        Future.microtask(
+                          () => ref.read(chatProvider.notifier).setModel(currentValue!),
+                        );
+                      }
+
+                      if (models.isEmpty) return const Text('No Models');
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: false,
+                            value: currentValue,
+                            icon: Icon(
+                              Icons.expand_more,
+                              size: 20,
+                              color: Theme.of(context).iconTheme.color,
+                            ),
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black,
+                            ),
+                            dropdownColor: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF1E1E1E)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            elevation: 4,
+                            selectedItemBuilder: (BuildContext context) {
+                              return models.map<Widget>((m) {
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.smart_toy_outlined,
+                                      size: 16,
+                                      color:
+                                          Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white70
+                                          : Colors.black87,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(maxWidth: 150),
+                                      child: Text(
+                                        m.name,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.bodyMedium
+                                            ?.copyWith(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList();
+                            },
+                            items: models.map<DropdownMenuItem<String>>((m) {
+                              return DropdownMenuItem<String>(
+                                value: m.name,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.smart_toy_outlined,
+                                      size: 16,
+                                      color:
+                                          Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white70
+                                          : Colors.black87,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      m.name,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (newModel) {
+                              if (newModel != null &&
+                                  newModel != chatState.selectedModel) {
+                                HapticFeedback.selectionClick();
+                                ref.read(chatProvider.notifier).setModel(newModel);
+                              }
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(), // Don't show loading when disconnected
+                    error: (e, s) => const SizedBox.shrink(), // Don't show error when disconnected
+                  );
+                },
+                loading: () => const SizedBox.shrink(), // Don't show connection loading
+                error: (e, s) => const SizedBox.shrink(), // Don't show connection error
               ),
-            );
-          },
-          loading: () => const Text('Loading...'),
-          error: (e, s) =>
-              const Text('Ollama Disconnected', style: TextStyle(fontSize: 16)),
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -249,38 +275,113 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: chatState.messages.isEmpty
-                ? Center(
+            child: connectionStatusAsync.when(
+              data: (isConnected) {
+                if (!isConnected) {
+                  // When not connected, show a clear message in the body with improved buttons
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(
-                          Icons.chat_bubble_outline,
+                          Icons.cloud_off,
                           size: 80,
-                          color: Colors.grey,
+                          color: Colors.red,
                         ),
                         const SizedBox(height: 16),
-                        Text(
-                          'Start a conversation',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(color: Colors.grey),
+                        const Text(
+                          'Not Connected',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Ensure Ollama is running in Termux',
+                          'Please ensure Ollama is running and connected',
                           style: TextStyle(color: Colors.grey),
+                        ),
+                        const SizedBox(height: 24),
+                        // Improved button layout with proper blue coloring
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              onPressed: () {
+                                // Navigate to settings to configure connection
+                                context.push('/settings');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue, // Blue background
+                                foregroundColor: Colors.white, // White text
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: const Text('Configure Connection'),
+                            ),
+                            const SizedBox(width: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                // Navigate to docs for setup instructions
+                                context.push('/settings/docs');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue, // Blue background
+                                foregroundColor: Colors.white, // White text
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: const Text('Docs'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.only(top: 16, bottom: 16),
-                    itemCount: chatState.messages.length,
-                    itemBuilder: (context, index) {
-                      return ChatBubble(message: chatState.messages[index]);
-                    },
-                  ),
+                  );
+                }
+                
+                // When connected, show normal chat interface
+                return chatState.messages.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.chat_bubble_outline,
+                              size: 80,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Start a conversation',
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Ensure Ollama is running in Termux',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.only(top: 16, bottom: 16),
+                        itemCount: chatState.messages.length,
+                        itemBuilder: (context, index) {
+                          return ChatBubble(message: chatState.messages[index]);
+                        },
+                      );
+              },
+              loading: () => const SizedBox.shrink(), // Don't show loading in body when checking connection
+              error: (e, s) => const SizedBox.shrink(), // Don't show error in body when checking connection
+            ),
           ),
           const ChatInput(),
         ],
