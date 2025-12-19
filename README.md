@@ -1,6 +1,18 @@
 # Pocket LLM Lite
 
+![App Banner](assets/pocketllmlite/banner%20main.png)
+
 A premium, privacy-first, offline AI chat application for Android/iOS, integrating with Ollama via Termux. Experience powerful AI models directly on your device with a beautiful, customizable interface.
+
+## 📸 App Screenshots
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+<img src="assets/pocketllmlite/image1.jpg" alt="Chat Interface" width="200"/>
+<img src="assets/pocketllmlite/image2.jpg" alt="Settings Screen" width="200"/>
+<img src="assets/pocketllmlite/image3.jpg" alt="Customization Options" width="200"/>
+<img src="assets/pocketllmlite/image4.jpg" alt="Chat History" width="200"/>
+<img src="assets/pocketllmlite/image5.jpg" alt="Prompt Enhancement" width="200"/>
+</div>
 
 ## 🚀 Key Features
 
