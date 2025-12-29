@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -49,6 +50,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
           if (mounted) setState(() => _isTopBannerLoaded = true);
         },
         onAdFailedToLoad: (ad, error) {
+          if (kDebugMode) {
+            // print('Top banner ad failed to load: ${error.code} - ${error.message}');
+          }
           ad.dispose();
         },
       ),
@@ -63,6 +67,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
           if (mounted) setState(() => _isBottomBannerLoaded = true);
         },
         onAdFailedToLoad: (ad, error) {
+          if (kDebugMode) {
+            // print('Bottom banner ad failed to load: ${error.code} - ${error.message}');
+          }
           ad.dispose();
         },
       ),

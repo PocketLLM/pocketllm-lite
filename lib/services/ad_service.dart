@@ -41,6 +41,16 @@ class AdService {
   /// Initialize MobileAds SDK
   static Future<void> initialize() async {
     await MobileAds.instance.initialize();
+    
+    // Configure test devices in debug mode
+    if (kDebugMode) {
+      await MobileAds.instance.updateRequestConfiguration(
+        RequestConfiguration(
+          testDeviceIds: <String>['1756C7EEFE5F918781893DF0AD6CC8E8'], // From your logs
+        ),
+      );
+    }
+    
     if (kDebugMode) {
       // Removed debug print to avoid exposing information in production
     }
@@ -51,6 +61,11 @@ class AdService {
     final connectivityResult = await Connectivity().checkConnectivity();
     return connectivityResult.isNotEmpty &&
         !connectivityResult.contains(ConnectivityResult.none);
+  }
+
+  /// Build ad request
+  AdRequest _buildAdRequest() {
+    return const AdRequest();
   }
 
   /// Get the appropriate banner ad unit ID based on platform
@@ -108,6 +123,9 @@ class AdService {
     Function()? onLoaded,
     Function(String)? onFailed,
   }) async {
+    // Dispose of existing banner ad if present
+    disposeBannerAd();
+    
     if (!await hasInternetConnection()) {
       onFailed?.call('No internet connection');
       return;
@@ -116,7 +134,7 @@ class AdService {
     _bannerAd = BannerAd(
       adUnitId: _bannerAdUnitId,
       size: AdSize.banner,
-      request: const AdRequest(),
+      request: _buildAdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
           _isBannerLoaded = true;
@@ -128,15 +146,21 @@ class AdService {
         onAdFailedToLoad: (ad, error) {
           _isBannerLoaded = false;
           ad.dispose();
-          onFailed?.call(error.message);
+          onFailed?.call('Ad failed to load: ${error.code} - ${error.message}');
           if (kDebugMode) {
-            // Removed debug print to avoid exposing information in production
+            // print('Banner ad failed to load: ${error.code} - ${error.message}');
           }
         },
       ),
     );
 
-    await _bannerAd?.load();
+    try {
+      await _bannerAd?.load();
+    } catch (e) {
+      _isBannerLoaded = false;
+      _bannerAd?.dispose();
+      onFailed?.call('Error loading banner: $e');
+    }
   }
 
   /// Proactive rewarded ad preloading with retry mechanism
@@ -385,27 +409,35 @@ class AdService {
       return;
     }
 
-    await RewardedAd.load(
-      adUnitId: _rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _rewardedAd = ad;
-          _isRewardedLoaded = true;
-          onLoaded?.call();
-          if (kDebugMode) {
-            // Removed debug print to avoid exposing information in production
-          }
-        },
-        onAdFailedToLoad: (error) {
-          _isRewardedLoaded = false;
-          onFailed?.call(error.message);
-          if (kDebugMode) {
-            // Removed debug print to avoid exposing information in production
-          }
-        },
-      ),
-    );
+    try {
+      await RewardedAd.load(
+        adUnitId: _rewardedAdUnitId,
+        request: _buildAdRequest(),
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) {
+            // Dispose of any existing ad before setting the new one
+            _rewardedAd?.dispose();
+            
+            _rewardedAd = ad;
+            _isRewardedLoaded = true;
+            onLoaded?.call();
+            if (kDebugMode) {
+              // Removed debug print to avoid exposing information in production
+            }
+          },
+          onAdFailedToLoad: (error) {
+            _isRewardedLoaded = false;
+            onFailed?.call('Ad failed to load: ${error.code} - ${error.message}');
+            if (kDebugMode) {
+              // print('Rewarded ad failed to load: ${error.code} - ${error.message}');
+            }
+          },
+        ),
+      );
+    } catch (e) {
+      _isRewardedLoaded = false;
+      onFailed?.call('Error loading rewarded ad: $e');
+    }
   }
 
   /// Load a deletion rewarded ad
@@ -418,27 +450,35 @@ class AdService {
       return;
     }
 
-    await RewardedAd.load(
-      adUnitId: _deletionRewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _deletionRewardedAd = ad;
-          _isDeletionRewardedLoaded = true;
-          onLoaded?.call();
-          if (kDebugMode) {
-            // Removed debug print to avoid exposing information in production
-          }
-        },
-        onAdFailedToLoad: (error) {
-          _isDeletionRewardedLoaded = false;
-          onFailed?.call(error.message);
-          if (kDebugMode) {
-            // Removed debug print to avoid exposing information in production
-          }
-        },
-      ),
-    );
+    try {
+      await RewardedAd.load(
+        adUnitId: _deletionRewardedAdUnitId,
+        request: _buildAdRequest(),
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) {
+            // Dispose of any existing ad before setting the new one
+            _deletionRewardedAd?.dispose();
+            
+            _deletionRewardedAd = ad;
+            _isDeletionRewardedLoaded = true;
+            onLoaded?.call();
+            if (kDebugMode) {
+              // Removed debug print to avoid exposing information in production
+            }
+          },
+          onAdFailedToLoad: (error) {
+            _isDeletionRewardedLoaded = false;
+            onFailed?.call('Ad failed to load: ${error.code} - ${error.message}');
+            if (kDebugMode) {
+              //print('Deletion rewarded ad failed to load: ${error.code} - ${error.message}');
+            }
+          },
+        ),
+      );
+    } catch (e) {
+      _isDeletionRewardedLoaded = false;
+      onFailed?.call('Error loading deletion rewarded ad: $e');
+    }
   }
 
   /// Load a prompt enhancement rewarded ad
@@ -451,27 +491,35 @@ class AdService {
       return;
     }
 
-    await RewardedAd.load(
-      adUnitId: _promptEnhancementRewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _promptEnhancementRewardedAd = ad;
-          _isPromptEnhancementRewardedLoaded = true;
-          onLoaded?.call();
-          if (kDebugMode) {
-            // Removed debug print to avoid exposing information in production
-          }
-        },
-        onAdFailedToLoad: (error) {
-          _isPromptEnhancementRewardedLoaded = false;
-          onFailed?.call(error.message);
-          if (kDebugMode) {
-            // Removed debug print to avoid exposing information in production
-          }
-        },
-      ),
-    );
+    try {
+      await RewardedAd.load(
+        adUnitId: _promptEnhancementRewardedAdUnitId,
+        request: _buildAdRequest(),
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) {
+            // Dispose of any existing ad before setting the new one
+            _promptEnhancementRewardedAd?.dispose();
+            
+            _promptEnhancementRewardedAd = ad;
+            _isPromptEnhancementRewardedLoaded = true;
+            onLoaded?.call();
+            if (kDebugMode) {
+              // Removed debug print to avoid exposing information in production
+            }
+          },
+          onAdFailedToLoad: (error) {
+            _isPromptEnhancementRewardedLoaded = false;
+            onFailed?.call('Ad failed to load: ${error.code} - ${error.message}');
+            if (kDebugMode) {
+              // print('Prompt enhancement rewarded ad failed to load: ${error.code} - ${error.message}');
+            }
+          },
+        ),
+      );
+    } catch (e) {
+      _isPromptEnhancementRewardedLoaded = false;
+      onFailed?.call('Error loading prompt enhancement rewarded ad: $e');
+    }
   }
 
   /// Load a chat creation rewarded ad
@@ -484,27 +532,35 @@ class AdService {
       return;
     }
 
-    await RewardedAd.load(
-      adUnitId: _chatCreationRewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _chatCreationRewardedAd = ad;
-          _isChatCreationRewardedLoaded = true;
-          onLoaded?.call();
-          if (kDebugMode) {
-            // Removed debug print to avoid exposing information in production
-          }
-        },
-        onAdFailedToLoad: (error) {
-          _isChatCreationRewardedLoaded = false;
-          onFailed?.call(error.message);
-          if (kDebugMode) {
-            // Removed debug print to avoid exposing information in production
-          }
-        },
-      ),
-    );
+    try {
+      await RewardedAd.load(
+        adUnitId: _chatCreationRewardedAdUnitId,
+        request: _buildAdRequest(),
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) {
+            // Dispose of any existing ad before setting the new one
+            _chatCreationRewardedAd?.dispose();
+            
+            _chatCreationRewardedAd = ad;
+            _isChatCreationRewardedLoaded = true;
+            onLoaded?.call();
+            if (kDebugMode) {
+              // Removed debug print to avoid exposing information in production
+            }
+          },
+          onAdFailedToLoad: (error) {
+            _isChatCreationRewardedLoaded = false;
+            onFailed?.call('Ad failed to load: ${error.code} - ${error.message}');
+            if (kDebugMode) {
+              //print('Chat creation rewarded ad failed to load: ${error.code} - ${error.message}');
+            }
+          },
+        ),
+      );
+    } catch (e) {
+      _isChatCreationRewardedLoaded = false;
+      onFailed?.call('Error loading chat creation rewarded ad: $e');
+    }
   }
 
   /// Show the rewarded ad
@@ -518,44 +574,61 @@ class AdService {
       return false;
     }
 
-    // If no ad is loaded, try to preload one immediately
+    // If no ad is loaded, try to load one immediately
     if (_rewardedAd == null || !_isRewardedLoaded) {
       // Try to load first
       await loadRewardedAd();
-      if (_rewardedAd == null) {
-        onFailed?.call('Ad not ready. Please try again.');
-        // Start preloading for next time
-        preloadRewardedAd();
-        return false;
+      if (_rewardedAd == null || !_isRewardedLoaded) {
+        // If still no ad, try preloading and waiting briefly
+        if (!_isPreloadingRewardedAd) {
+          preloadRewardedAd();
+        }
+        
+        // Wait a short time to see if preloading helps
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (_rewardedAd == null || !_isRewardedLoaded) {
+          onFailed?.call('Ad not ready. Please try again in a moment.');
+          return false;
+        }
       }
     }
 
-    _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
-        _rewardedAd = null;
-        _isRewardedLoaded = false;
-        onAdDismissed?.call();
-        // Preload the next ad
-        preloadRewardedAd();
-      },
-      onAdFailedToShowFullScreenContent: (ad, error) {
-        ad.dispose();
-        _rewardedAd = null;
-        _isRewardedLoaded = false;
-        onFailed?.call(error.message);
-        // Preload the next ad
-        preloadRewardedAd();
-      },
-    );
+    try {
+      _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _rewardedAd = null;
+          _isRewardedLoaded = false;
+          onAdDismissed?.call();
+          // Preload the next ad
+          preloadRewardedAd();
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          ad.dispose();
+          _rewardedAd = null;
+          _isRewardedLoaded = false;
+          onFailed?.call('Ad failed to show: ${error.message}');
+          // Preload the next ad
+          preloadRewardedAd();
+        },
+      );
 
-    await _rewardedAd!.show(
-      onUserEarnedReward: (ad, reward) {
-        onUserEarnedReward(reward);
-      },
-    );
-
-    return true;
+      await _rewardedAd!.show(
+        onUserEarnedReward: (ad, reward) {
+          onUserEarnedReward(reward);
+        },
+      );
+      return true;
+    } catch (e) {
+      _rewardedAd?.dispose();
+      _rewardedAd = null;
+      _isRewardedLoaded = false;
+      onFailed?.call('Error showing ad: $e');
+      // Preload the next ad
+      preloadRewardedAd();
+      return false;
+    }
   }
 
   /// Show the deletion rewarded ad
@@ -573,40 +646,57 @@ class AdService {
     if (_deletionRewardedAd == null || !_isDeletionRewardedLoaded) {
       // Try to load first
       await loadDeletionRewardedAd();
-      if (_deletionRewardedAd == null) {
-        onFailed?.call('Ad not ready. Please try again.');
-        // Start preloading for next time
-        preloadDeletionRewardedAd();
-        return false;
+      if (_deletionRewardedAd == null || !_isDeletionRewardedLoaded) {
+        // If still no ad, try preloading and waiting briefly
+        if (!_isPreloadingDeletionRewardedAd) {
+          preloadDeletionRewardedAd();
+        }
+        
+        // Wait a short time to see if preloading helps
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (_deletionRewardedAd == null || !_isDeletionRewardedLoaded) {
+          onFailed?.call('Ad not ready. Please try again in a moment.');
+          return false;
+        }
       }
     }
 
-    _deletionRewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
-        _deletionRewardedAd = null;
-        _isDeletionRewardedLoaded = false;
-        onAdDismissed?.call();
-        // Preload the next ad
-        preloadDeletionRewardedAd();
-      },
-      onAdFailedToShowFullScreenContent: (ad, error) {
-        ad.dispose();
-        _deletionRewardedAd = null;
-        _isDeletionRewardedLoaded = false;
-        onFailed?.call(error.message);
-        // Preload the next ad
-        preloadDeletionRewardedAd();
-      },
-    );
+    try {
+      _deletionRewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _deletionRewardedAd = null;
+          _isDeletionRewardedLoaded = false;
+          onAdDismissed?.call();
+          // Preload the next ad
+          preloadDeletionRewardedAd();
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          ad.dispose();
+          _deletionRewardedAd = null;
+          _isDeletionRewardedLoaded = false;
+          onFailed?.call('Ad failed to show: ${error.message}');
+          // Preload the next ad
+          preloadDeletionRewardedAd();
+        },
+      );
 
-    await _deletionRewardedAd!.show(
-      onUserEarnedReward: (ad, reward) {
-        onUserEarnedReward(reward);
-      },
-    );
-
-    return true;
+      await _deletionRewardedAd!.show(
+        onUserEarnedReward: (ad, reward) {
+          onUserEarnedReward(reward);
+        },
+      );
+      return true;
+    } catch (e) {
+      _deletionRewardedAd?.dispose();
+      _deletionRewardedAd = null;
+      _isDeletionRewardedLoaded = false;
+      onFailed?.call('Error showing ad: $e');
+      // Preload the next ad
+      preloadDeletionRewardedAd();
+      return false;
+    }
   }
 
   /// Show the prompt enhancement rewarded ad
@@ -624,40 +714,57 @@ class AdService {
     if (_promptEnhancementRewardedAd == null || !_isPromptEnhancementRewardedLoaded) {
       // Try to load first
       await loadPromptEnhancementRewardedAd();
-      if (_promptEnhancementRewardedAd == null) {
-        onFailed?.call('Ad not ready. Please try again.');
-        // Start preloading for next time
-        preloadPromptEnhancementRewardedAd();
-        return false;
+      if (_promptEnhancementRewardedAd == null || !_isPromptEnhancementRewardedLoaded) {
+        // If still no ad, try preloading and waiting briefly
+        if (!_isPreloadingPromptEnhancementRewardedAd) {
+          preloadPromptEnhancementRewardedAd();
+        }
+        
+        // Wait a short time to see if preloading helps
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (_promptEnhancementRewardedAd == null || !_isPromptEnhancementRewardedLoaded) {
+          onFailed?.call('Ad not ready. Please try again in a moment.');
+          return false;
+        }
       }
     }
 
-    _promptEnhancementRewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
-        _promptEnhancementRewardedAd = null;
-        _isPromptEnhancementRewardedLoaded = false;
-        onAdDismissed?.call();
-        // Preload the next ad
-        preloadPromptEnhancementRewardedAd();
-      },
-      onAdFailedToShowFullScreenContent: (ad, error) {
-        ad.dispose();
-        _promptEnhancementRewardedAd = null;
-        _isPromptEnhancementRewardedLoaded = false;
-        onFailed?.call(error.message);
-        // Preload the next ad
-        preloadPromptEnhancementRewardedAd();
-      },
-    );
+    try {
+      _promptEnhancementRewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _promptEnhancementRewardedAd = null;
+          _isPromptEnhancementRewardedLoaded = false;
+          onAdDismissed?.call();
+          // Preload the next ad
+          preloadPromptEnhancementRewardedAd();
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          ad.dispose();
+          _promptEnhancementRewardedAd = null;
+          _isPromptEnhancementRewardedLoaded = false;
+          onFailed?.call('Ad failed to show: ${error.message}');
+          // Preload the next ad
+          preloadPromptEnhancementRewardedAd();
+        },
+      );
 
-    await _promptEnhancementRewardedAd!.show(
-      onUserEarnedReward: (ad, reward) {
-        onUserEarnedReward(reward);
-      },
-    );
-
-    return true;
+      await _promptEnhancementRewardedAd!.show(
+        onUserEarnedReward: (ad, reward) {
+          onUserEarnedReward(reward);
+        },
+      );
+      return true;
+    } catch (e) {
+      _promptEnhancementRewardedAd?.dispose();
+      _promptEnhancementRewardedAd = null;
+      _isPromptEnhancementRewardedLoaded = false;
+      onFailed?.call('Error showing ad: $e');
+      // Preload the next ad
+      preloadPromptEnhancementRewardedAd();
+      return false;
+    }
   }
 
   /// Show the chat creation rewarded ad
@@ -675,40 +782,57 @@ class AdService {
     if (_chatCreationRewardedAd == null || !_isChatCreationRewardedLoaded) {
       // Try to load first
       await loadChatCreationRewardedAd();
-      if (_chatCreationRewardedAd == null) {
-        onFailed?.call('Ad not ready. Please try again.');
-        // Start preloading for next time
-        preloadChatCreationRewardedAd();
-        return false;
+      if (_chatCreationRewardedAd == null || !_isChatCreationRewardedLoaded) {
+        // If still no ad, try preloading and waiting briefly
+        if (!_isPreloadingChatCreationRewardedAd) {
+          preloadChatCreationRewardedAd();
+        }
+        
+        // Wait a short time to see if preloading helps
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (_chatCreationRewardedAd == null || !_isChatCreationRewardedLoaded) {
+          onFailed?.call('Ad not ready. Please try again in a moment.');
+          return false;
+        }
       }
     }
 
-    _chatCreationRewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
-        _chatCreationRewardedAd = null;
-        _isChatCreationRewardedLoaded = false;
-        onAdDismissed?.call();
-        // Preload the next ad
-        preloadChatCreationRewardedAd();
-      },
-      onAdFailedToShowFullScreenContent: (ad, error) {
-        ad.dispose();
-        _chatCreationRewardedAd = null;
-        _isChatCreationRewardedLoaded = false;
-        onFailed?.call(error.message);
-        // Preload the next ad
-        preloadChatCreationRewardedAd();
-      },
-    );
+    try {
+      _chatCreationRewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _chatCreationRewardedAd = null;
+          _isChatCreationRewardedLoaded = false;
+          onAdDismissed?.call();
+          // Preload the next ad
+          preloadChatCreationRewardedAd();
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          ad.dispose();
+          _chatCreationRewardedAd = null;
+          _isChatCreationRewardedLoaded = false;
+          onFailed?.call('Ad failed to show: ${error.message}');
+          // Preload the next ad
+          preloadChatCreationRewardedAd();
+        },
+      );
 
-    await _chatCreationRewardedAd!.show(
-      onUserEarnedReward: (ad, reward) {
-        onUserEarnedReward(reward);
-      },
-    );
-
-    return true;
+      await _chatCreationRewardedAd!.show(
+        onUserEarnedReward: (ad, reward) {
+          onUserEarnedReward(reward);
+        },
+      );
+      return true;
+    } catch (e) {
+      _chatCreationRewardedAd?.dispose();
+      _chatCreationRewardedAd = null;
+      _isChatCreationRewardedLoaded = false;
+      onFailed?.call('Error showing ad: $e');
+      // Preload the next ad
+      preloadChatCreationRewardedAd();
+      return false;
+    }
   }
 
   /// Dispose banner ad

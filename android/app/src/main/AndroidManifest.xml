@@ -7,7 +7,8 @@
     <application
         android:label="pocketllm_lite"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/launcher_icon"
+        android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -39,6 +40,11 @@
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3982364651708878~4866669439"/>
+        
+        <!-- Add test device configuration -->
+        <meta-data
+            android:name="com.google.android.gms.ads.DELAY_APP_SETTINGS_LOADING"
+            android:value="true"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
