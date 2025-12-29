@@ -6,6 +6,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
 import '../../../../services/ad_service.dart';
+import '../../../../services/usage_limits_provider.dart';
 import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
 
@@ -279,10 +280,19 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       floatingActionButton: _isSelectionMode
           ? null
           : FloatingActionButton.extended(
-              onPressed: () {
+              onPressed: () async {
                 HapticFeedback.mediumImpact();
+                
+                // Check chat limit
+                final limitsNotifier = ref.read(usageLimitsProvider.notifier);
+                if (!limitsNotifier.canCreateChat()) {
+                  await _showChatLimitDialog();
+                  return;
+                }
+
+                await limitsNotifier.incrementChatCount();
                 ref.read(chatProvider.notifier).newChat();
-                Navigator.pop(context); // Go back to chat screen with new chat
+                if (context.mounted) Navigator.pop(context);
               },
               label: const Text('New Chat'),
               icon: const Icon(Icons.add),
@@ -367,6 +377,96 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     );
   }
 
+  Future<void> _showChatLimitDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Chat Limit Reached'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_outline, size: 48, color: Colors.orange),
+            const SizedBox(height: 16),
+            Text(
+              "You've used your ${AppConstants.freeChatsAllowed} free chats.",
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Watch a short ad to unlock more chats!',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Later'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              if (!await _adService.hasInternetConnection()) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Connect to WiFi/Data to watch ad and unlock.',
+                      ),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+                return;
+              }
+              if (context.mounted) Navigator.pop(context, true);
+            },
+            icon: const Icon(Icons.play_circle),
+            label: const Text('Watch Ad'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      await _adService.showChatCreationRewardedAd(
+        onUserEarnedReward: (reward) async {
+          final limitsNotifier = ref.read(usageLimitsProvider.notifier);
+          await limitsNotifier.addChatCredits(AppConstants.chatsPerAdWatch);
+
+          if (mounted) {
+            // Immediately use one credit to create the chat
+            await limitsNotifier.incrementChatCount();
+            if (!mounted) return;
+
+            ref.read(chatProvider.notifier).newChat();
+
+            HapticFeedback.heavyImpact();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Unlocked more chats! New chat created.'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.pop(context); // Go back to chat screen
+          }
+        },
+        onFailed: (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Ad failed: $error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
+    }
+  }
+
   Future<void> _deleteSession(String id) async {
     // Show confirmation with ad requirement
     final confirm = await showDialog<bool>(
@@ -381,7 +481,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(
@@ -427,7 +527,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
         return;
       }
 
-      await _adService.showRewardedAd(
+      await _adService.showDeletionRewardedAd(
         onUserEarnedReward: (reward) async {
           final storage = ref.read(storageServiceProvider);
           await storage.deleteChatSession(id);
@@ -470,7 +570,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(
@@ -517,7 +617,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
         return;
       }
 
-      await _adService.showRewardedAd(
+      await _adService.showDeletionRewardedAd(
         onUserEarnedReward: (reward) async {
           final storage = ref.read(storageServiceProvider);
           for (final id in _selectedIds) {

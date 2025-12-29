@@ -84,7 +84,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       if (mounted) {
         await showDialog(
           context: context,
-          builder: (context) => AlertDialog(
+          builder: (dialogContext) => AlertDialog(
             title: const Text('Ollama Not Connected'),
             content: const Text(
               'Please ensure Ollama is running and connected. '
@@ -92,22 +92,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Cancel'),
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context);
-                  // Navigate to settings for connection configuration
-                  context.push('/settings');
+                  Navigator.pop(dialogContext);
+                  // Navigate to settings using State context
+                  if (mounted) context.push('/settings');
                 },
                 child: const Text('Settings'),
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context);
-                  // Navigate to docs for setup instructions
-                  context.push('/settings/docs');
+                  Navigator.pop(dialogContext);
+                  // Navigate to docs using State context
+                  if (mounted) context.push('/settings/docs');
                 },
                 child: const Text('Docs'),
               ),
@@ -199,6 +199,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       if (mounted) {
         // Consume one enhancer use
         await limitsNotifier.useEnhancer();
+        
+        if (!mounted) return;
 
         setState(() {
           _controller.text = enhanced;
@@ -296,7 +298,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
     if (result == true && mounted) {
       // Show and handle rewarded ad
-      await adService.showRewardedAd(
+      await adService.showPromptEnhancementRewardedAd(
         onUserEarnedReward: (reward) async {
           await ref
               .read(usageLimitsProvider.notifier)
@@ -398,10 +400,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 gradient: _isEnhancing
                     ? LinearGradient(
                         colors: [
-                          Colors.blue.withOpacity(0.1),
-                          Colors.purple.withOpacity(0.1),
-                          Colors.pink.withOpacity(0.1),
-                          Colors.blue.withOpacity(0.1),
+                          Colors.blue.withValues(alpha: 0.1),
+                          Colors.purple.withValues(alpha: 0.1),
+                          Colors.pink.withValues(alpha: 0.1),
+                          Colors.blue.withValues(alpha: 0.1),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -410,7 +412,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 boxShadow: _isEnhancing
                     ? [
                         BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
+                          color: Colors.blue.withValues(alpha: 0.3),
                           blurRadius: 8,
                           spreadRadius: 1,
                         ),

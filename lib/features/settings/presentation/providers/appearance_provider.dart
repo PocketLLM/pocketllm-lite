@@ -58,11 +58,11 @@ class AppearanceNotifier extends Notifier<AppearanceState> {
     return AppearanceState(
       userMsgColor: storage.getSetting(
         AppConstants.userMsgColorKey,
-        defaultValue: Colors.teal.value,
+        defaultValue: Colors.teal.toARGB32(),
       ),
       aiMsgColor: storage.getSetting(
         AppConstants.aiMsgColorKey,
-        defaultValue: Colors.grey[800]?.value ?? Colors.grey.value,
+        defaultValue: Colors.grey[800]?.toARGB32() ?? Colors.grey.toARGB32(),
       ),
       bubbleRadius: storage.getSetting(
         AppConstants.bubbleRadiusKey,

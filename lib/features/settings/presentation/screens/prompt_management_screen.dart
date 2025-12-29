@@ -15,8 +15,10 @@ class PromptManagementScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final storage = ref.watch(storageServiceProvider);
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
         // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
         if (GoRouter.of(context).canPop()) {
           context.pop();
@@ -24,7 +26,6 @@ class PromptManagementScreen extends ConsumerWidget {
           // If we can't pop, go to the settings screen directly
           context.go('/settings');
         }
-        return false; // We handle the pop ourselves
       },
       child: Scaffold(
         appBar: AppBar(
@@ -69,10 +70,10 @@ class PromptManagementScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: Theme.of(context).dividerColor.withOpacity(0.1),
+                      color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
                     ),
                   ),
                   child: ListTile(
@@ -93,7 +94,7 @@ class PromptManagementScreen extends ConsumerWidget {
                         style: TextStyle(
                           color: Theme.of(
                             context,
-                          ).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                          ).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
                         ),
                       ),
                     ),
@@ -200,7 +201,7 @@ class PromptManagementScreen extends ConsumerWidget {
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                        side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                       ),
                     ),
                     child: const Text('Cancel'),
