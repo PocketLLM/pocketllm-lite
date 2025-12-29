@@ -125,8 +125,10 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
     final appearance = ref.watch(appearanceProvider);
     final notifier = ref.read(appearanceProvider.notifier);
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
         // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
         if (GoRouter.of(context).canPop()) {
           context.pop();
@@ -134,7 +136,6 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
           // If we can't pop, go to the settings screen directly
           context.go('/settings');
         }
-        return false; // We handle the pop ourselves
       },
       child: Scaffold(
         appBar: AppBar(
@@ -173,14 +174,14 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                 context,
                 'You',
                 Color(appearance.userMsgColor),
-                (c) => notifier.updateUserMsgColor(c.value),
+                (c) => notifier.updateUserMsgColor(c.toARGB32()),
               ),
               const SizedBox(height: 12),
               _buildColorPickerSection(
                 context,
                 'AI',
                 Color(appearance.aiMsgColor),
-                (c) => notifier.updateAiMsgColor(c.value),
+                (c) => notifier.updateAiMsgColor(c.toARGB32()),
               ),
 
               const SizedBox(height: 24),
@@ -487,7 +488,7 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                       decoration: BoxDecoration(
                         color: c,
                         shape: BoxShape.circle,
-                        border: currentColor.value == c.value
+                        border: currentColor.toARGB32() == c.toARGB32()
                             ? Border.all(
                                 color: Theme.of(context).primaryColor,
                                 width: 3,
@@ -602,8 +603,9 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                   divisions: 36,
                   label: current.toStringAsFixed(0),
                   onChanged: (val) {
-                    if ((val - current).abs() > 1)
+                    if ((val - current).abs() > 1) {
                       HapticFeedback.selectionClick();
+                    }
                     notifier.updateBubbleRadius(val);
                   },
                 ),
@@ -712,7 +714,7 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                     ? Color(appearance.customBgColor!)
                     : Colors.white,
                 (c) {
-                  notifier.updateCustomBgColor(c.value);
+                  notifier.updateCustomBgColor(c.toARGB32());
                 },
               );
             },

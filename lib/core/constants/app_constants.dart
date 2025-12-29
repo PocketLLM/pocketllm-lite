@@ -35,15 +35,21 @@ class AppConstants {
       '''You are an expert prompt engineer. Your task is to take the user's input text, which is a prompt intended for an AI model, and enhance it by applying best practices: Make it more specific, descriptive, and structured; add context if implied; use delimiters like ### or """ for sections; encourage step-by-step reasoning if appropriate; preserve the original intent. Output ONLY the enhanced prompt text—no introductions, explanations, conclusions, or additional text.''';
 
   // ============ AdMob Configuration ============
-  // Test IDs (use these for development)
+  // Production IDs
   static const String admobAppIdAndroid =
-      'ca-app-pub-3940256099942544~3347511713';
-  static const String admobAppIdIos = 'ca-app-pub-3940256099942544~1458002511';
+      'ca-app-pub-3982364651708878~4866669439'; // Android production App ID
+  static const String admobAppIdIos = 'ca-app-pub-3982364651708878~4866669439'; // iOS production App ID
 
-  // Test Ad Unit IDs (REPLACE with your production IDs from console.google.com/admob)
-  static const String bannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
+  // Production Ad Unit IDs
+  static const String bannerAdUnitId = 'ca-app-pub-3982364651708878/8534645229'; // Banner Ad Unit ID
   static const String rewardedAdUnitId =
-      'ca-app-pub-3940256099942544/5224354917';
+      'ca-app-pub-3982364651708878/3098485717'; // Rewarded Ad Unit ID for tokens
+  static const String deletionRewardedAdUnitId =
+      'ca-app-pub-3982364651708878/9472322373'; // Rewarded Ad Unit ID for deletion feature
+  static const String promptEnhancementRewardedAdUnitId =
+      'ca-app-pub-3982364651708878/4212256839'; // Rewarded Ad Unit ID for prompt enhancement
+  static const String chatCreationRewardedAdUnitId =
+      'ca-app-pub-3982364651708878/4455799413'; // Rewarded Ad Unit ID for chat creation
 
   // ============ Usage Limits ============
   // Token System

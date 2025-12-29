@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -92,6 +93,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         if (mounted) setState(() => _isBannerLoaded = true);
       },
       onFailed: (error) {
+        if (kDebugMode) {
+          print('Banner ad failed to load: $error');
+        }
         if (mounted) setState(() => _isBannerLoaded = false);
       },
     );

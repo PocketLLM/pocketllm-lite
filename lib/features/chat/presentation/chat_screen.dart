@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers.dart';
 import '../../../services/usage_limits_provider.dart';
+import '../../../services/ad_service.dart';
 import 'providers/chat_provider.dart';
 import 'providers/models_provider.dart';
 import 'providers/connection_status_provider.dart';
@@ -98,7 +99,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.4),
+                          color: Colors.green.withValues(alpha: 0.4),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: DropdownButtonHideUnderline(
@@ -390,6 +391,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _showChatLimitDialog() async {
+    final adService = AdService();
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -415,7 +417,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             child: const Text('Later'),
           ),
           ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () async {
+              // Check internet first
+              if (!await adService.hasInternetConnection()) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Connect to WiFi/Data to watch ad and unlock.',
+                      ),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+                return;
+              }
+              if (context.mounted) Navigator.pop(context, true);
+            },
             icon: const Icon(Icons.play_circle),
             label: const Text('Watch Ad'),
             style: ElevatedButton.styleFrom(
@@ -428,19 +446,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
 
     if (result == true && mounted) {
-      // Since we've removed ads from the chat screen, we'll redirect to settings
-      // where users can watch an ad to unlock more chats
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please go to Settings to watch an ad and unlock more chats'),
-            backgroundColor: Colors.blue,
-          ),
-        );
-        
-        // Optionally navigate to settings
-        // Future.microtask(() => context.push('/settings'));
-      }
+      await adService.showChatCreationRewardedAd(
+        onUserEarnedReward: (reward) async {
+          final limitsNotifier = ref.read(usageLimitsProvider.notifier);
+          await limitsNotifier.addChatCredits(AppConstants.chatsPerAdWatch);
+          
+          if (mounted) {
+            // Immediately use one credit to create the chat
+            await limitsNotifier.incrementChatCount();
+            if (!mounted) return;
+            
+            ref.read(chatProvider.notifier).newChat();
+
+            if (ref.read(storageServiceProvider).getSetting(
+                  AppConstants.hapticFeedbackKey,
+                  defaultValue: true,
+                )) {
+              HapticFeedback.heavyImpact();
+            }
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Unlocked more chats! New chat created.'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        },
+        onFailed: (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Ad failed: $error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
     }
   }
 }

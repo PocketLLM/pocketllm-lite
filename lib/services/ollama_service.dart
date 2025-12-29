@@ -5,9 +5,11 @@ import '../features/chat/domain/models/ollama_model.dart';
 
 class OllamaService {
   String _baseUrl;
+  final http.Client _client;
 
-  OllamaService({String? baseUrl})
-    : _baseUrl = baseUrl ?? AppConstants.defaultOllamaBaseUrl;
+  OllamaService({String? baseUrl, http.Client? client})
+    : _baseUrl = baseUrl ?? AppConstants.defaultOllamaBaseUrl,
+      _client = client ?? http.Client();
 
   void updateBaseUrl(String url) {
     _baseUrl = url;
@@ -15,7 +17,7 @@ class OllamaService {
 
   Future<bool> checkConnection() async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/api/tags'));
+      final response = await _client.get(Uri.parse('$_baseUrl/api/tags'));
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -24,7 +26,7 @@ class OllamaService {
 
   Future<List<OllamaModel>> listModels() async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/api/tags'));
+      final response = await _client.get(Uri.parse('$_baseUrl/api/tags'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final models = (data['models'] as List)
@@ -57,21 +59,33 @@ class OllamaService {
     };
 
     if (options != null) body["options"] = options;
+    
+    // Handle system prompt by prepending it to messages if provided
+    final List<Map<String, dynamic>> finalMessages = List.from(messages);
     if (system != null && system.isNotEmpty) {
-      // Ollama supports system in messages list or top level depending on version/model.
-      // Usually standard is adding a "system" role message primarily.
-      // However, some endpoints support prompt/systemOverride.
-      // The most compatible way is to prepend to messages list, but caller can do that.
-      // If we want to explicitely set system prompt:
-      // Note: Ollama chat api doesn't always strictly separate system param if messages has it.
-      // We will trust the caller to put it in messages OR we can add a system message here.
-      // But let's assume if 'system' arg is passed, we check if messages already has it.
+      // Check if a system message already exists at the beginning
+      bool hasSystem = false;
+      if (finalMessages.isNotEmpty) {
+        hasSystem = finalMessages.first['role'] == 'system';
+      }
+      
+      if (!hasSystem) {
+        finalMessages.insert(0, {
+          "role": "system",
+          "content": system,
+        });
+      }
     }
+    body["messages"] = finalMessages;
 
     request.body = jsonEncode(body);
 
     try {
-      final streamedResponse = await request.send();
+      // We can't use _client.send(request) directly if _client is a standard IOClient 
+      // because we want a streamed response. 
+      // However, for testing with MockClient, we want to use the injected client.
+      // Standard http.Client.send returns a StreamedResponse.
+      final streamedResponse = await _client.send(request);
 
       if (streamedResponse.statusCode == 200) {
         await for (final chunk in streamedResponse.stream.transform(
@@ -110,12 +124,12 @@ class OllamaService {
   Future<void> pullModel(String modelName) async {
     final url = Uri.parse('$_baseUrl/api/pull');
     // Simple pull trigger, might want to stream progress differently
-    await http.post(url, body: jsonEncode({"name": modelName}));
+    await _client.post(url, body: jsonEncode({"name": modelName}));
   }
 
   Future<void> deleteModel(String modelName) async {
     final url = Uri.parse('$_baseUrl/api/delete');
-    await http.delete(url, body: jsonEncode({"name": modelName}));
+    await _client.delete(url, body: jsonEncode({"name": modelName}));
   }
 
   /// Non-streaming prompt enhancement using /api/chat
@@ -142,7 +156,7 @@ class OllamaService {
     };
 
     try {
-      final response = await http
+      final response = await _client
           .post(
             url,
             headers: {'Content-Type': 'application/json'},

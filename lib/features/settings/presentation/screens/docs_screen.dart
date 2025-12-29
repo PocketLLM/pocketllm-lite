@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
@@ -35,93 +34,273 @@ class _DocsState extends State<Docs> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    // Hardcoded markdown content for Termux and Ollama setup
+    // File Overview:
+    // - Purpose: Fullscreen documentation view duplicating the app bar docs tabs.
+    // - Backend Migration: Replace hardcoded markdown with backend-served
+    //   documentation sources.
     const termuxDocs = '''
 # Termux Setup Guide
 
-## Install Termux
-Download Termux from F-Droid for the latest version:
-[F-Droid Termux](https://f-droid.org/en/packages/com.termux/)
+## What is Termux?
+Termux is an Android terminal emulator and Linux environment app that works directly with no rooting required. It provides a powerful command-line experience and allows you to run Linux tools on your Android device.
 
-## Basic Setup
-Open Termux and run these commands:
+## Installation Methods
 
-```
-pkg update && pkg upgrade
-pkg install curl
-```
+### Method 1: F-Droid (Recommended)
+1. Visit [F-Droid website](https://f-droid.org)
+2. Download and install F-Droid
+3. Search for "Termux" in F-Droid
+4. Install the latest version
 
-## Install Ollama
-```
-curl -fsSL https://ollama.com/install.sh | sh
-```
+### Method 2: GitHub Release
+If F-Droid is not accessible:
+1. Go to [Termux GitHub releases](https://github.com/termux/termux-app/releases)
+2. Download `termux-app_v0.119.0-beta.1+apt-android-7-github-debug_arm64-v8a.apk`
+3. Install the downloaded APK
 
-## Start Ollama Service
-```
-ollama serve
-```
+## Initial Setup
 
-Keep Termux running in the background. You can minimize it, but don't swipe it away from recent apps.
+1. **Grant Storage Permission**
+   ```bash
+   termux-setup-storage
+   ```
+   - This will prompt for storage access permission
+   - Required for accessing device storage
 
-## Pull a Model (Example)
-```
-ollama pull llama3
-```
+2. **Update Package Repository**
+   ```bash
+   pkg update
+   pkg upgrade
+   ```
+   - Always run this after fresh installation
+   - Type 'y' when prompted
 
-## Troubleshooting Tips
-- If you get "connection refused" errors, make sure ollama serve is still running
-- Some models require significant RAM. If downloads fail, try simpler models like "tinyllama"
-- Use `termux-wake-lock` to prevent Termux from sleeping (optional but recommended)
+3. **Install Essential Packages**
+   ```bash
+   pkg install git cmake golang
+   ```
+   These are required for building Ollama
+
+## Basic Termux Usage
+
+### Package Management
+- Install package: `pkg install <package-name>`
+- Update packages: `pkg upgrade`
+- Search packages: `pkg search <query>`
+- Remove package: `pkg remove <package-name>`
+
+### File Navigation
+- Current directory: `pwd`
+- List files: `ls`
+- Change directory: `cd <directory>`
+- Create directory: `mkdir <name>`
+- Remove directory: `rm -r <directory>`
+
+### Text Editing
+- Nano editor: `pkg install nano`
+- Vim editor: `pkg install vim`
+- Edit file: `nano <filename>` or `vim <filename>`
+
+## Tips & Best Practices
+
+1. **Performance**
+   - Keep packages updated
+   - Remove unused packages
+   - Clear package cache: `pkg clean`
+
+2. **Usability**
+   - Enable extra keys row in settings
+   - Use a monospace font
+   - Create aliases for common commands
+   - Use tab completion
+
+3. **Storage**
+   - Regular cleanup of downloaded files
+   - Monitor storage usage: `df -h`
+   - Use `termux-setup-storage` for external storage
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Package Installation Fails**
+   ```bash
+   pkg update
+   pkg upgrade
+   ```
+   If still failing, try:
+   ```bash
+   termux-change-repo
+   ```
+
+2. **Storage Access Issues**
+   - Check app permissions in Android settings
+   - Run `termux-setup-storage`
+   - Restart Termux
+
+3. **Performance Issues**
+   - Clear package cache
+   - Remove unused packages
+   - Check storage space
+
+## Additional Resources
+- [Official Termux Wiki](https://wiki.termux.com)
+- [Termux GitHub](https://github.com/termux)
+- [Termux Community Forum](https://termux.com/community)
 ''';
 
     const ollamaDocs = '''
 # Ollama Setup Guide
 
 ## What is Ollama?
-Ollama allows you to run large language models locally on your device. It's the backbone of Pocket LLM Lite.
+Ollama is an open-source tool that allows you to run large language models locally. On Android, it can be run through Termux, enabling you to use AI models directly on your device without cloud dependencies.
 
-## Installation
-Visit [Ollama.com](https://ollama.com) and download the appropriate version for your system:
-- Windows: Download the .exe installer
-- macOS: Download the .app bundle
-- Linux: Use the installation script
+## Prerequisites
+- Termux installed and configured
+- Git, CMake, and Golang installed
+- Sufficient storage space (varies by model)
+- Android device with good processing power
 
-## Running Ollama
-After installation, Ollama runs as a service:
-- Windows: Runs as a background service automatically
-- macOS: Runs as a background service automatically
-- Linux: Start with `systemctl start ollama` or run `ollama serve` manually
+## Installation Steps
 
-## Pulling Models
-Use the command line to pull models:
-```
-ollama pull llama3
-ollama pull mistral
-ollama pull tinyllama
+### 1. Prepare Environment
+Ensure you have the required packages:
+```bash
+pkg upgrade
+pkg install git cmake golang
 ```
 
-## Model Directory
-Models are stored in:
-- Windows: `C:\\Users\\<username>\\.ollama\\models`
-- macOS: `~/.ollama/models`
-- Linux: `/usr/share/ollama/.ollama/models`
+### 2. Build from Source
+```bash
+# Clone Ollama repository
+git clone --depth 1 https://github.com/ollama/ollama.git
 
-## API Endpoint
-Pocket LLM Lite connects to Ollama at:
-```
-http://localhost:11434
+# Navigate to ollama directory
+cd ollama
+
+# Generate and build
+go generate ./...
+go build .
 ```
 
-This is usually detected automatically. If not, enter it manually in Settings.
+### 3. Start Ollama Server
+```bash
+# Run server in background
+./ollama serve &
+```
+
+## Using Ollama
+
+### Basic Commands
+- Start server: `./ollama serve &`
+- Run model: `./ollama run <model-name>`
+- List models: `./ollama list`
+- Remove model: `./ollama rm <model-name>`
+- Pull model: `./ollama pull <model-name>`
+
+### Model Management
+
+#### Recommended Models for Mobile
+1. **Small Models (Best for phones)**
+   - deepseek-r1:1.5b
+   - phi-2
+   - neural-chat:3b
+   - mistral:7b
+
+2. **Model Size Categories**
+   - 1.5B-3B: Good performance on phones
+   - 7B-13B: May be slow but usable
+   - >30B: Not recommended for mobile use
+
+### Performance Optimization
+
+1. **Device Preparation**
+   - Close background apps
+   - Ensure sufficient free RAM
+   - Connect to power source
+   - Use in a cool environment
+
+2. **Model Selection**
+   - Start with smaller models
+   - Test performance before heavy use
+   - Monitor resource usage
+
+3. **Usage Tips**
+   - Run server in background
+   - Use offline when possible
+   - Monitor temperature
+   - Keep sessions reasonable length
+
+## Installation Options
+
+### Option 1: Basic Installation
+```bash
+./ollama serve &
+./ollama run <model-name>
+```
+
+### Option 2: System-wide Installation
+```bash
+# Move to bin for system-wide access
+cp ollama/ollama /data/data/com.termux/files/usr/bin/
+```
+
+## Cleanup and Maintenance
+
+### Remove Build Files
+```bash
+# Clean up Go directory
+chmod -R 700 ~/go
+rm -r ~/go
+```
+
+### Model Management
+```bash
+# Remove unused models
+ollama list
+ollama rm <model-name>
+
+# Update models
+ollama pull <model-name>
+```
 
 ## Troubleshooting
-- Firewall issues: Make sure port 11434 is not blocked
-- Model loading: Large models may take time to load on first use
-- Memory errors: Try smaller models if you have limited RAM
+
+### Common Issues
+
+1. **Build Failures**
+   - Check Go installation
+   - Update all packages
+   - Clear Go cache
+   - Ensure sufficient storage
+
+2. **Performance Issues**
+   - Try smaller models
+   - Check RAM usage
+   - Monitor CPU temperature
+   - Close background apps
+
+3. **Connection Issues**
+   - Check if server is running
+   - Verify localhost access
+   - Check port availability
+
+### Best Practices
+- Regular cleanup of unused models
+- Monitor device temperature
+- Keep models updated
+- Regular maintenance of Termux environment
+
+## Additional Resources
+- [Ollama GitHub](https://github.com/ollama/ollama)
+- [Ollama Models Library](https://ollama.com/library)
+- [Ollama Documentation](https://ollama.ai/docs)
 ''';
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
         // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
         if (GoRouter.of(context).canPop()) {
           context.pop();
@@ -129,7 +308,6 @@ This is usually detected automatically. If not, enter it manually in Settings.
           // If we can't pop, go to the settings screen directly
           context.go('/settings');
         }
-        return false; // We handle the pop ourselves
       },
       child: Scaffold(
         backgroundColor: Colors.grey[50], // User specified
