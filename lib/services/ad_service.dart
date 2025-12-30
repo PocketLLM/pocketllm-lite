@@ -182,7 +182,7 @@ class AdService {
       adUnitId: _bannerAdUnitId,
       size:
           adSize ??
-          AdSize.largeBanner, // Use larger banner by default for better fill
+          AdSize.banner, // Use standard banner (320x50) for reliable loading
       request: _buildAdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
