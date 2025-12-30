@@ -18,12 +18,19 @@ void main() async {
 
   // Initialize AdMob
   await AdService.initialize();
-  
-  // Preload rewarded ads in background
-  AdService().preloadRewardedAd();
-  AdService().preloadDeletionRewardedAd();
-  AdService().preloadPromptEnhancementRewardedAd();
-  AdService().preloadChatCreationRewardedAd();
+
+  // Preload all rewarded ads immediately
+  final adService = AdService();
+  adService.preloadRewardedAd();
+  adService.preloadDeletionRewardedAd();
+  adService.preloadPromptEnhancementRewardedAd();
+  adService.preloadChatCreationRewardedAd();
+
+  // Set up periodic preloading to ensure ads are always ready
+  // This runs every 2 minutes to check and reload ads if needed
+  Future.delayed(const Duration(minutes: 2), () {
+    _periodicAdPreload(adService);
+  });
 
   FlutterNativeSplash.remove();
 
@@ -33,6 +40,28 @@ void main() async {
       child: const PocketLLMApp(),
     ),
   );
+}
+
+// Periodic ad preloading to ensure ads are always ready
+void _periodicAdPreload(AdService adService) {
+  // Preload any ads that aren't currently loaded
+  if (!adService.isRewardedLoaded) {
+    adService.preloadRewardedAd();
+  }
+  if (!adService.isDeletionRewardedLoaded) {
+    adService.preloadDeletionRewardedAd();
+  }
+  if (!adService.isPromptEnhancementRewardedLoaded) {
+    adService.preloadPromptEnhancementRewardedAd();
+  }
+  if (!adService.isChatCreationRewardedLoaded) {
+    adService.preloadChatCreationRewardedAd();
+  }
+
+  // Schedule next check in 2 minutes
+  Future.delayed(const Duration(minutes: 2), () {
+    _periodicAdPreload(adService);
+  });
 }
 
 class PocketLLMApp extends ConsumerWidget {

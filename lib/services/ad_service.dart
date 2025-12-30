@@ -19,7 +19,7 @@ class AdService {
   bool _isDeletionRewardedLoaded = false;
   bool _isPromptEnhancementRewardedLoaded = false;
   bool _isChatCreationRewardedLoaded = false;
-  
+
   // Add preload management
   bool _isPreloadingRewardedAd = false;
   bool _isPreloadingDeletionRewardedAd = false;
@@ -34,23 +34,26 @@ class AdService {
   bool get isBannerLoaded => _isBannerLoaded;
   bool get isRewardedLoaded => _isRewardedLoaded;
   bool get isDeletionRewardedLoaded => _isDeletionRewardedLoaded;
-  bool get isPromptEnhancementRewardedLoaded => _isPromptEnhancementRewardedLoaded;
+  bool get isPromptEnhancementRewardedLoaded =>
+      _isPromptEnhancementRewardedLoaded;
   bool get isChatCreationRewardedLoaded => _isChatCreationRewardedLoaded;
   BannerAd? get bannerAd => _bannerAd;
 
   /// Initialize MobileAds SDK
   static Future<void> initialize() async {
     await MobileAds.instance.initialize();
-    
+
     // Configure test devices in debug mode
     if (kDebugMode) {
       await MobileAds.instance.updateRequestConfiguration(
         RequestConfiguration(
-          testDeviceIds: <String>['1756C7EEFE5F918781893DF0AD6CC8E8'], // From your logs
+          testDeviceIds: <String>[
+            '1756C7EEFE5F918781893DF0AD6CC8E8',
+          ], // From your logs
         ),
       );
     }
-    
+
     if (kDebugMode) {
       // Removed debug print to avoid exposing information in production
     }
@@ -125,7 +128,7 @@ class AdService {
   }) async {
     // Dispose of existing banner ad if present
     disposeBannerAd();
-    
+
     if (!await hasInternetConnection()) {
       onFailed?.call('No internet connection');
       return;
@@ -163,16 +166,61 @@ class AdService {
     }
   }
 
+  /// Create and load a banner ad
+  /// Returns the BannerAd instance which must be disposed by the caller
+  Future<BannerAd?> createAndLoadBannerAd({
+    required Function() onLoaded,
+    required Function(String) onFailed,
+    AdSize? adSize,
+  }) async {
+    if (!await hasInternetConnection()) {
+      onFailed('No internet connection');
+      return null;
+    }
+
+    final bannerAd = BannerAd(
+      adUnitId: _bannerAdUnitId,
+      size:
+          adSize ??
+          AdSize.largeBanner, // Use larger banner by default for better fill
+      request: _buildAdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          onLoaded();
+          if (kDebugMode) {
+            // Removed debug print to avoid exposing information in production
+          }
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          onFailed('Ad failed to load: ${error.code} - ${error.message}');
+          if (kDebugMode) {
+            // print('Banner ad failed to load: ${error.code} - ${error.message}');
+          }
+        },
+      ),
+    );
+
+    try {
+      await bannerAd.load();
+      return bannerAd;
+    } catch (e) {
+      bannerAd.dispose();
+      onFailed('Error loading banner: $e');
+      return null;
+    }
+  }
+
   /// Proactive rewarded ad preloading with retry mechanism
   Future<void> preloadRewardedAd() async {
     // Prevent multiple simultaneous preload attempts
     if (_isPreloadingRewardedAd) return;
-    
+
     // If we already have a loaded ad, don't preload another one
     if (_rewardedAd != null && _isRewardedLoaded) return;
-    
+
     _isPreloadingRewardedAd = true;
-    
+
     try {
       if (!await hasInternetConnection()) {
         _isPreloadingRewardedAd = false;
@@ -186,12 +234,12 @@ class AdService {
           onAdLoaded: (ad) {
             // Dispose of any existing ad before setting the new one
             _rewardedAd?.dispose();
-            
+
             _rewardedAd = ad;
             _isRewardedLoaded = true;
             _isPreloadingRewardedAd = false;
             _rewardedAdRetryCount = 0; // Reset retry count on success
-            
+
             if (kDebugMode) {
               // Removed debug print to avoid exposing information in production
             }
@@ -199,14 +247,14 @@ class AdService {
           onAdFailedToLoad: (error) {
             _isRewardedLoaded = false;
             _isPreloadingRewardedAd = false;
-            
+
             // Implement retry mechanism
             if (_rewardedAdRetryCount < maxRetryAttempts) {
               _rewardedAdRetryCount++;
               // Retry after a short delay
               Future.delayed(const Duration(seconds: 2), preloadRewardedAd);
             }
-            
+
             if (kDebugMode) {
               // Removed debug print to avoid exposing information in production
             }
@@ -226,12 +274,12 @@ class AdService {
   Future<void> preloadDeletionRewardedAd() async {
     // Prevent multiple simultaneous preload attempts
     if (_isPreloadingDeletionRewardedAd) return;
-    
+
     // If we already have a loaded ad, don't preload another one
     if (_deletionRewardedAd != null && _isDeletionRewardedLoaded) return;
-    
+
     _isPreloadingDeletionRewardedAd = true;
-    
+
     try {
       if (!await hasInternetConnection()) {
         _isPreloadingDeletionRewardedAd = false;
@@ -245,12 +293,12 @@ class AdService {
           onAdLoaded: (ad) {
             // Dispose of any existing ad before setting the new one
             _deletionRewardedAd?.dispose();
-            
+
             _deletionRewardedAd = ad;
             _isDeletionRewardedLoaded = true;
             _isPreloadingDeletionRewardedAd = false;
             _deletionRewardedAdRetryCount = 0; // Reset retry count on success
-            
+
             if (kDebugMode) {
               // Removed debug print to avoid exposing information in production
             }
@@ -258,14 +306,17 @@ class AdService {
           onAdFailedToLoad: (error) {
             _isDeletionRewardedLoaded = false;
             _isPreloadingDeletionRewardedAd = false;
-            
+
             // Implement retry mechanism
             if (_deletionRewardedAdRetryCount < maxRetryAttempts) {
               _deletionRewardedAdRetryCount++;
               // Retry after a short delay
-              Future.delayed(const Duration(seconds: 2), preloadDeletionRewardedAd);
+              Future.delayed(
+                const Duration(seconds: 2),
+                preloadDeletionRewardedAd,
+              );
             }
-            
+
             if (kDebugMode) {
               // Removed debug print to avoid exposing information in production
             }
@@ -285,12 +336,14 @@ class AdService {
   Future<void> preloadPromptEnhancementRewardedAd() async {
     // Prevent multiple simultaneous preload attempts
     if (_isPreloadingPromptEnhancementRewardedAd) return;
-    
+
     // If we already have a loaded ad, don't preload another one
-    if (_promptEnhancementRewardedAd != null && _isPromptEnhancementRewardedLoaded) return;
-    
+    if (_promptEnhancementRewardedAd != null &&
+        _isPromptEnhancementRewardedLoaded)
+      return;
+
     _isPreloadingPromptEnhancementRewardedAd = true;
-    
+
     try {
       if (!await hasInternetConnection()) {
         _isPreloadingPromptEnhancementRewardedAd = false;
@@ -304,12 +357,13 @@ class AdService {
           onAdLoaded: (ad) {
             // Dispose of any existing ad before setting the new one
             _promptEnhancementRewardedAd?.dispose();
-            
+
             _promptEnhancementRewardedAd = ad;
             _isPromptEnhancementRewardedLoaded = true;
             _isPreloadingPromptEnhancementRewardedAd = false;
-            _promptEnhancementRewardedAdRetryCount = 0; // Reset retry count on success
-            
+            _promptEnhancementRewardedAdRetryCount =
+                0; // Reset retry count on success
+
             if (kDebugMode) {
               // Removed debug print to avoid exposing information in production
             }
@@ -317,14 +371,17 @@ class AdService {
           onAdFailedToLoad: (error) {
             _isPromptEnhancementRewardedLoaded = false;
             _isPreloadingPromptEnhancementRewardedAd = false;
-            
+
             // Implement retry mechanism
             if (_promptEnhancementRewardedAdRetryCount < maxRetryAttempts) {
               _promptEnhancementRewardedAdRetryCount++;
               // Retry after a short delay
-              Future.delayed(const Duration(seconds: 2), preloadPromptEnhancementRewardedAd);
+              Future.delayed(
+                const Duration(seconds: 2),
+                preloadPromptEnhancementRewardedAd,
+              );
             }
-            
+
             if (kDebugMode) {
               // Removed debug print to avoid exposing information in production
             }
@@ -335,7 +392,10 @@ class AdService {
       _isPreloadingPromptEnhancementRewardedAd = false;
       if (_promptEnhancementRewardedAdRetryCount < maxRetryAttempts) {
         _promptEnhancementRewardedAdRetryCount++;
-        Future.delayed(const Duration(seconds: 2), preloadPromptEnhancementRewardedAd);
+        Future.delayed(
+          const Duration(seconds: 2),
+          preloadPromptEnhancementRewardedAd,
+        );
       }
     }
   }
@@ -344,12 +404,13 @@ class AdService {
   Future<void> preloadChatCreationRewardedAd() async {
     // Prevent multiple simultaneous preload attempts
     if (_isPreloadingChatCreationRewardedAd) return;
-    
+
     // If we already have a loaded ad, don't preload another one
-    if (_chatCreationRewardedAd != null && _isChatCreationRewardedLoaded) return;
-    
+    if (_chatCreationRewardedAd != null && _isChatCreationRewardedLoaded)
+      return;
+
     _isPreloadingChatCreationRewardedAd = true;
-    
+
     try {
       if (!await hasInternetConnection()) {
         _isPreloadingChatCreationRewardedAd = false;
@@ -363,12 +424,13 @@ class AdService {
           onAdLoaded: (ad) {
             // Dispose of any existing ad before setting the new one
             _chatCreationRewardedAd?.dispose();
-            
+
             _chatCreationRewardedAd = ad;
             _isChatCreationRewardedLoaded = true;
             _isPreloadingChatCreationRewardedAd = false;
-            _chatCreationRewardedAdRetryCount = 0; // Reset retry count on success
-            
+            _chatCreationRewardedAdRetryCount =
+                0; // Reset retry count on success
+
             if (kDebugMode) {
               // Removed debug print to avoid exposing information in production
             }
@@ -376,14 +438,17 @@ class AdService {
           onAdFailedToLoad: (error) {
             _isChatCreationRewardedLoaded = false;
             _isPreloadingChatCreationRewardedAd = false;
-            
+
             // Implement retry mechanism
             if (_chatCreationRewardedAdRetryCount < maxRetryAttempts) {
               _chatCreationRewardedAdRetryCount++;
               // Retry after a short delay
-              Future.delayed(const Duration(seconds: 2), preloadChatCreationRewardedAd);
+              Future.delayed(
+                const Duration(seconds: 2),
+                preloadChatCreationRewardedAd,
+              );
             }
-            
+
             if (kDebugMode) {
               // Removed debug print to avoid exposing information in production
             }
@@ -394,7 +459,10 @@ class AdService {
       _isPreloadingChatCreationRewardedAd = false;
       if (_chatCreationRewardedAdRetryCount < maxRetryAttempts) {
         _chatCreationRewardedAdRetryCount++;
-        Future.delayed(const Duration(seconds: 2), preloadChatCreationRewardedAd);
+        Future.delayed(
+          const Duration(seconds: 2),
+          preloadChatCreationRewardedAd,
+        );
       }
     }
   }
@@ -417,7 +485,7 @@ class AdService {
           onAdLoaded: (ad) {
             // Dispose of any existing ad before setting the new one
             _rewardedAd?.dispose();
-            
+
             _rewardedAd = ad;
             _isRewardedLoaded = true;
             onLoaded?.call();
@@ -427,7 +495,9 @@ class AdService {
           },
           onAdFailedToLoad: (error) {
             _isRewardedLoaded = false;
-            onFailed?.call('Ad failed to load: ${error.code} - ${error.message}');
+            onFailed?.call(
+              'Ad failed to load: ${error.code} - ${error.message}',
+            );
             if (kDebugMode) {
               // print('Rewarded ad failed to load: ${error.code} - ${error.message}');
             }
@@ -458,7 +528,7 @@ class AdService {
           onAdLoaded: (ad) {
             // Dispose of any existing ad before setting the new one
             _deletionRewardedAd?.dispose();
-            
+
             _deletionRewardedAd = ad;
             _isDeletionRewardedLoaded = true;
             onLoaded?.call();
@@ -468,7 +538,9 @@ class AdService {
           },
           onAdFailedToLoad: (error) {
             _isDeletionRewardedLoaded = false;
-            onFailed?.call('Ad failed to load: ${error.code} - ${error.message}');
+            onFailed?.call(
+              'Ad failed to load: ${error.code} - ${error.message}',
+            );
             if (kDebugMode) {
               //print('Deletion rewarded ad failed to load: ${error.code} - ${error.message}');
             }
@@ -499,7 +571,7 @@ class AdService {
           onAdLoaded: (ad) {
             // Dispose of any existing ad before setting the new one
             _promptEnhancementRewardedAd?.dispose();
-            
+
             _promptEnhancementRewardedAd = ad;
             _isPromptEnhancementRewardedLoaded = true;
             onLoaded?.call();
@@ -509,7 +581,9 @@ class AdService {
           },
           onAdFailedToLoad: (error) {
             _isPromptEnhancementRewardedLoaded = false;
-            onFailed?.call('Ad failed to load: ${error.code} - ${error.message}');
+            onFailed?.call(
+              'Ad failed to load: ${error.code} - ${error.message}',
+            );
             if (kDebugMode) {
               // print('Prompt enhancement rewarded ad failed to load: ${error.code} - ${error.message}');
             }
@@ -540,7 +614,7 @@ class AdService {
           onAdLoaded: (ad) {
             // Dispose of any existing ad before setting the new one
             _chatCreationRewardedAd?.dispose();
-            
+
             _chatCreationRewardedAd = ad;
             _isChatCreationRewardedLoaded = true;
             onLoaded?.call();
@@ -550,7 +624,9 @@ class AdService {
           },
           onAdFailedToLoad: (error) {
             _isChatCreationRewardedLoaded = false;
-            onFailed?.call('Ad failed to load: ${error.code} - ${error.message}');
+            onFailed?.call(
+              'Ad failed to load: ${error.code} - ${error.message}',
+            );
             if (kDebugMode) {
               //print('Chat creation rewarded ad failed to load: ${error.code} - ${error.message}');
             }
@@ -583,10 +659,10 @@ class AdService {
         if (!_isPreloadingRewardedAd) {
           preloadRewardedAd();
         }
-        
+
         // Wait a short time to see if preloading helps
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         if (_rewardedAd == null || !_isRewardedLoaded) {
           onFailed?.call('Ad not ready. Please try again in a moment.');
           return false;
@@ -638,7 +714,9 @@ class AdService {
     Function(String)? onFailed,
   }) async {
     if (!await hasInternetConnection()) {
-      onFailed?.call('Connect to WiFi/Data to watch ad and unlock deletion feature.');
+      onFailed?.call(
+        'Connect to WiFi/Data to watch ad and unlock deletion feature.',
+      );
       return false;
     }
 
@@ -651,10 +729,10 @@ class AdService {
         if (!_isPreloadingDeletionRewardedAd) {
           preloadDeletionRewardedAd();
         }
-        
+
         // Wait a short time to see if preloading helps
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         if (_deletionRewardedAd == null || !_isDeletionRewardedLoaded) {
           onFailed?.call('Ad not ready. Please try again in a moment.');
           return false;
@@ -663,24 +741,25 @@ class AdService {
     }
 
     try {
-      _deletionRewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          _deletionRewardedAd = null;
-          _isDeletionRewardedLoaded = false;
-          onAdDismissed?.call();
-          // Preload the next ad
-          preloadDeletionRewardedAd();
-        },
-        onAdFailedToShowFullScreenContent: (ad, error) {
-          ad.dispose();
-          _deletionRewardedAd = null;
-          _isDeletionRewardedLoaded = false;
-          onFailed?.call('Ad failed to show: ${error.message}');
-          // Preload the next ad
-          preloadDeletionRewardedAd();
-        },
-      );
+      _deletionRewardedAd!.fullScreenContentCallback =
+          FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _deletionRewardedAd = null;
+              _isDeletionRewardedLoaded = false;
+              onAdDismissed?.call();
+              // Preload the next ad
+              preloadDeletionRewardedAd();
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              ad.dispose();
+              _deletionRewardedAd = null;
+              _isDeletionRewardedLoaded = false;
+              onFailed?.call('Ad failed to show: ${error.message}');
+              // Preload the next ad
+              preloadDeletionRewardedAd();
+            },
+          );
 
       await _deletionRewardedAd!.show(
         onUserEarnedReward: (ad, reward) {
@@ -706,24 +785,29 @@ class AdService {
     Function(String)? onFailed,
   }) async {
     if (!await hasInternetConnection()) {
-      onFailed?.call('Connect to WiFi/Data to watch ad and unlock prompt enhancement feature.');
+      onFailed?.call(
+        'Connect to WiFi/Data to watch ad and unlock prompt enhancement feature.',
+      );
       return false;
     }
 
     // If no ad is loaded, try to load one immediately
-    if (_promptEnhancementRewardedAd == null || !_isPromptEnhancementRewardedLoaded) {
+    if (_promptEnhancementRewardedAd == null ||
+        !_isPromptEnhancementRewardedLoaded) {
       // Try to load first
       await loadPromptEnhancementRewardedAd();
-      if (_promptEnhancementRewardedAd == null || !_isPromptEnhancementRewardedLoaded) {
+      if (_promptEnhancementRewardedAd == null ||
+          !_isPromptEnhancementRewardedLoaded) {
         // If still no ad, try preloading and waiting briefly
         if (!_isPreloadingPromptEnhancementRewardedAd) {
           preloadPromptEnhancementRewardedAd();
         }
-        
+
         // Wait a short time to see if preloading helps
         await Future.delayed(const Duration(milliseconds: 500));
-        
-        if (_promptEnhancementRewardedAd == null || !_isPromptEnhancementRewardedLoaded) {
+
+        if (_promptEnhancementRewardedAd == null ||
+            !_isPromptEnhancementRewardedLoaded) {
           onFailed?.call('Ad not ready. Please try again in a moment.');
           return false;
         }
@@ -731,24 +815,25 @@ class AdService {
     }
 
     try {
-      _promptEnhancementRewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          _promptEnhancementRewardedAd = null;
-          _isPromptEnhancementRewardedLoaded = false;
-          onAdDismissed?.call();
-          // Preload the next ad
-          preloadPromptEnhancementRewardedAd();
-        },
-        onAdFailedToShowFullScreenContent: (ad, error) {
-          ad.dispose();
-          _promptEnhancementRewardedAd = null;
-          _isPromptEnhancementRewardedLoaded = false;
-          onFailed?.call('Ad failed to show: ${error.message}');
-          // Preload the next ad
-          preloadPromptEnhancementRewardedAd();
-        },
-      );
+      _promptEnhancementRewardedAd!.fullScreenContentCallback =
+          FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _promptEnhancementRewardedAd = null;
+              _isPromptEnhancementRewardedLoaded = false;
+              onAdDismissed?.call();
+              // Preload the next ad
+              preloadPromptEnhancementRewardedAd();
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              ad.dispose();
+              _promptEnhancementRewardedAd = null;
+              _isPromptEnhancementRewardedLoaded = false;
+              onFailed?.call('Ad failed to show: ${error.message}');
+              // Preload the next ad
+              preloadPromptEnhancementRewardedAd();
+            },
+          );
 
       await _promptEnhancementRewardedAd!.show(
         onUserEarnedReward: (ad, reward) {
@@ -774,7 +859,9 @@ class AdService {
     Function(String)? onFailed,
   }) async {
     if (!await hasInternetConnection()) {
-      onFailed?.call('Connect to WiFi/Data to watch ad and unlock chat creation feature.');
+      onFailed?.call(
+        'Connect to WiFi/Data to watch ad and unlock chat creation feature.',
+      );
       return false;
     }
 
@@ -787,10 +874,10 @@ class AdService {
         if (!_isPreloadingChatCreationRewardedAd) {
           preloadChatCreationRewardedAd();
         }
-        
+
         // Wait a short time to see if preloading helps
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         if (_chatCreationRewardedAd == null || !_isChatCreationRewardedLoaded) {
           onFailed?.call('Ad not ready. Please try again in a moment.');
           return false;
@@ -799,24 +886,25 @@ class AdService {
     }
 
     try {
-      _chatCreationRewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          _chatCreationRewardedAd = null;
-          _isChatCreationRewardedLoaded = false;
-          onAdDismissed?.call();
-          // Preload the next ad
-          preloadChatCreationRewardedAd();
-        },
-        onAdFailedToShowFullScreenContent: (ad, error) {
-          ad.dispose();
-          _chatCreationRewardedAd = null;
-          _isChatCreationRewardedLoaded = false;
-          onFailed?.call('Ad failed to show: ${error.message}');
-          // Preload the next ad
-          preloadChatCreationRewardedAd();
-        },
-      );
+      _chatCreationRewardedAd!.fullScreenContentCallback =
+          FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _chatCreationRewardedAd = null;
+              _isChatCreationRewardedLoaded = false;
+              onAdDismissed?.call();
+              // Preload the next ad
+              preloadChatCreationRewardedAd();
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              ad.dispose();
+              _chatCreationRewardedAd = null;
+              _isChatCreationRewardedLoaded = false;
+              onFailed?.call('Ad failed to show: ${error.message}');
+              // Preload the next ad
+              preloadChatCreationRewardedAd();
+            },
+          );
 
       await _chatCreationRewardedAd!.show(
         onUserEarnedReward: (ad, reward) {

@@ -26,11 +26,17 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   bool _isBottomBannerLoaded = false;
   BannerAd? _topBannerAd;
   BannerAd? _bottomBannerAd;
+  int _topBannerRetryCount = 0;
+  int _bottomBannerRetryCount = 0;
+  static const int _maxBannerRetries = 5;
 
   @override
   void initState() {
     super.initState();
-    _loadBannerAds();
+    // Add a small delay to ensure the widget is built before loading banners
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadBannerAds();
+    });
   }
 
   @override
@@ -40,40 +46,73 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     super.dispose();
   }
 
-  void _loadBannerAds() {
-    _topBannerAd = BannerAd(
-      adUnitId: AppConstants.bannerAdUnitId,
-      size: AdSize.banner,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (mounted) setState(() => _isTopBannerLoaded = true);
-        },
-        onAdFailedToLoad: (ad, error) {
-          if (kDebugMode) {
-            // print('Top banner ad failed to load: ${error.code} - ${error.message}');
-          }
-          ad.dispose();
-        },
-      ),
-    )..load();
+  Future<void> _loadBannerAds() async {
+    _loadTopBanner();
+    // Add a small delay between loading the two banners
+    await Future.delayed(const Duration(milliseconds: 500));
+    _loadBottomBanner();
+  }
 
-    _bottomBannerAd = BannerAd(
-      adUnitId: AppConstants.bannerAdUnitId,
-      size: AdSize.banner,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (mounted) setState(() => _isBottomBannerLoaded = true);
-        },
-        onAdFailedToLoad: (ad, error) {
-          if (kDebugMode) {
-            // print('Bottom banner ad failed to load: ${error.code} - ${error.message}');
+  Future<void> _loadTopBanner() async {
+    _topBannerAd?.dispose();
+    _topBannerAd = await _adService.createAndLoadBannerAd(
+      onLoaded: () {
+        if (mounted) {
+          setState(() {
+            _isTopBannerLoaded = true;
+            _topBannerRetryCount = 0; // Reset retry count on success
+          });
+        }
+      },
+      onFailed: (error) {
+        if (kDebugMode) {
+          // print('Top banner ad failed to load: $error');
+        }
+        if (mounted) {
+          setState(() => _isTopBannerLoaded = false);
+          // Retry with longer delay and max retries
+          if (_topBannerRetryCount < _maxBannerRetries) {
+            _topBannerRetryCount++;
+            Future.delayed(const Duration(seconds: 5), () {
+              if (mounted && !_isTopBannerLoaded) {
+                _loadTopBanner();
+              }
+            });
           }
-          ad.dispose();
-        },
-      ),
-    )..load();
+        }
+      },
+    );
+  }
+
+  Future<void> _loadBottomBanner() async {
+    _bottomBannerAd?.dispose();
+    _bottomBannerAd = await _adService.createAndLoadBannerAd(
+      onLoaded: () {
+        if (mounted) {
+          setState(() {
+            _isBottomBannerLoaded = true;
+            _bottomBannerRetryCount = 0; // Reset retry count on success
+          });
+        }
+      },
+      onFailed: (error) {
+        if (kDebugMode) {
+          // print('Bottom banner ad failed to load: $error');
+        }
+        if (mounted) {
+          setState(() => _isBottomBannerLoaded = false);
+          // Retry with longer delay and max retries
+          if (_bottomBannerRetryCount < _maxBannerRetries) {
+            _bottomBannerRetryCount++;
+            Future.delayed(const Duration(seconds: 5), () {
+              if (mounted && !_isBottomBannerLoaded) {
+                _loadBottomBanner();
+              }
+            });
+          }
+        }
+      },
+    );
   }
 
   @override
@@ -130,8 +169,64 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             Container(
               alignment: Alignment.center,
               width: double.infinity,
-              height: 50,
-              child: AdWidget(ad: _topBannerAd!),
+              height: 60,
+              child: Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 60,
+                    child: AdWidget(ad: _topBannerAd!),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Container(
+                      padding: EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[600],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.refresh,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        onPressed: () {
+                          _topBannerRetryCount = 0;
+                          _loadTopBanner();
+                        },
+                        padding: EdgeInsets.all(2),
+                        constraints: BoxConstraints.tight(Size(18, 18)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (!_isTopBannerLoaded)
+            Container(
+              height: 60,
+              alignment: Alignment.center,
+              color: Colors.grey[200],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Top ad loading...',
+                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.refresh, size: 14),
+                    onPressed: () {
+                      _topBannerRetryCount = 0;
+                      _loadTopBanner();
+                    },
+                    padding: EdgeInsets.all(4),
+                  ),
+                ],
+              ),
             ),
           if (_isSelectionMode)
             Container(
@@ -278,8 +373,66 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               child: Container(
                 alignment: Alignment.center,
                 width: double.infinity,
-                height: 50,
-                child: AdWidget(ad: _bottomBannerAd!),
+                height: 60,
+                child: Stack(
+                  alignment: Alignment.topRight,
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      height: 60,
+                      child: AdWidget(ad: _bottomBannerAd!),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        padding: EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[600],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.refresh,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            _bottomBannerRetryCount = 0;
+                            _loadBottomBanner();
+                          },
+                          padding: EdgeInsets.all(2),
+                          constraints: BoxConstraints.tight(Size(18, 18)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (!_isBottomBannerLoaded)
+            SafeArea(
+              child: Container(
+                height: 60,
+                alignment: Alignment.center,
+                color: Colors.grey[200],
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Bottom ad loading...',
+                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.refresh, size: 14),
+                      onPressed: () {
+                        _bottomBannerRetryCount = 0;
+                        _loadBottomBanner();
+                      },
+                      padding: EdgeInsets.all(4),
+                    ),
+                  ],
+                ),
               ),
             ),
         ],
@@ -289,7 +442,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
           : FloatingActionButton.extended(
               onPressed: () async {
                 HapticFeedback.mediumImpact();
-                
+
                 // Check chat limit
                 final limitsNotifier = ref.read(usageLimitsProvider.notifier);
                 if (!limitsNotifier.canCreateChat()) {

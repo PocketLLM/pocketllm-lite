@@ -34,6 +34,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // Banner Ad
   final AdService _adService = AdService();
   bool _isBannerLoaded = false;
+  BannerAd? _bannerAd;
+  int _bannerRetryCount = 0;
+  static const int _maxBannerRetries = 5;
 
   @override
   void initState() {
@@ -46,8 +49,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _urlController = TextEditingController(text: url);
     _loadVersion();
     _checkConnection();
-    _loadBannerAd();
-    
+
+    // Add a small delay to ensure the widget is built before loading the banner
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadBannerAd();
+    });
+
     // Automatically refresh usage limits and models when settings page is opened
     // Use Future.delayed to avoid modifying providers during widget build
     Future.delayed(Duration.zero, () {
@@ -66,13 +73,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() {
       _isRefreshingModels = true;
     });
-    
+
     // Refresh the models provider
     ref.invalidate(modelsProvider);
-    
+
     // Small delay to ensure UI updates
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     if (mounted) {
       setState(() {
         _isRefreshingModels = false;
@@ -83,20 +90,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void dispose() {
     _urlController.dispose();
-    _adService.disposeBannerAd();
+    _bannerAd?.dispose();
     super.dispose();
   }
 
-  void _loadBannerAd() {
-    _adService.loadBannerAd(
+  Future<void> _loadBannerAd() async {
+    _bannerAd?.dispose();
+    _bannerAd = await _adService.createAndLoadBannerAd(
       onLoaded: () {
-        if (mounted) setState(() => _isBannerLoaded = true);
+        if (mounted) {
+          setState(() {
+            _isBannerLoaded = true;
+            _bannerRetryCount = 0; // Reset retry count on success
+          });
+        }
       },
       onFailed: (error) {
         if (kDebugMode) {
-          print('Banner ad failed to load: $error');
+          // print('Banner ad failed to load: $error');
         }
-        if (mounted) setState(() => _isBannerLoaded = false);
+        if (mounted) {
+          setState(() => _isBannerLoaded = false);
+          // Retry loading the banner ad after a longer delay with max retries
+          if (_bannerRetryCount < _maxBannerRetries) {
+            _bannerRetryCount++;
+            Future.delayed(const Duration(seconds: 5), () {
+              if (mounted && !_isBannerLoaded) {
+                _loadBannerAd();
+              }
+            });
+          }
+        }
       },
     );
   }
@@ -198,23 +222,61 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildBannerAd() {
-    if (_isBannerLoaded && _adService.bannerAd != null) {
+    if (_isBannerLoaded && _bannerAd != null) {
       return SafeArea(
         child: Container(
           alignment: Alignment.center,
           width: double.infinity,
-          height: 50,
-          child: AdWidget(ad: _adService.bannerAd!),
+          height: 60,
+          child: Stack(
+            alignment: Alignment.topRight,
+            children: [
+              Container(height: 60, child: AdWidget(ad: _bannerAd!)),
+              Positioned(
+                top: -10,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[600],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: IconButton(
+                    icon: Icon(Icons.refresh, size: 16, color: Colors.white),
+                    onPressed: () {
+                      _bannerRetryCount = 0; // Reset retry count
+                      _loadBannerAd();
+                    },
+                    padding: EdgeInsets.all(4),
+                    constraints: BoxConstraints.tight(Size(20, 20)),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
     return Container(
-      height: 50,
+      height: 60,
       alignment: Alignment.center,
       color: Colors.grey[200],
-      child: const Text(
-        'Ad loading...',
-        style: TextStyle(color: Colors.grey, fontSize: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'Ad loading...',
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+          IconButton(
+            icon: Icon(Icons.refresh, size: 16),
+            onPressed: () {
+              _bannerRetryCount = 0; // Reset retry count
+              _loadBannerAd();
+            },
+            padding: EdgeInsets.all(4),
+          ),
+        ],
       ),
     );
   }
@@ -243,7 +305,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: theme.colorScheme.outlineVariant),
           ),
@@ -380,7 +444,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Prompts'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: ListTile(
@@ -444,8 +510,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                 return Container(
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.3),
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.3,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: ListTile(
@@ -545,7 +612,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ],
                     ),
-
                   ),
                 );
               },
@@ -572,7 +638,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Prompt Enhancer'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Theme(
@@ -692,7 +760,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.blue.withValues(alpha: 0.2),
+                                          color: Colors.blue.withValues(
+                                            alpha: 0.2,
+                                          ),
                                           borderRadius: BorderRadius.circular(
                                             4,
                                           ),
@@ -835,7 +905,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1113,7 +1185,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Chats & Storage'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1191,7 +1265,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Appearance'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1269,7 +1345,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('About'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1360,19 +1438,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Supporting Development',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   const Text(
@@ -1400,10 +1472,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const Text(
                     'Ads help us continue improving the app and adding new features '
                     'while keeping it free to use. Thank you for your support!',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontStyle: FontStyle.italic,
-                    ),
+                    style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
                   ),
                 ],
               ),
