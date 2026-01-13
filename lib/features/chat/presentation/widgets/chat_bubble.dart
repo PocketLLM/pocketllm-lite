@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/utils/image_decoder.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import 'three_dot_loading_indicator.dart';
@@ -54,18 +56,32 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   @override
   void didUpdateWidget(ChatBubble oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.message != widget.message) {
+    // Only re-decode if the image list actually changed.
+    // Using listEquals from foundation to check content equality if references differ.
+    final oldImages = oldWidget.message.images;
+    final newImages = widget.message.images;
+    if (oldImages != newImages && !listEquals(oldImages, newImages)) {
       _decodeImages();
     }
   }
 
-  void _decodeImages() {
+  Future<void> _decodeImages() async {
     if (widget.message.images != null && widget.message.images!.isNotEmpty) {
-      _decodedImages = widget.message.images!
-          .map((str) => base64Decode(str))
-          .toList();
+      // Use Isolate to decode images off the main thread to avoid UI jank
+      // during scrolling or message reception.
+      final images =
+          await IsolateImageDecoder.decodeImages(widget.message.images!);
+      if (mounted) {
+        setState(() {
+          _decodedImages = images;
+        });
+      }
     } else {
-      _decodedImages = null;
+      if (_decodedImages != null) {
+        setState(() {
+          _decodedImages = null;
+        });
+      }
     }
   }
 
