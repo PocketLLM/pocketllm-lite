@@ -25,6 +25,23 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final _picker = ImagePicker();
   final List<Uint8List> _selectedImages = [];
 
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onTextChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    setState(() {});
+  }
+
   Future<void> _pickImage() async {
     // Show bottom sheet to choose camera or gallery
     final storage = ref.read(storageServiceProvider);
@@ -333,6 +350,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final theme = Theme.of(context);
     final isGenerating = ref.watch(chatProvider.select((s) => s.isGenerating));
     final isDark = theme.brightness == Brightness.dark;
+    final canSend =
+        (_controller.text.trim().isNotEmpty || _selectedImages.isNotEmpty) &&
+            !isGenerating;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -509,13 +529,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: isGenerating
-                        ? Colors.grey
-                        : theme.colorScheme.primary,
+                    color: canSend ? theme.colorScheme.primary : Colors.grey,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    onPressed: isGenerating ? null : _send,
+                    onPressed: canSend ? _send : null,
                     icon: isGenerating
                         ? SizedBox(
                             width: 18,
