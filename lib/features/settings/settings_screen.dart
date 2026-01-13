@@ -94,7 +94,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       },
       onFailed: (error) {
         if (kDebugMode) {
-          print('Banner ad failed to load: $error');
+          debugPrint('Banner ad failed to load: $error');
         }
         if (mounted) setState(() => _isBannerLoaded = false);
       },
