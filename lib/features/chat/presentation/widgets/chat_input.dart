@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -22,7 +23,7 @@ class ChatInput extends ConsumerStatefulWidget {
 class _ChatInputState extends ConsumerState<ChatInput> {
   final _controller = TextEditingController();
   final _picker = ImagePicker();
-  final List<String> _selectedImages = [];
+  final List<Uint8List> _selectedImages = [];
 
   Future<void> _pickImage() async {
     // Show bottom sheet to choose camera or gallery
@@ -62,9 +63,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       );
       if (image != null) {
         final bytes = await image.readAsBytes();
-        final base64 = base64Encode(bytes);
         setState(() {
-          _selectedImages.add(base64);
+          _selectedImages.add(bytes);
         });
       }
     }
@@ -126,12 +126,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       HapticFeedback.lightImpact();
     }
 
-    ref
-        .read(chatProvider.notifier)
-        .sendMessage(
-          _controller.text,
-          images: _selectedImages.isNotEmpty ? [..._selectedImages] : null,
-        );
+    final imagesToSend =
+        _selectedImages.map((bytes) => base64Encode(bytes)).toList();
+
+    ref.read(chatProvider.notifier).sendMessage(
+      _controller.text,
+      images: imagesToSend.isNotEmpty ? imagesToSend : null,
+    );
 
     _controller.clear();
     setState(() {
@@ -365,7 +366,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.memory(
-                            base64Decode(_selectedImages[i]),
+                            _selectedImages[i],
                             width: 60,
                             height: 60,
                             fit: BoxFit.cover,
