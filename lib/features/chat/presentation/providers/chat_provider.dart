@@ -52,6 +52,8 @@ class ChatState {
 }
 
 class ChatNotifier extends Notifier<ChatState> {
+  static final _wordRegExp = RegExp(r'\S+');
+
   @override
   ChatState build() {
     return ChatState(messages: [], isGenerating: false, streamingContent: '');
@@ -103,7 +105,7 @@ class ChatNotifier extends Notifier<ChatState> {
 
   /// Estimate tokens from text (rough approximation: words * 1.3)
   static int _estimateTokens(String text) {
-    final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+    final words = _wordRegExp.allMatches(text).length;
     return (words * 1.3).ceil();
   }
 
