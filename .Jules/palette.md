@@ -1,0 +1,3 @@
+## 2024-05-22 - [Custom Action Buttons Accessibility]
+**Learning:** In Flutter, `GestureDetector` on a custom container provides no semantic information to screen readers and no visual feedback (ripple) to users. For custom circular buttons, the pattern of wrapping a `Container` in `InkWell` (inside `Material` with `Clip.antiAlias` and `CircleBorder`) + `Semantics` provides the best experience. The text label below the button should be wrapped in `ExcludeSemantics` if the button itself carries the label, to avoid redundancy.
+**Action:** When creating custom action buttons that deviate from `IconButton`, always wrap in `Material` > `InkWell` and ensure `Semantics` are applied to the touch target, excluding redundant text labels.
