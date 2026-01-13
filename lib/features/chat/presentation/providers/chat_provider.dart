@@ -80,6 +80,14 @@ class ChatNotifier extends Notifier<ChatState> {
     );
   }
 
+  Future<void> loadSessionById(String id) async {
+    final storage = ref.read(storageServiceProvider);
+    final session = await storage.getChatSession(id);
+    if (session != null) {
+      loadSession(session);
+    }
+  }
+
   void newChat() {
     // Load default model if available
     final storage = ref.read(storageServiceProvider);

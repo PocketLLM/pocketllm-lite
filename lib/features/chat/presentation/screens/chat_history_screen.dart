@@ -310,9 +310,12 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
-  void _loadSession(ChatSession session) {
-    ref.read(chatProvider.notifier).loadSession(session);
-    Navigator.pop(context);
+  void _loadSession(ChatSession session) async {
+    // Use the notifier to load by ID, which will handle fetching from storage
+    await ref.read(chatProvider.notifier).loadSessionById(session.id);
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   void _showSessionOptions(ChatSession session) {
