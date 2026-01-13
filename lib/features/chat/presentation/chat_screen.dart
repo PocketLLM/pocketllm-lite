@@ -374,9 +374,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.only(top: 16, bottom: 16),
-                        itemCount: chatState.messages.length,
+                        itemCount: chatState.messages.length + (chatState.isGenerating && chatState.streamingContent.isNotEmpty ? 1 : 0),
                         itemBuilder: (context, index) {
-                          return ChatBubble(message: chatState.messages[index]);
+                          if (index < chatState.messages.length) {
+                            return ChatBubble(message: chatState.messages[index]);
+                          } else {
+                            // This is the streaming bubble
+                            return ChatBubble(
+                              message: ChatMessage(
+                                role: 'assistant',
+                                content: chatState.streamingContent,
+                                timestamp: DateTime.now(),
+                              ),
+                            );
+                          }
                         },
                       );
               },
