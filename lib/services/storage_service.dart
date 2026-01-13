@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -11,6 +12,9 @@ class StorageService {
   late Box<ChatSession> _chatBox;
   late Box<SystemPrompt> _systemPromptBox;
   late Box _settingsBox;
+
+  // Cache for sorted chat sessions
+  List<ChatSession>? _cachedSessions;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -33,6 +37,11 @@ class StorageService {
         for (final prompt in initialPrompts) prompt.id: prompt,
       });
     }
+
+    // Invalidate cache when chat box changes
+    _chatBox.watch().listen((_) {
+      _cachedSessions = null;
+    });
   }
 
   ValueListenable<Box<ChatSession>> get chatBoxListenable =>
@@ -40,19 +49,28 @@ class StorageService {
 
   // Chats
   List<ChatSession> getChatSessions() {
-    return _chatBox.values.toList()
+    if (_cachedSessions != null) {
+      return UnmodifiableListView(_cachedSessions!);
+    }
+
+    _cachedSessions = _chatBox.values.toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    return UnmodifiableListView(_cachedSessions!);
   }
 
   Future<void> saveChatSession(ChatSession session) async {
+    _cachedSessions = null;
     await _chatBox.put(session.id, session);
   }
 
   Future<void> deleteChatSession(String id) async {
+    _cachedSessions = null;
     await _chatBox.delete(id);
   }
 
   Future<void> clearAllChats() async {
+    _cachedSessions = null;
     await _chatBox.clear();
   }
 

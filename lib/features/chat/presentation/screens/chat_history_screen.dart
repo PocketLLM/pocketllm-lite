@@ -168,8 +168,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             child: ValueListenableBuilder<Box<ChatSession>>(
               valueListenable: storage.chatBoxListenable,
               builder: (context, box, _) {
-                final sessions = box.values.toList()
-                  ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                final sessions = storage.getChatSessions();
 
                 if (sessions.isEmpty) {
                   return Center(
