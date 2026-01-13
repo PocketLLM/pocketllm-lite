@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
+import 'dart:isolate';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -62,7 +63,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       );
       if (image != null) {
         final bytes = await image.readAsBytes();
-        final base64 = base64Encode(bytes);
+        final base64 = await Isolate.run(() => base64Encode(bytes));
         setState(() {
           _selectedImages.add(base64);
         });
