@@ -374,16 +374,25 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         Positioned(
                           right: 0,
                           top: 0,
-                          child: GestureDetector(
-                            onTap: () =>
-                                setState(() => _selectedImages.removeAt(i)),
-                            child: CircleAvatar(
-                              radius: 10,
-                              backgroundColor: Colors.black54,
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 12,
+                          child: Semantics(
+                            label: 'Remove image',
+                            button: true,
+                            child: Material(
+                              color: Colors.black54,
+                              shape: const CircleBorder(),
+                              child: InkWell(
+                                onTap: () =>
+                                    setState(() => _selectedImages.removeAt(i)),
+                                customBorder: const CircleBorder(),
+                                child: const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 12,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
