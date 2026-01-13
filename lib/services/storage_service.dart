@@ -38,10 +38,33 @@ class StorageService {
       });
     }
 
-    // Invalidate cache when chat box changes
-    _chatBox.watch().listen((_) {
-      _cachedSessions = null;
-    });
+    // Update cache when chat box changes
+    _chatBox.watch().listen(_onChatBoxEvent);
+  }
+
+  void _onChatBoxEvent(BoxEvent event) {
+    if (_cachedSessions == null) return;
+
+    if (event.deleted) {
+      _cachedSessions!.removeWhere((session) => session.id == event.key);
+    } else if (event.value != null) {
+      final ChatSession updatedSession = event.value as ChatSession;
+      final index = _cachedSessions!
+          .indexWhere((session) => session.id == updatedSession.id);
+
+      if (index != -1) {
+        final oldSession = _cachedSessions![index];
+        _cachedSessions![index] = updatedSession;
+
+        // Only resort if sort key changed
+        if (updatedSession.createdAt != oldSession.createdAt) {
+          _cachedSessions!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        }
+      } else {
+        _cachedSessions!.add(updatedSession);
+        _cachedSessions!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      }
+    }
   }
 
   ValueListenable<Box<ChatSession>> get chatBoxListenable =>
@@ -60,12 +83,33 @@ class StorageService {
   }
 
   Future<void> saveChatSession(ChatSession session) async {
-    _cachedSessions = null;
+    // Optimistic update for immediate UI response
+    if (_cachedSessions != null) {
+      final index =
+          _cachedSessions!.indexWhere((s) => s.id == session.id);
+      if (index != -1) {
+        _cachedSessions![index] = session;
+        // Assume createdAt didn't change for optimization in save path
+      } else {
+        // If it's a new session, it's likely the newest, so insert at top
+        if (_cachedSessions!.isEmpty ||
+            session.createdAt.isAfter(_cachedSessions!.first.createdAt) ||
+            session.createdAt.isAtSameMomentAs(_cachedSessions!.first.createdAt)) {
+          _cachedSessions!.insert(0, session);
+        } else {
+          _cachedSessions!.add(session);
+          _cachedSessions!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        }
+      }
+    }
     await _chatBox.put(session.id, session);
   }
 
   Future<void> deleteChatSession(String id) async {
-    _cachedSessions = null;
+    // Optimistic update
+    if (_cachedSessions != null) {
+      _cachedSessions!.removeWhere((s) => s.id == id);
+    }
     await _chatBox.delete(id);
   }
 
