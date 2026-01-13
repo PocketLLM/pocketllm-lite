@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:ui';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -42,6 +43,31 @@ class ChatBubble extends ConsumerStatefulWidget {
 
 class _ChatBubbleState extends ConsumerState<ChatBubble> {
   final GlobalKey _bubbleKey = GlobalKey();
+  List<Uint8List>? _decodedImages;
+
+  @override
+  void initState() {
+    super.initState();
+    _decodeImages();
+  }
+
+  @override
+  void didUpdateWidget(ChatBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.message != widget.message) {
+      _decodeImages();
+    }
+  }
+
+  void _decodeImages() {
+    if (widget.message.images != null && widget.message.images!.isNotEmpty) {
+      _decodedImages = widget.message.images!
+          .map((str) => base64Decode(str))
+          .toList();
+    } else {
+      _decodedImages = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,14 +161,14 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (message.images != null && message.images!.isNotEmpty)
-                        ...message.images!.map(
-                          (str) => Padding(
+                      if (_decodedImages != null && _decodedImages!.isNotEmpty)
+                        ..._decodedImages!.map(
+                          (bytes) => Padding(
                             padding: const EdgeInsets.only(bottom: 8.0),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: Image.memory(
-                                base64Decode(str),
+                                bytes,
                                 height: 150,
                                 fit: BoxFit.cover,
                               ),
