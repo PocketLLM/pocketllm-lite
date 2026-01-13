@@ -29,9 +29,9 @@ class StorageService {
     // Seed system prompts if empty
     if (_systemPromptBox.isEmpty) {
       final initialPrompts = SystemPromptPresets.getInitialPrompts();
-      for (final prompt in initialPrompts) {
-        await _systemPromptBox.put(prompt.id, prompt);
-      }
+      await _systemPromptBox.putAll({
+        for (final prompt in initialPrompts) prompt.id: prompt,
+      });
     }
   }
 
