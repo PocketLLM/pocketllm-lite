@@ -431,124 +431,127 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             if (models.isEmpty) {
               return const Text('No models found. Pull one via Termux.');
             }
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: models.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final model = models[index];
-                final storage = ref.watch(storageServiceProvider);
-                final defaultModel =
-                    storage.getSetting(AppConstants.defaultModelKey) ?? '';
+            return Column(
+              children: [
+                for (int i = 0; i < models.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 8),
+                  Builder(
+                    builder: (context) {
+                      final model = models[i];
+                      final storage = ref.watch(storageServiceProvider);
+                      final defaultModel =
+                          storage.getSetting(AppConstants.defaultModelKey) ??
+                          '';
 
-                return Container(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    title: Text(
-                      model.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Row(
-                      children: [
-                        Text(
-                          '${(model.size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB',
-                          style: const TextStyle(fontSize: 12),
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(width: 8),
-                        if (model.name.toLowerCase().contains('vision') ||
-                            model.name.toLowerCase().contains('llava'))
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.visibility,
-                                  size: 12,
-                                  color: Colors.blue,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  "Vision",
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.blue,
+                        child: ListTile(
+                          title: Text(
+                            model.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Row(
+                            children: [
+                              Text(
+                                '${(model.size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              const SizedBox(width: 8),
+                              if (model.name.toLowerCase().contains('vision') ||
+                                  model.name.toLowerCase().contains('llava'))
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.visibility,
+                                        size: 12,
+                                        color: Colors.blue,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        "Vision",
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.blue,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
+                            ],
                           ),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Radio<String>(
-                          value: model.name,
-                          groupValue: defaultModel,
-                          onChanged: (val) {
-                            storage.saveSetting(
-                              AppConstants.defaultModelKey,
-                              val,
-                            );
-                            setState(() {});
-                          },
-                          activeColor: Colors.blue,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.edit,
-                            size: 20,
-                            color: Colors.grey,
-                          ),
-                          onPressed: () {
-                            // Open dialog to set per-model system prompt and settings
-                            // For now just show "feature coming soon" or simple dialog
-                            //    _showModelSettingsDialog(context, model.name);
-                            // We will just show a snackbar since I haven't defined _showModelSettingsDialog yet
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Model specific settings coming soon',
-                                ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Radio<String>(
+                                value: model.name,
+                                groupValue: defaultModel,
+                                onChanged: (val) {
+                                  storage.saveSetting(
+                                    AppConstants.defaultModelKey,
+                                    val,
+                                  );
+                                  setState(() {});
+                                },
+                                activeColor: Colors.blue,
+                                visualDensity: VisualDensity.compact,
                               ),
-                            );
-                          },
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.delete_outline,
-                            color: theme.colorScheme.error,
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  size: 20,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () {
+                                  // Open dialog to set per-model system prompt and settings
+                                  // For now just show "feature coming soon" or simple dialog
+                                  //    _showModelSettingsDialog(context, model.name);
+                                  // We will just show a snackbar since I haven't defined _showModelSettingsDialog yet
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Model specific settings coming soon',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  color: theme.colorScheme.error,
+                                ),
+                                onPressed: () async {
+                                  HapticFeedback.mediumImpact();
+                                  await ref
+                                      .read(ollamaServiceProvider)
+                                      .deleteModel(model.name);
+                                  // Use our refresh method to show loading indicator
+                                  await _refreshModels();
+                                },
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ],
                           ),
-                          onPressed: () async {
-                            HapticFeedback.mediumImpact();
-                            await ref
-                                .read(ollamaServiceProvider)
-                                .deleteModel(model.name);
-                            // Use our refresh method to show loading indicator
-                            await _refreshModels();
-                          },
-                          visualDensity: VisualDensity.compact,
                         ),
-                      ],
-                    ),
-
+                      );
+                    },
                   ),
-                );
-              },
+                ],
+              ],
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
