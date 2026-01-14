@@ -88,7 +88,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   void _send() async {
-    if (_controller.text.trim().isEmpty && _selectedImages.isEmpty) return;
+    final text = _controller.text;
+    if (text.trim().isEmpty && _selectedImages.isEmpty) return;
+
+    if (text.length > AppConstants.maxInputLength) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Message too long. Please limit to ${AppConstants.maxInputLength} characters.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
 
     // Check connection status before sending using the auto-refreshing provider
     final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
