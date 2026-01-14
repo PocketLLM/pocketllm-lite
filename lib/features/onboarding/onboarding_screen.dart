@@ -144,7 +144,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     
     if (mounted) {
       // Show the offline notification popup
-      await showDialog(
+      final shouldGoToDocs = await showDialog<bool>(
         context: context,
         barrierDismissible: false, // User must tap button to dismiss
         builder: (BuildContext context) {
@@ -152,9 +152,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         },
       );
       
-      // Navigate to chat screen after popup is dismissed
+      // Navigate based on user choice
       if (mounted) {
-        context.go('/chat');
+        if (shouldGoToDocs == true) {
+          // Navigate to docs
+          context.go('/settings/docs');
+        } else {
+          // Navigate to chat screen
+          context.go('/chat');
+        }
       }
     }
   }
