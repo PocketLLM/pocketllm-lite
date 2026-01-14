@@ -9,3 +9,7 @@
 ## 2025-02-18 - [Widget Equality Optimization for Streaming Lists]
 **Learning:** In streaming applications where a parent list rebuilds frequently (e.g., chat), children widgets rebuild unnecessarily even if their data hasn't changed. By overriding `operator ==` and `hashCode` in the child widget to check for model identity, we can leverage Flutter's Element update optimization to skip build/layout/paint for unchanged items.
 **Action:** Implement `operator ==` and `hashCode` overrides for list items in high-frequency update scenarios, ensuring the underlying data model uses stable object identities.
+
+## 2025-10-27 - [Value Equality for Domain Models to Support Widget Optimization]
+**Learning:** Widget-level `operator ==` optimizations (like in `ChatBubble`) fail if the underlying data model relies on identity equality but instances are recreated (e.g., from Hive or `copyWith`). This causes unnecessary rebuilds even when content is identical.
+**Action:** Implement value-based equality (`operator ==` and `hashCode`) for core domain models used in high-frequency lists to allow widgets to detect "same content" efficiently, regardless of object identity.
