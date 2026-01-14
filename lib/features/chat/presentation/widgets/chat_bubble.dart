@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/utils/image_decoder.dart';
+import '../../../../core/utils/url_validator.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import 'three_dot_loading_indicator.dart';
@@ -205,7 +206,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                           onTapLink: (text, href, title) async {
                             if (href != null) {
                               final uri = Uri.tryParse(href);
-                              if (uri != null && await canLaunchUrl(uri)) {
+                              // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
+                              if (UrlValidator.isSecureUrl(uri) &&
+                                  await canLaunchUrl(uri!)) {
                                 await launchUrl(
                                   uri,
                                   mode: LaunchMode.externalApplication,
