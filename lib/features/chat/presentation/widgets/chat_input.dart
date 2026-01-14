@@ -527,28 +527,38 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     ),
                   ],
                 ),
-                Container(
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   decoration: BoxDecoration(
                     color: canSend ? theme.colorScheme.primary : Colors.grey,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
                     onPressed: canSend ? _send : null,
-                    icon: isGenerating
-                        ? SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      transitionBuilder: (child, animation) => ScaleTransition(
+                        scale: animation,
+                        child: child,
+                      ),
+                      child: isGenerating
+                          ? SizedBox(
+                              key: const ValueKey('spinner'),
+                              width: 18,
+                              height: 18,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation(Colors.white),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.arrow_upward,
+                              key: ValueKey('send_icon'),
+                              color: Colors.white,
+                              size: 20,
                             ),
-                          )
-                        : const Icon(
-                            Icons.arrow_upward,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                    tooltip: 'Send',
+                    ),
+                    tooltip: isGenerating ? 'Generating...' : 'Send',
                   ),
                 ),
               ],
