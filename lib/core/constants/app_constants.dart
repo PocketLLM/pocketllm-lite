@@ -69,4 +69,7 @@ class AppConstants {
   static const String totalChatsCreatedKey = 'total_chats_created';
   static const int freeChatsAllowed = 5;
   static const int chatsPerAdWatch = 5;
+
+  // Security Limits
+  static const int maxInputLength = 50000;
 }
