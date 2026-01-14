@@ -3,7 +3,7 @@
 **Learning:** `flutter_markdown`'s `onTapLink` and general usage of `url_launcher` does not automatically filter dangerous schemes.
 **Prevention:** Always validate `uri.scheme` against a whitelist (e.g., `http`, `https`, `mailto`) before calling `launchUrl`. Implemented reusable `UrlValidator`.
 
-## 2025-02-18 - Exposed Android Signing Keystore
-**Vulnerability:** The Android signing keystore (`upload-keystore.jks`) was committed to the repository root and not ignored by `.gitignore`. This exposes the private signing key, allowing unauthorized parties to sign malicious updates.
-**Learning:** Placing sensitive files in the project root without explicit `.gitignore` rules is a common oversight. The default Flutter `.gitignore` or `android/.gitignore` may not cover root-level keystores or might be overridden if the file is already tracked.
-**Prevention:** Explicitly ignore `*.jks`, `*.keystore`, and `key.properties` in the root `.gitignore`. Ensure sensitive files are never `git add`ed.
+## 2025-02-18 - Exposed Android Signing Keystore (Reverted)
+**Vulnerability:** The Android signing keystore (`upload-keystore.jks`) is committed to the repository root. This exposes the private signing key.
+**Learning:** The user explicitly requested to keep the keystore and property files in the repository. Security best practices advise against this, but the user's requirement supersedes standard procedure in this context.
+**Prevention:** In this specific repo, these files are intentionally tracked. Future audits should note this exception.
