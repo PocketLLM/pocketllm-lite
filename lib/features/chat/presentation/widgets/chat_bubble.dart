@@ -432,7 +432,14 @@ class _FocusedMenuOverlay extends StatelessWidget {
               children: [
                 _buildIconBtn(context, Icons.copy, 'Copy', () {
                   Clipboard.setData(ClipboardData(text: message.content));
+                  final messenger = ScaffoldMessenger.of(context);
                   Navigator.pop(context);
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Message copied to clipboard'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
                 }),
                 const SizedBox(width: 12),
                 _buildIconBtn(context, Icons.share, 'Share', () {
@@ -442,8 +449,14 @@ class _FocusedMenuOverlay extends StatelessWidget {
                 if (isUser) ...[
                   const SizedBox(width: 12),
                   _buildIconBtn(context, Icons.edit, 'Edit', () {
-                    // Edit logic
+                    final messenger = ScaffoldMessenger.of(context);
                     Navigator.pop(context);
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Edit feature coming soon!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                   }),
                 ],
               ],
