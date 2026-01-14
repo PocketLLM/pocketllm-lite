@@ -40,6 +40,19 @@ class ChatBubble extends ConsumerStatefulWidget {
 
   const ChatBubble({super.key, required this.message});
 
+  // Optimize performance by preventing rebuilds when the message instance hasn't changed.
+  // This is crucial during streaming, where the parent list rebuilds frequently.
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ChatBubble &&
+        other.key == key &&
+        other.message == message;
+  }
+
+  @override
+  int get hashCode => Object.hash(key, message);
+
   @override
   ConsumerState<ChatBubble> createState() => _ChatBubbleState();
 }
