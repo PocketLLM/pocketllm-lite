@@ -5,6 +5,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../domain/models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../providers/connection_status_provider.dart';
+import '../providers/draft_message_provider.dart';
 import 'chat_bubble.dart';
 
 class ChatBody extends ConsumerStatefulWidget {
@@ -150,29 +151,7 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
         }
 
         if (messages.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.chat_bubble_outline,
-                  size: 80,
-                  color: Colors.grey,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Start a conversation',
-                  style: Theme.of(context).textTheme.headlineSmall
-                      ?.copyWith(color: Colors.grey),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Ensure Ollama is running in Termux',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
-          );
+          return const _EmptyState();
         }
 
         return Stack(
@@ -219,6 +198,65 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
       },
       loading: () => const SizedBox.shrink(),
       error: (e, s) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _EmptyState extends ConsumerWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final suggestions = [
+      'Tell me a joke',
+      'Explain quantum computing',
+      'Write a python script',
+      'Summarize a book',
+    ];
+
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.chat_bubble_outline,
+                size: 80,
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'How can I help you?',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'PocketLLM is ready to chat.',
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 32),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: suggestions.map((suggestion) {
+                  return ActionChip(
+                    label: Text(suggestion),
+                    avatar: const Icon(Icons.auto_awesome, size: 16),
+                    onPressed: () {
+                      ref.read(draftMessageProvider.notifier).state = suggestion;
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
