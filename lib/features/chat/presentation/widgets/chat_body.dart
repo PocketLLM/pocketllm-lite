@@ -17,6 +17,7 @@ class ChatBody extends ConsumerStatefulWidget {
 class _ChatBodyState extends ConsumerState<ChatBody> {
   final ScrollController _scrollController = ScrollController();
   bool _showScrollToBottom = false;
+  DateTime? _lastAutoScroll;
 
   @override
   void initState() {
@@ -55,19 +56,38 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
     }
   }
 
+  void _throttledScrollToBottom() {
+    final now = DateTime.now();
+    if (_lastAutoScroll == null ||
+        now.difference(_lastAutoScroll!) > const Duration(milliseconds: 100)) {
+      _scrollToBottom();
+      _lastAutoScroll = now;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Only watch what we need for the body
     final connectionStatusAsync = ref.watch(autoConnectionStatusProvider);
-    final chatState = ref.watch(chatProvider);
+    final messages = ref.watch(chatProvider.select((s) => s.messages));
+    final isGenerating = ref.watch(chatProvider.select((s) => s.isGenerating));
+    final hasStreamingContent =
+        ref.watch(chatProvider.select((s) => s.streamingContent.isNotEmpty));
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     // Auto-scroll logic scoped to this widget
-    ref.listen(chatProvider, (prev, next) {
-      if (next.messages.length > (prev?.messages.length ?? 0) ||
-          (next.isGenerating && next.messages.isNotEmpty)) {
+    ref.listen(chatProvider.select((s) => s.messages.length), (prev, next) {
+      if (next > (prev ?? 0)) {
         Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+      }
+    });
+
+    // Throttled scroll for streaming content
+    ref.listen(chatProvider.select((s) => s.streamingContent.length),
+        (prev, next) {
+      if (next > (prev ?? 0)) {
+        _throttledScrollToBottom();
       }
     });
 
@@ -129,7 +149,7 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
           );
         }
 
-        if (chatState.messages.isEmpty) {
+        if (messages.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -160,22 +180,13 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
             ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.only(top: 16, bottom: 16),
-              itemCount: chatState.messages.length +
-                  (chatState.isGenerating &&
-                          chatState.streamingContent.isNotEmpty
-                      ? 1
-                      : 0),
+              itemCount: messages.length +
+                  (isGenerating && hasStreamingContent ? 1 : 0),
               itemBuilder: (context, index) {
-                if (index < chatState.messages.length) {
-                  return ChatBubble(message: chatState.messages[index]);
+                if (index < messages.length) {
+                  return ChatBubble(message: messages[index]);
                 } else {
-                  return ChatBubble(
-                    message: ChatMessage(
-                      role: 'assistant',
-                      content: chatState.streamingContent,
-                      timestamp: DateTime.now(),
-                    ),
-                  );
+                  return const _StreamingChatBubble();
                 }
               },
             ),
@@ -208,6 +219,23 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
       },
       loading: () => const SizedBox.shrink(),
       error: (e, s) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _StreamingChatBubble extends ConsumerWidget {
+  const _StreamingChatBubble();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final content = ref.watch(chatProvider.select((s) => s.streamingContent));
+
+    return ChatBubble(
+      message: ChatMessage(
+        role: 'assistant',
+        content: content,
+        timestamp: DateTime.now(),
+      ),
     );
   }
 }

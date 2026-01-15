@@ -13,3 +13,7 @@
 ## 2025-10-27 - [Value Equality for Domain Models to Support Widget Optimization]
 **Learning:** Widget-level `operator ==` optimizations (like in `ChatBubble`) fail if the underlying data model relies on identity equality but instances are recreated (e.g., from Hive or `copyWith`). This causes unnecessary rebuilds even when content is identical.
 **Action:** Implement value-based equality (`operator ==` and `hashCode`) for core domain models used in high-frequency lists to allow widgets to detect "same content" efficiently, regardless of object identity.
+
+## 2025-05-23 - [Optimizing Streaming Lists with Isolated Consumers]
+**Learning:** Watching a whole provider in a `ListView` parent forces full list rebuilds on every item update (e.g., streaming token). Using `select` for the list and isolating the streaming item in a separate `ConsumerWidget` reduces parent rebuilds from O(N) to O(1).
+**Action:** When implementing streaming lists, always isolate the active/changing item in a dedicated widget that watches the specific streaming property.
