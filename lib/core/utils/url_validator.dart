@@ -14,4 +14,19 @@ class UrlValidator {
     final uri = Uri.tryParse(url);
     return isSecureUrl(uri);
   }
+
+  /// Checks if the provided [Uri] is strictly HTTP or HTTPS.
+  /// Useful for API endpoints where 'mailto' is not valid.
+  static bool isHttpUrl(Uri? uri) {
+    if (uri == null) return false;
+    final scheme = uri.scheme.toLowerCase();
+    return scheme == 'http' || scheme == 'https';
+  }
+
+  /// Checks if the provided URL string is a valid HTTP/HTTPS URI.
+  static bool isHttpUrlString(String? url) {
+    if (url == null) return false;
+    final uri = Uri.tryParse(url);
+    return isHttpUrl(uri);
+  }
 }
