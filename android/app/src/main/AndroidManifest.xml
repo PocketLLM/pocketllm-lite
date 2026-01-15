@@ -8,6 +8,8 @@
         android:label="pocketllm_lite"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
         android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
