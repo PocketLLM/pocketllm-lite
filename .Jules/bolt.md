@@ -17,3 +17,7 @@
 ## 2025-05-23 - [Optimizing Streaming Lists with Isolated Consumers]
 **Learning:** Watching a whole provider in a `ListView` parent forces full list rebuilds on every item update (e.g., streaming token). Using `select` for the list and isolating the streaming item in a separate `ConsumerWidget` reduces parent rebuilds from O(N) to O(1).
 **Action:** When implementing streaming lists, always isolate the active/changing item in a dedicated widget that watches the specific streaming property.
+
+## 2025-05-24 - [Avoid Hero Tags with Dynamic Content Hashes in Streaming]
+**Learning:** Using `message.hashCode` (which hashes the full content string) for `Hero` tags in a streaming chat bubble forces O(N) hash calculation on every token update. Since the `Hero` was unused for navigation, this was pure overhead causing unnecessary CPU usage during streaming.
+**Action:** Avoid using dynamic, content-based hashes for `Hero` tags in high-frequency update widgets. If `Hero` is needed, use a stable ID or constant tag for the streaming state. Remove unused `Hero` widgets.
