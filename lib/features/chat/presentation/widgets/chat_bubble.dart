@@ -163,15 +163,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                 HapticFeedback.mediumImpact();
                 _showFocusedMenu(context, isUser);
               },
-              child: Hero(
-                tag: 'bubble_${message.hashCode}',
-                // Note: Hero helps transition if we pushed a page,
-                // but for overlay we manually position.
-                // Keeping tag just in case or we can remove if unused.
-                child: Container(
-                  key: _bubbleKey,
-                  padding: EdgeInsets.all(padding),
-                  decoration: BoxDecoration(
+              child: Container(
+                key: _bubbleKey,
+                padding: EdgeInsets.all(padding),
+                decoration: BoxDecoration(
                     color: bubbleColor,
                     borderRadius: BorderRadius.circular(radius).copyWith(
                       bottomRight: isUser ? const Radius.circular(0) : null,
