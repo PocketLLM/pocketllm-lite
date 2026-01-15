@@ -9,3 +9,7 @@
 ## 2024-05-23 - Smooth Transitions on Chat Send Button
 **Learning:** Users perceive "jank" or "abruptness" when buttons instantly change state (e.g., from Send Icon to Spinner). Using `AnimatedContainer` and `AnimatedSwitcher` makes the interface feel more polished and responsive, even if the underlying logic is the same.
 **Action:** When implementing state-change buttons (like Send/Loading), always use `AnimatedSwitcher` for icons and `AnimatedContainer` for background colors to ensure smooth visual feedback.
+
+## 2024-05-24 - [Decoupled Input Pre-filling]
+**Learning:** Sibling widgets (like `ChatBody` and `ChatInput`) cannot share a `TextEditingController` directly. To allow UI elements in the body (like suggestion chips) to populate the input field, use a shared `StateProvider` (e.g., `draftMessageProvider`) as an event bus. The input widget listens to this provider, updates its controller, requests focus, and then resets the provider to null to handle repeated actions cleanly.
+**Action:** Use a dedicated `StateProvider<String?>` to facilitate one-way "text fill" events between decoupled widgets.

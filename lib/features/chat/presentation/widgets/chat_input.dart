@@ -12,6 +12,7 @@ import '../../../../services/usage_limits_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/prompt_enhancer_provider.dart';
 import '../providers/connection_status_provider.dart';
+import '../providers/draft_message_provider.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -22,6 +23,7 @@ class ChatInput extends ConsumerStatefulWidget {
 
 class _ChatInputState extends ConsumerState<ChatInput> {
   final _controller = TextEditingController();
+  final _focusNode = FocusNode();
   final _picker = ImagePicker();
   final List<Uint8List> _selectedImages = [];
 
@@ -35,6 +37,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   void dispose() {
     _controller.removeListener(_onTextChanged);
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -362,6 +365,19 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for draft messages (e.g. from suggestion chips)
+    ref.listen<String?>(draftMessageProvider, (previous, next) {
+      if (next != null && next.isNotEmpty) {
+        _controller.text = next;
+        _controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: next.length),
+        );
+        _focusNode.requestFocus();
+        // Reset the provider to avoid re-triggering or stale state
+        ref.read(draftMessageProvider.notifier).state = null;
+      }
+    });
+
     final theme = Theme.of(context);
     final isGenerating = ref.watch(chatProvider.select((s) => s.isGenerating));
     final isDark = theme.brightness == Brightness.dark;
@@ -466,6 +482,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               ),
               child: TextField(
                 controller: _controller,
+                focusNode: _focusNode,
                 enabled: !isGenerating && !_isEnhancing,
                 textCapitalization: TextCapitalization.sentences,
                 keyboardType: TextInputType.multiline,
