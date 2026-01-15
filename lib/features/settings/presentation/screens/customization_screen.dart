@@ -649,18 +649,22 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
             children: [
               const Text('Radius', style: TextStyle(fontSize: 12)),
               Expanded(
-                child: Slider(
-                  value: current,
-                  min: 4,
-                  max: 40,
-                  divisions: 36,
-                  label: current.toStringAsFixed(0),
-                  onChanged: (val) {
-                    if ((val - current).abs() > 1) {
-                      HapticFeedback.selectionClick();
-                    }
-                    notifier.updateBubbleRadius(val);
-                  },
+                child: Semantics(
+                  label: 'Bubble Radius',
+                  value: '${current.toInt()} density pixels',
+                  child: Slider(
+                    value: current,
+                    min: 4,
+                    max: 40,
+                    divisions: 36,
+                    label: current.toStringAsFixed(0),
+                    onChanged: (val) {
+                      if ((val - current).abs() > 1) {
+                        HapticFeedback.selectionClick();
+                      }
+                      notifier.updateBubbleRadius(val);
+                    },
+                  ),
                 ),
               ),
               Text(
@@ -687,15 +691,20 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
             children: [
               const Text('Font Size'),
               Expanded(
-                child: Slider(
-                  value: appearance.fontSize,
-                  min: 12,
-                  max: 24,
-                  divisions: 12,
-                  label: appearance.fontSize.toStringAsFixed(1),
-                  onChanged: (val) {
-                    notifier.updateFontSize(val);
-                  },
+                child: Semantics(
+                  label: 'Message Font Size',
+                  value:
+                      '${appearance.fontSize.toStringAsFixed(1)} scale pixels',
+                  child: Slider(
+                    value: appearance.fontSize,
+                    min: 12,
+                    max: 24,
+                    divisions: 12,
+                    label: appearance.fontSize.toStringAsFixed(1),
+                    onChanged: (val) {
+                      notifier.updateFontSize(val);
+                    },
+                  ),
                 ),
               ),
               Text('${appearance.fontSize.toStringAsFixed(0)} sp'),
@@ -706,15 +715,20 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
             children: [
               const Text('Padding'),
               Expanded(
-                child: Slider(
-                  value: appearance.chatPadding,
-                  min: 8,
-                  max: 24,
-                  divisions: 16,
-                  label: appearance.chatPadding.toStringAsFixed(1),
-                  onChanged: (val) {
-                    notifier.updateChatPadding(val);
-                  },
+                child: Semantics(
+                  label: 'Chat Bubble Padding',
+                  value:
+                      '${appearance.chatPadding.toStringAsFixed(1)} density pixels',
+                  child: Slider(
+                    value: appearance.chatPadding,
+                    min: 8,
+                    max: 24,
+                    divisions: 16,
+                    label: appearance.chatPadding.toStringAsFixed(1),
+                    onChanged: (val) {
+                      notifier.updateChatPadding(val);
+                    },
+                  ),
                 ),
               ),
               Text('${appearance.chatPadding.toStringAsFixed(0)} dp'),
@@ -785,13 +799,17 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
             alignment: Alignment.centerLeft,
             child: Text('Message Opacity'),
           ),
-          Slider(
-            value: appearance.msgOpacity,
-            min: 0.8,
-            max: 1.0,
-            divisions: 20,
-            label: '${(appearance.msgOpacity * 100).toInt()}%',
-            onChanged: (val) => notifier.updateMsgOpacity(val),
+          Semantics(
+            label: 'Message Bubble Opacity',
+            value: '${(appearance.msgOpacity * 100).toInt()} percent',
+            child: Slider(
+              value: appearance.msgOpacity,
+              min: 0.8,
+              max: 1.0,
+              divisions: 20,
+              label: '${(appearance.msgOpacity * 100).toInt()}%',
+              onChanged: (val) => notifier.updateMsgOpacity(val),
+            ),
           ),
         ],
       ),
