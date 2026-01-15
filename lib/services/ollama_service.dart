@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
+import '../core/utils/url_validator.dart';
 import '../features/chat/domain/models/ollama_model.dart';
 
 class OllamaService {
@@ -12,12 +13,19 @@ class OllamaService {
       _client = client ?? http.Client();
 
   void updateBaseUrl(String url) {
+    if (!UrlValidator.isHttpUrlString(url)) {
+      throw ArgumentError(
+        'Invalid Ollama URL. Must start with http:// or https://',
+      );
+    }
     _baseUrl = url;
   }
 
   Future<bool> checkConnection() async {
     try {
-      final response = await _client.get(Uri.parse('$_baseUrl/api/tags'));
+      final response = await _client
+          .get(Uri.parse('$_baseUrl/api/tags'))
+          .timeout(const Duration(seconds: 10));
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -26,7 +34,9 @@ class OllamaService {
 
   Future<List<OllamaModel>> listModels() async {
     try {
-      final response = await _client.get(Uri.parse('$_baseUrl/api/tags'));
+      final response = await _client
+          .get(Uri.parse('$_baseUrl/api/tags'))
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final models = (data['models'] as List)

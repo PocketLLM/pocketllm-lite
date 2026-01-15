@@ -12,3 +12,8 @@
 **Vulnerability:** The Ollama Base URL setting accepted any valid URI string (e.g., `file:///etc/hosts`), potentially leading to unexpected behavior or security issues if the HTTP client supports those schemes.
 **Learning:** `Uri.tryParse` only checks for syntax validity, not semantic security.
 **Prevention:** Always validate the `scheme` of user-provided URLs against a strict whitelist (e.g., `['http', 'https']`) for API endpoints.
+
+## 2025-02-18 - HTTP Client Timeout Regression on Long-Running Operations
+**Vulnerability:** Adding a blanket timeout (e.g., 10 seconds) to all `http.Client` operations broke `pullModel` (downloading large files) because `http.post` buffers the response body by default, waiting for the entire operation to complete before returning.
+**Learning:** Security controls like timeouts must be context-aware. Blocking HTTP methods (`post`, `get`, `delete`) on large payloads or long tasks are incompatible with short timeouts.
+**Prevention:** Only apply timeouts to control plane operations (e.g., connection checks, listing models). For data plane operations (e.g., downloads), either use streaming (so the timeout applies to chunks) or avoid timeouts/use very long ones.
