@@ -16,11 +16,33 @@ class ChatBody extends ConsumerStatefulWidget {
 
 class _ChatBodyState extends ConsumerState<ChatBody> {
   final ScrollController _scrollController = ScrollController();
+  bool _showScrollToBottom = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    // Show button if we are more than 300 pixels away from the bottom
+    final show = (maxScroll - currentScroll) > 300;
+
+    if (show != _showScrollToBottom) {
+      setState(() {
+        _showScrollToBottom = show;
+      });
+    }
   }
 
   void _scrollToBottom() {
@@ -38,6 +60,8 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
     // Only watch what we need for the body
     final connectionStatusAsync = ref.watch(autoConnectionStatusProvider);
     final chatState = ref.watch(chatProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     // Auto-scroll logic scoped to this widget
     ref.listen(chatProvider, (prev, next) {
@@ -105,52 +129,82 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
           );
         }
 
-        return chatState.messages.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.chat_bubble_outline,
-                      size: 80,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Start a conversation',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Ensure Ollama is running in Termux',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
+        if (chatState.messages.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.chat_bubble_outline,
+                  size: 80,
+                  color: Colors.grey,
                 ),
-              )
-            : ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.only(top: 16, bottom: 16),
-                itemCount: chatState.messages.length +
-                    (chatState.isGenerating &&
-                            chatState.streamingContent.isNotEmpty
-                        ? 1
-                        : 0),
-                itemBuilder: (context, index) {
-                  if (index < chatState.messages.length) {
-                    return ChatBubble(message: chatState.messages[index]);
-                  } else {
-                    return ChatBubble(
-                      message: ChatMessage(
-                        role: 'assistant',
-                        content: chatState.streamingContent,
-                        timestamp: DateTime.now(),
-                      ),
-                    );
-                  }
-                },
-              );
+                const SizedBox(height: 16),
+                Text(
+                  'Start a conversation',
+                  style: Theme.of(context).textTheme.headlineSmall
+                      ?.copyWith(color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Ensure Ollama is running in Termux',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Stack(
+          children: [
+            ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.only(top: 16, bottom: 16),
+              itemCount: chatState.messages.length +
+                  (chatState.isGenerating &&
+                          chatState.streamingContent.isNotEmpty
+                      ? 1
+                      : 0),
+              itemBuilder: (context, index) {
+                if (index < chatState.messages.length) {
+                  return ChatBubble(message: chatState.messages[index]);
+                } else {
+                  return ChatBubble(
+                    message: ChatMessage(
+                      role: 'assistant',
+                      content: chatState.streamingContent,
+                      timestamp: DateTime.now(),
+                    ),
+                  );
+                }
+              },
+            ),
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: AnimatedOpacity(
+                opacity: _showScrollToBottom ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: IgnorePointer(
+                  ignoring: !_showScrollToBottom,
+                  child: Semantics(
+                    label: 'Scroll to bottom',
+                    button: true,
+                    child: FloatingActionButton.small(
+                      onPressed: _scrollToBottom,
+                      backgroundColor: isDark
+                        ? Colors.grey[800]
+                        : Colors.white,
+                      foregroundColor: theme.colorScheme.primary,
+                      elevation: 4,
+                      child: const Icon(Icons.arrow_downward),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
       },
       loading: () => const SizedBox.shrink(),
       error: (e, s) => const SizedBox.shrink(),
