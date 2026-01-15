@@ -33,5 +33,15 @@ void main() {
       expect(UrlValidator.isSecureUrlString('HTTPS://GOOGLE.COM'), isTrue);
       expect(UrlValidator.isSecureUrlString('JavaScript:alert(1)'), isFalse);
     });
+
+    test('isHttpUrlString strictly enforces http/https', () {
+      expect(UrlValidator.isHttpUrlString('http://localhost'), isTrue);
+      expect(UrlValidator.isHttpUrlString('https://api.example.com'), isTrue);
+      // specific check: mailto is secure but not http
+      expect(UrlValidator.isHttpUrlString('mailto:user@example.com'), isFalse);
+      expect(UrlValidator.isHttpUrlString('javascript:alert(1)'), isFalse);
+      expect(UrlValidator.isHttpUrlString('file:///etc/hosts'), isFalse);
+      expect(UrlValidator.isHttpUrlString(null), isFalse);
+    });
   });
 }

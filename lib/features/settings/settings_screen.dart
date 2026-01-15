@@ -122,7 +122,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _saveUrl() async {
     final url = _urlController.text.trim();
-    if (Uri.tryParse(url) == null) return;
+
+    // Security: Validate URL scheme to prevent non-HTTP protocols (e.g. file://, javascript:)
+    if (!UrlValidator.isHttpUrlString(url)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid URL: Must start with http:// or https://'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
 
     final storage = ref.read(storageServiceProvider);
     await storage.saveSetting(AppConstants.ollamaBaseUrlKey, url);
