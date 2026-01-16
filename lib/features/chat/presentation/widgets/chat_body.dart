@@ -268,13 +268,16 @@ class _StreamingChatBubble extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final content = ref.watch(chatProvider.select((s) => s.streamingContent));
+    final state = ref.watch(chatProvider.select((s) => (
+      content: s.streamingContent,
+      timestamp: s.streamingTimestamp,
+    )));
 
     return ChatBubble(
       message: ChatMessage(
         role: 'assistant',
-        content: content,
-        timestamp: DateTime.now(),
+        content: state.content,
+        timestamp: state.timestamp ?? DateTime.now(),
       ),
     );
   }
