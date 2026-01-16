@@ -201,9 +201,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final enhancerState = ref.read(promptEnhancerProvider);
     if (enhancerState.selectedModelId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Select a Prompt Enhancer model in Settings first.'),
-          duration: Duration(seconds: 3),
+        SnackBar(
+          content: const Text('Select a Prompt Enhancer model first.'),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Settings',
+            onPressed: () {
+              if (mounted) context.push('/settings/prompts');
+            },
+          ),
         ),
       );
       return;
