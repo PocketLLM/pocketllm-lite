@@ -263,18 +263,34 @@ class _EmptyState extends ConsumerWidget {
   }
 }
 
-class _StreamingChatBubble extends ConsumerWidget {
+class _StreamingChatBubble extends ConsumerStatefulWidget {
   const _StreamingChatBubble();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_StreamingChatBubble> createState() =>
+      _StreamingChatBubbleState();
+}
+
+class _StreamingChatBubbleState extends ConsumerState<_StreamingChatBubble> {
+  // Capture timestamp once when streaming starts to prevent unnecessary
+  // object creation and identity changes during high-frequency updates.
+  late final DateTime _timestamp;
+
+  @override
+  void initState() {
+    super.initState();
+    _timestamp = DateTime.now();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final content = ref.watch(chatProvider.select((s) => s.streamingContent));
 
     return ChatBubble(
       message: ChatMessage(
         role: 'assistant',
         content: content,
-        timestamp: DateTime.now(),
+        timestamp: _timestamp,
       ),
     );
   }
