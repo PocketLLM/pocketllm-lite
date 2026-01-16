@@ -90,6 +90,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
           if (_isSelectionMode)
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
+              tooltip: 'Delete selected chats',
               onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
             )
           else
@@ -107,6 +108,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close),
+                tooltip: 'Cancel selection',
                 onPressed: () {
                   HapticFeedback.lightImpact();
                   setState(() {
@@ -117,6 +119,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               )
             : IconButton(
                 icon: const Icon(Icons.arrow_back),
+                tooltip: 'Back',
                 onPressed: () {
                   HapticFeedback.selectionClick();
                   Navigator.pop(context);
@@ -241,6 +244,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                       trailing: !_isSelectionMode
                           ? IconButton(
                               icon: const Icon(Icons.chevron_right),
+                              tooltip: 'Open chat',
                               onPressed: () => _loadSession(session),
                             )
                           : null,
