@@ -104,7 +104,18 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final message = widget.message;
     final isUser = message.role == 'user';
     final theme = Theme.of(context);
-    final appearance = ref.watch(appearanceProvider);
+
+    // Select only the properties that affect the bubble's appearance
+    // to prevent unnecessary rebuilds (e.g. when showAvatars or customBgColor changes).
+    final appearance = ref.watch(appearanceProvider.select((state) => (
+          userMsgColor: state.userMsgColor,
+          aiMsgColor: state.aiMsgColor,
+          msgOpacity: state.msgOpacity,
+          bubbleRadius: state.bubbleRadius,
+          fontSize: state.fontSize,
+          chatPadding: state.chatPadding,
+          bubbleElevation: state.bubbleElevation,
+        )));
 
     // Appearance Values
     final bubbleColor = isUser
