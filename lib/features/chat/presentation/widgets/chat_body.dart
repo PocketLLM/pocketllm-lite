@@ -158,6 +158,7 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
           children: [
             ListView.builder(
               controller: _scrollController,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.only(top: 16, bottom: 16),
               itemCount: messages.length +
                   (isGenerating && hasStreamingContent ? 1 : 0),
@@ -182,6 +183,7 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
                     button: true,
                     child: FloatingActionButton.small(
                       onPressed: _scrollToBottom,
+                      tooltip: 'Scroll to bottom',
                       backgroundColor: isDark
                         ? Colors.grey[800]
                         : Colors.white,
