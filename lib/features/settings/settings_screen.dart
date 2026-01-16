@@ -8,6 +8,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../../core/constants/legal_constants.dart';
+import '../../core/utils/url_validator.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
@@ -121,7 +122,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _saveUrl() async {
     final url = _urlController.text.trim();
-    if (Uri.tryParse(url) == null) return;
+
+    // Security: Validate URL scheme to prevent non-HTTP protocols (e.g. file://, javascript:)
+    if (!UrlValidator.isHttpUrlString(url)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid URL: Must start with http:// or https://'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
 
     final storage = ref.read(storageServiceProvider);
     await storage.saveSetting(AppConstants.ollamaBaseUrlKey, url);
@@ -1467,7 +1480,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTapLink: (text, href, title) async {
                   if (href != null) {
                     final uri = Uri.parse(href);
-                    if (await canLaunchUrl(uri)) await launchUrl(uri);
+                    if (UrlValidator.isSecureUrl(uri) &&
+                        await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    }
                   }
                 },
                 styleSheet: MarkdownStyleSheet.fromTheme(

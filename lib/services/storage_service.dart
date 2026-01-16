@@ -49,10 +49,33 @@ class StorageService {
       });
     }
 
-    // Invalidate cache when chat box changes
-    _chatBox.watch().listen((_) {
-      _cachedSessions = null;
-    });
+    // Update cache when chat box changes
+    _chatBox.watch().listen(_onChatBoxEvent);
+  }
+
+  void _onChatBoxEvent(BoxEvent event) {
+    if (_cachedSessions == null) return;
+
+    if (event.deleted) {
+      _cachedSessions!.removeWhere((session) => session.id == event.key);
+    } else if (event.value != null) {
+      final ChatSession updatedSession = event.value as ChatSession;
+      final index = _cachedSessions!
+          .indexWhere((session) => session.id == updatedSession.id);
+
+      if (index != -1) {
+        final oldSession = _cachedSessions![index];
+        _cachedSessions![index] = updatedSession;
+
+        // Only resort if sort key changed
+        if (updatedSession.createdAt != oldSession.createdAt) {
+          _cachedSessions!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        }
+      } else {
+        _cachedSessions!.add(updatedSession);
+        _cachedSessions!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      }
+    }
   }
 
   /// Migrates messages from ChatSession objects in _chatBox to _messagesBox.
@@ -96,22 +119,33 @@ class StorageService {
   }
 
   Future<void> saveChatSession(ChatSession session) async {
-    _cachedSessions = null;
+    // The main branch added optimistic updates to _cachedSessions.
+    // I need to preserve that, BUT update it to work with my "lite" sessions.
 
-    // Safety check: if messages are empty, we might be saving a "lite" session.
-    // If it's a new session, empty messages are fine.
-    // If it's an existing session and we have empty messages, we should NOT overwrite
-    // the existing messages in _messagesBox with empty list, UNLESS we intend to clear them.
-    //
-    // Distinguish based on whether we provided messages or not.
-    // However, session.messages is non-nullable.
-    //
-    // Logic:
-    // 1. If messages is NOT empty, save to _messagesBox.
-    // 2. If messages IS empty:
-    //    - If the session ID exists in _messagesBox, assume we are updating metadata only -> DO NOT overwrite messages.
-    //    - If the session ID does NOT exist in _messagesBox, assume it's a new chat -> Save empty list (or nothing).
+    // Create the lite session for storage and cache
+    final liteSession = session.copyWith(messages: []);
 
+    if (_cachedSessions != null) {
+      final index =
+          _cachedSessions!.indexWhere((s) => s.id == session.id);
+      if (index != -1) {
+        // Update with lite session (messages empty)
+        _cachedSessions![index] = liteSession;
+        // Assume createdAt didn't change for optimization in save path
+      } else {
+        // If it's a new session, it's likely the newest, so insert at top
+        if (_cachedSessions!.isEmpty ||
+            session.createdAt.isAfter(_cachedSessions!.first.createdAt) ||
+            session.createdAt.isAtSameMomentAs(_cachedSessions!.first.createdAt)) {
+          _cachedSessions!.insert(0, liteSession);
+        } else {
+          _cachedSessions!.add(liteSession);
+          _cachedSessions!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        }
+      }
+    }
+
+    // Split Storage Logic from my branch
     if (session.messages.isNotEmpty) {
       await _messagesBox.put(session.id, session.messages);
     } else {
@@ -119,17 +153,17 @@ class StorageService {
        final hasMessages = await _messagesBox.containsKey(session.id);
        if (!hasMessages) {
          // New chat or intentionally empty.
-         // If we don't put anything, future gets will return null, treated as empty.
        }
     }
 
-    // Save metadata only
-    final liteSession = session.copyWith(messages: []);
     await _chatBox.put(session.id, liteSession);
   }
 
   Future<void> deleteChatSession(String id) async {
-    _cachedSessions = null;
+    // Optimistic update
+    if (_cachedSessions != null) {
+      _cachedSessions!.removeWhere((s) => s.id == id);
+    }
     await _chatBox.delete(id);
     await _messagesBox.delete(id);
   }

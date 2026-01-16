@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/utils/image_decoder.dart';
+import '../../../../core/utils/url_validator.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import 'three_dot_loading_indicator.dart';
@@ -37,6 +40,19 @@ class ChatBubble extends ConsumerStatefulWidget {
 
   const ChatBubble({super.key, required this.message});
 
+  // Optimize performance by preventing rebuilds when the message instance hasn't changed.
+  // This is crucial during streaming, where the parent list rebuilds frequently.
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ChatBubble &&
+        other.key == key &&
+        other.message == message;
+  }
+
+  @override
+  int get hashCode => Object.hash(key, message);
+
   @override
   ConsumerState<ChatBubble> createState() => _ChatBubbleState();
 }
@@ -54,18 +70,32 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   @override
   void didUpdateWidget(ChatBubble oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.message != widget.message) {
+    // Only re-decode if the image list actually changed.
+    // Using listEquals from foundation to check content equality if references differ.
+    final oldImages = oldWidget.message.images;
+    final newImages = widget.message.images;
+    if (oldImages != newImages && !listEquals(oldImages, newImages)) {
       _decodeImages();
     }
   }
 
-  void _decodeImages() {
+  Future<void> _decodeImages() async {
     if (widget.message.images != null && widget.message.images!.isNotEmpty) {
-      _decodedImages = widget.message.images!
-          .map((str) => base64Decode(str))
-          .toList();
+      // Use Isolate to decode images off the main thread to avoid UI jank
+      // during scrolling or message reception.
+      final images =
+          await IsolateImageDecoder.decodeImages(widget.message.images!);
+      if (mounted) {
+        setState(() {
+          _decodedImages = images;
+        });
+      }
     } else {
-      _decodedImages = null;
+      if (_decodedImages != null) {
+        setState(() {
+          _decodedImages = null;
+        });
+      }
     }
   }
 
@@ -133,15 +163,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                 HapticFeedback.mediumImpact();
                 _showFocusedMenu(context, isUser);
               },
-              child: Hero(
-                tag: 'bubble_${message.hashCode}',
-                // Note: Hero helps transition if we pushed a page,
-                // but for overlay we manually position.
-                // Keeping tag just in case or we can remove if unused.
-                child: Container(
-                  key: _bubbleKey,
-                  padding: EdgeInsets.all(padding),
-                  decoration: BoxDecoration(
+              child: Container(
+                key: _bubbleKey,
+                padding: EdgeInsets.all(padding),
+                decoration: BoxDecoration(
                     color: bubbleColor,
                     borderRadius: BorderRadius.circular(radius).copyWith(
                       bottomRight: isUser ? const Radius.circular(0) : null,
@@ -189,7 +214,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                           onTapLink: (text, href, title) async {
                             if (href != null) {
                               final uri = Uri.tryParse(href);
-                              if (uri != null && await canLaunchUrl(uri)) {
+                              // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
+                              if (UrlValidator.isSecureUrl(uri) &&
+                                  await canLaunchUrl(uri!)) {
                                 await launchUrl(
                                   uri,
                                   mode: LaunchMode.externalApplication,
