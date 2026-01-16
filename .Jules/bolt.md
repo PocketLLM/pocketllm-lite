@@ -25,3 +25,7 @@
 ## 2025-06-01 - [Watching Full State Objects in List Items]
 **Learning:** Watching an entire state object (e.g., `ref.watch(appearanceProvider)`) in a list item widget causes O(N) rebuilds of the entire list whenever *any* field in that state changes, even if the item only uses a subset of fields. This is wasteful if unrelated fields (like settings toggles not visible in the item) are updated.
 **Action:** Use `ref.watch(provider.select((state) => (field1: state.a, field2: state.b)))` to select only the fields required by the widget. Dart Records provide value equality, ensuring the widget only rebuilds when those specific fields change.
+
+## 2025-10-27 - [Stable Timestamps in Streaming Widgets]
+**Learning:** Generating `DateTime.now()` inside the `build` method of a streaming widget causes the resulting data model (e.g., `ChatMessage`) to have a new identity/value on every frame. This breaks `operator ==` optimizations in child widgets, forcing unnecessary rebuilds/diffing even if the content hasn't changed meaningfully (or if only content changed, but we want to preserve other props).
+**Action:** Capture timestamps in `initState` (or use a stable provider value) for streaming/generating content to ensure object identity stability during the stream.
