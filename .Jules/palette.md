@@ -13,3 +13,7 @@
 ## 2024-05-24 - [Decoupled Input Pre-filling]
 **Learning:** Sibling widgets (like `ChatBody` and `ChatInput`) cannot share a `TextEditingController` directly. To allow UI elements in the body (like suggestion chips) to populate the input field, use a shared `StateProvider` (e.g., `draftMessageProvider`) as an event bus. The input widget listens to this provider, updates its controller, requests focus, and then resets the provider to null to handle repeated actions cleanly.
 **Action:** Use a dedicated `StateProvider<String?>` to facilitate one-way "text fill" events between decoupled widgets.
+
+## 2024-05-24 - [Interactive Status Indicators]
+**Learning:** When displaying critical system status errors (like "Not Connected"), static text leaves users stranded without a path to resolution. Users instinctively want to tap the red text to fix the problem.
+**Action:** Convert static error text into interactive chips/buttons that open a diagnostic dialog or settings screen, guiding the user to the solution.

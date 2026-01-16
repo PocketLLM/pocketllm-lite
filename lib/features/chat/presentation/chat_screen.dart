@@ -44,11 +44,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: connectionStatusAsync.when(
                 data: (isConnected) {
                   if (!isConnected) {
-                    return const Text(
-                      'Not Connected',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
+                    return InkWell(
+                      onTap: () => _showConnectionHelpDialog(context),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.red.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.cloud_off,
+                              size: 14,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Not Connected',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }
@@ -255,6 +284,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           const Expanded(child: ChatBody()),
           const ChatInput(),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showConnectionHelpDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.cloud_off, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Ollama Not Connected', style: TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Pocket LLM cannot reach the Ollama server.',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 12),
+            Text('Possible causes:'),
+            SizedBox(height: 4),
+            Text('• Ollama is not running (run "ollama serve")'),
+            Text('• Termux session was closed'),
+            Text('• Incorrect endpoint URL in Settings'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/settings');
+            },
+            icon: const Icon(Icons.settings),
+            label: const Text('Check Settings'),
+          ),
         ],
       ),
     );
