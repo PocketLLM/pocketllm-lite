@@ -16,6 +16,7 @@ class ChatState {
   final double temperature;
   final double topP;
   final String streamingContent;
+  final DateTime? streamingTimestamp;
 
   ChatState({
     required this.messages,
@@ -26,6 +27,7 @@ class ChatState {
     this.temperature = 0.7,
     this.topP = 0.9,
     this.streamingContent = '',
+    this.streamingTimestamp,
   });
 
   ChatState copyWith({
@@ -37,6 +39,7 @@ class ChatState {
     double? temperature,
     double? topP,
     String? streamingContent,
+    DateTime? streamingTimestamp,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -47,6 +50,7 @@ class ChatState {
       temperature: temperature ?? this.temperature,
       topP: topP ?? this.topP,
       streamingContent: streamingContent ?? this.streamingContent,
+      streamingTimestamp: streamingTimestamp ?? this.streamingTimestamp,
     );
   }
 }
@@ -122,6 +126,7 @@ class ChatNotifier extends Notifier<ChatState> {
     state = state.copyWith(
       messages: [...state.messages, userMsg],
       isGenerating: true,
+      streamingTimestamp: DateTime.now(),
     );
 
     final ollama = ref.read(ollamaServiceProvider);
@@ -151,8 +156,17 @@ class ChatNotifier extends Notifier<ChatState> {
           .getSetting(AppConstants.hapticFeedbackKey, defaultValue: true);
 
       String assistantContent = '';
+      DateTime? lastHapticTime;
+      const hapticThrottle = Duration(milliseconds: 100);
+
       await for (final chunk in stream) {
-        if (hapticEnabled) HapticFeedback.lightImpact();
+        if (hapticEnabled) {
+          final now = DateTime.now();
+          if (lastHapticTime == null || now.difference(lastHapticTime) > hapticThrottle) {
+             HapticFeedback.lightImpact();
+             lastHapticTime = now;
+          }
+        }
         assistantContent += chunk;
         state = state.copyWith(streamingContent: assistantContent);
       }
