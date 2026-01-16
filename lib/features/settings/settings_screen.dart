@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../../core/constants/legal_constants.dart';
 import '../../core/utils/url_validator.dart';
+import '../../core/utils/markdown_handlers.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
@@ -1477,15 +1478,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   horizontal: 16,
                   vertical: 8,
                 ),
-                onTapLink: (text, href, title) async {
-                  if (href != null) {
-                    final uri = Uri.parse(href);
-                    if (UrlValidator.isSecureUrl(uri) &&
-                        await canLaunchUrl(uri)) {
-                      await launchUrl(uri);
-                    }
-                  }
-                },
+                onTapLink: MarkdownHandlers.onTapLink,
+                imageBuilder: MarkdownHandlers.imageBuilder,
                 styleSheet: MarkdownStyleSheet.fromTheme(
                   Theme.of(context),
                 ).copyWith(p: Theme.of(context).textTheme.bodyMedium),
