@@ -21,3 +21,7 @@
 ## 2025-05-24 - [Avoid Hero Tags with Dynamic Content Hashes in Streaming]
 **Learning:** Using `message.hashCode` (which hashes the full content string) for `Hero` tags in a streaming chat bubble forces O(N) hash calculation on every token update. Since the `Hero` was unused for navigation, this was pure overhead causing unnecessary CPU usage during streaming.
 **Action:** Avoid using dynamic, content-based hashes for `Hero` tags in high-frequency update widgets. If `Hero` is needed, use a stable ID or constant tag for the streaming state. Remove unused `Hero` widgets.
+
+## 2025-06-01 - [Watching Full State Objects in List Items]
+**Learning:** Watching an entire state object (e.g., `ref.watch(appearanceProvider)`) in a list item widget causes O(N) rebuilds of the entire list whenever *any* field in that state changes, even if the item only uses a subset of fields. This is wasteful if unrelated fields (like settings toggles not visible in the item) are updated.
+**Action:** Use `ref.watch(provider.select((state) => (field1: state.a, field2: state.b)))` to select only the fields required by the widget. Dart Records provide value equality, ensuring the widget only rebuilds when those specific fields change.
