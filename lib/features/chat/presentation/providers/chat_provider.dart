@@ -15,6 +15,7 @@ class ChatState {
   final String? systemPrompt;
   final double temperature;
   final double topP;
+  final String streamingContent;
 
   ChatState({
     required this.messages,
@@ -24,6 +25,7 @@ class ChatState {
     this.systemPrompt,
     this.temperature = 0.7,
     this.topP = 0.9,
+    this.streamingContent = '',
   });
 
   ChatState copyWith({
@@ -34,6 +36,7 @@ class ChatState {
     String? systemPrompt,
     double? temperature,
     double? topP,
+    String? streamingContent,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -43,14 +46,17 @@ class ChatState {
       systemPrompt: systemPrompt ?? this.systemPrompt,
       temperature: temperature ?? this.temperature,
       topP: topP ?? this.topP,
+      streamingContent: streamingContent ?? this.streamingContent,
     );
   }
 }
 
 class ChatNotifier extends Notifier<ChatState> {
+  static final _wordRegExp = RegExp(r'\S+');
+
   @override
   ChatState build() {
-    return ChatState(messages: [], isGenerating: false);
+    return ChatState(messages: [], isGenerating: false, streamingContent: '');
   }
 
   void setModel(String model) {
@@ -93,12 +99,13 @@ class ChatNotifier extends Notifier<ChatState> {
       systemPrompt: state.systemPrompt,
       temperature: 0.7,
       topP: 0.9,
+      streamingContent: '',
     );
   }
 
   /// Estimate tokens from text (rough approximation: words * 1.3)
   static int _estimateTokens(String text) {
-    final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+    final words = _wordRegExp.allMatches(text).length;
     return (words * 1.3).ceil();
   }
 
@@ -129,15 +136,6 @@ class ChatNotifier extends Notifier<ChatState> {
         )
         .toList();
 
-    String assistantContent = '';
-
-    state = state.copyWith(
-      messages: [
-        ...state.messages,
-        ChatMessage(role: 'assistant', content: '', timestamp: DateTime.now()),
-      ],
-    );
-
     try {
       final options = {"temperature": state.temperature, "top_p": state.topP};
 
@@ -145,13 +143,25 @@ class ChatNotifier extends Notifier<ChatState> {
         state.selectedModel,
         history,
         options: options,
-        system: state
-            .systemPrompt, // We pass system string, service handles it (conceptually)
+        system: state.systemPrompt,
       );
 
       final hapticEnabled = ref
           .read(storageServiceProvider)
           .getSetting(AppConstants.hapticFeedbackKey, defaultValue: true);
+
+      String assistantContent = '';
+
+      state = state.copyWith(
+        messages: [
+          ...state.messages,
+          ChatMessage(
+            role: 'assistant',
+            content: '',
+            timestamp: DateTime.now(),
+          ),
+        ],
+      );
 
       await for (final chunk in stream) {
         if (hapticEnabled) HapticFeedback.lightImpact();
@@ -165,19 +175,16 @@ class ChatNotifier extends Notifier<ChatState> {
           state = state.copyWith(messages: updatedMessages);
         }
       }
-      
-      // Estimate and consume tokens after the response is complete
-      // Estimate tokens for both user input and AI response
+
       final userTokens = _estimateTokens(text);
       final aiTokens = _estimateTokens(assistantContent);
       final totalTokens = userTokens + aiTokens;
       
-      // Consume tokens
       await ref.read(usageLimitsProvider.notifier).consumeTokens(totalTokens);
     } catch (e) {
-      // Removed debug print to avoid exposing information in production
+      // Handle potential errors, e.g., show a message to the user
     } finally {
-      state = state.copyWith(isGenerating: false);
+      state = state.copyWith(isGenerating: false, streamingContent: '');
       _saveSession();
     }
   }

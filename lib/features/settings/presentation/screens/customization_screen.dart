@@ -23,6 +23,12 @@ class ThemePreset {
   });
 }
 
+class _ColorOption {
+  final Color color;
+  final String name;
+  const _ColorOption(this.color, this.name);
+}
+
 class CustomizationScreen extends ConsumerStatefulWidget {
   const CustomizationScreen({super.key});
 
@@ -91,17 +97,17 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
     ),
   ];
 
-  static const List<Color> recommendedSwatches = [
-    Color(0xFF4F46E5),
-    Color(0xFF7C3AED),
-    Color(0xFFEC4899),
-    Color(0xFFF59E0B),
-    Color(0xFF10B981),
-    Color(0xFF06B6D4),
-    Color(0xFFF43F5E),
-    Color(0xFF8B5CF6),
-    Color(0xFF0EA5E9),
-    Color(0xFF6366F1),
+  static const List<_ColorOption> recommendedSwatches = [
+    _ColorOption(Color(0xFF4F46E5), 'Indigo'),
+    _ColorOption(Color(0xFF7C3AED), 'Violet'),
+    _ColorOption(Color(0xFFEC4899), 'Pink'),
+    _ColorOption(Color(0xFFF59E0B), 'Amber'),
+    _ColorOption(Color(0xFF10B981), 'Emerald'),
+    _ColorOption(Color(0xFF06B6D4), 'Cyan'),
+    _ColorOption(Color(0xFFF43F5E), 'Rose'),
+    _ColorOption(Color(0xFF8B5CF6), 'Purple'),
+    _ColorOption(Color(0xFF0EA5E9), 'Sky Blue'),
+    _ColorOption(Color(0xFF6366F1), 'Light Indigo'),
   ];
 
   // Dummy messages for preview
@@ -348,29 +354,13 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
 
             return Padding(
               padding: const EdgeInsets.only(right: 12),
-              child: InkWell(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  notifier.applyPreset(
-                    userColor: preset.userColor,
-                    aiColor: preset.aiColor,
-                    radius: appearance.bubbleRadius,
-                    fontSize: appearance.fontSize,
-                  );
-                },
-                borderRadius: BorderRadius.circular(12),
+              child: Semantics(
+                selected: isSelected,
+                button: true,
+                label: '${preset.name} theme',
                 child: Container(
-                  width: 140,
-                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
-                    border: isSelected
-                        ? Border.all(
-                            color: Theme.of(context).primaryColor,
-                            width: 2,
-                          )
-                        : Border.all(color: Colors.transparent),
                     boxShadow: [
                       if (isSelected)
                         BoxShadow(
@@ -382,9 +372,35 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                         ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                  child: Material(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        notifier.applyPreset(
+                          userColor: preset.userColor,
+                          aiColor: preset.aiColor,
+                          radius: appearance.bubbleRadius,
+                          fontSize: appearance.fontSize,
+                        );
+                      },
+                      child: Container(
+                        width: 140,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: isSelected
+                              ? Border.all(
+                                  color: Theme.of(context).primaryColor,
+                                  width: 2,
+                                )
+                              : Border.all(color: Colors.transparent),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                       Row(
                         children: [
                           CircleAvatar(
@@ -447,59 +463,96 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
             child: Row(
               children: [
                 // Wheel / Custom Button
-                InkWell(
-                  onTap: () => _showFullColorPicker(
-                    context,
-                    currentColor,
-                    onColorChanged,
-                  ),
-                  borderRadius: BorderRadius.circular(50),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Colors.red, Colors.green, Colors.blue],
-                      ),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.grey.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.colorize,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ),
-                // Swatches
-                ...recommendedSwatches.map(
-                  (c) => GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      onColorChanged(c);
-                    },
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      margin: const EdgeInsets.only(right: 8),
+                Semantics(
+                  label: 'Pick custom color',
+                  button: true,
+                  child: Material(
+                    color: Colors.transparent,
+                    shape: const CircleBorder(),
+                    clipBehavior: Clip.antiAlias,
+                    child: Ink(
                       decoration: BoxDecoration(
-                        color: c,
+                        gradient: const LinearGradient(
+                          colors: [Colors.red, Colors.green, Colors.blue],
+                        ),
                         shape: BoxShape.circle,
-                        border: currentColor.toARGB32() == c.toARGB32()
-                            ? Border.all(
-                                color: Theme.of(context).primaryColor,
-                                width: 3,
-                              )
-                            : Border.all(
-                                color: Colors.grey.withValues(alpha: 0.2),
-                              ),
+                        border: Border.all(
+                          color: Colors.grey.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: InkWell(
+                        onTap: () => _showFullColorPicker(
+                          context,
+                          currentColor,
+                          onColorChanged,
+                        ),
+                        customBorder: const CircleBorder(),
+                        child: const SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: Icon(
+                            Icons.colorize,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
+                const SizedBox(width: 12),
+                // Swatches
+                ...recommendedSwatches.map((option) {
+                  final isSelected =
+                      currentColor.toARGB32() == option.color.toARGB32();
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Semantics(
+                      label: '${option.name} color',
+                      selected: isSelected,
+                      button: true,
+                      child: Material(
+                        color: option.color,
+                        shape: const CircleBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        elevation: isSelected ? 2 : 0,
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            onColorChanged(option.color);
+                          },
+                          customBorder: const CircleBorder(),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: isSelected
+                                  ? Border.all(
+                                      color: Theme.of(context).primaryColor,
+                                      width: 3,
+                                    )
+                                  : Border.all(
+                                      color: Colors.black
+                                          .withValues(alpha: 0.1),
+                                      width: 1,
+                                    ),
+                            ),
+                            // Checkmark for extra visibility on selected
+                            child: isSelected
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 20,
+                                    color: Colors.white,
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
               ],
             ),
           ),
@@ -596,18 +649,22 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
             children: [
               const Text('Radius', style: TextStyle(fontSize: 12)),
               Expanded(
-                child: Slider(
-                  value: current,
-                  min: 4,
-                  max: 40,
-                  divisions: 36,
-                  label: current.toStringAsFixed(0),
-                  onChanged: (val) {
-                    if ((val - current).abs() > 1) {
-                      HapticFeedback.selectionClick();
-                    }
-                    notifier.updateBubbleRadius(val);
-                  },
+                child: Semantics(
+                  label: 'Bubble Radius',
+                  value: '${current.toInt()} density pixels',
+                  child: Slider(
+                    value: current,
+                    min: 4,
+                    max: 40,
+                    divisions: 36,
+                    label: current.toStringAsFixed(0),
+                    onChanged: (val) {
+                      if ((val - current).abs() > 1) {
+                        HapticFeedback.selectionClick();
+                      }
+                      notifier.updateBubbleRadius(val);
+                    },
+                  ),
                 ),
               ),
               Text(
@@ -634,15 +691,20 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
             children: [
               const Text('Font Size'),
               Expanded(
-                child: Slider(
-                  value: appearance.fontSize,
-                  min: 12,
-                  max: 24,
-                  divisions: 12,
-                  label: appearance.fontSize.toStringAsFixed(1),
-                  onChanged: (val) {
-                    notifier.updateFontSize(val);
-                  },
+                child: Semantics(
+                  label: 'Message Font Size',
+                  value:
+                      '${appearance.fontSize.toStringAsFixed(1)} scale pixels',
+                  child: Slider(
+                    value: appearance.fontSize,
+                    min: 12,
+                    max: 24,
+                    divisions: 12,
+                    label: appearance.fontSize.toStringAsFixed(1),
+                    onChanged: (val) {
+                      notifier.updateFontSize(val);
+                    },
+                  ),
                 ),
               ),
               Text('${appearance.fontSize.toStringAsFixed(0)} sp'),
@@ -653,15 +715,20 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
             children: [
               const Text('Padding'),
               Expanded(
-                child: Slider(
-                  value: appearance.chatPadding,
-                  min: 8,
-                  max: 24,
-                  divisions: 16,
-                  label: appearance.chatPadding.toStringAsFixed(1),
-                  onChanged: (val) {
-                    notifier.updateChatPadding(val);
-                  },
+                child: Semantics(
+                  label: 'Chat Bubble Padding',
+                  value:
+                      '${appearance.chatPadding.toStringAsFixed(1)} density pixels',
+                  child: Slider(
+                    value: appearance.chatPadding,
+                    min: 8,
+                    max: 24,
+                    divisions: 16,
+                    label: appearance.chatPadding.toStringAsFixed(1),
+                    onChanged: (val) {
+                      notifier.updateChatPadding(val);
+                    },
+                  ),
                 ),
               ),
               Text('${appearance.chatPadding.toStringAsFixed(0)} dp'),
@@ -732,13 +799,17 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
             alignment: Alignment.centerLeft,
             child: Text('Message Opacity'),
           ),
-          Slider(
-            value: appearance.msgOpacity,
-            min: 0.8,
-            max: 1.0,
-            divisions: 20,
-            label: '${(appearance.msgOpacity * 100).toInt()}%',
-            onChanged: (val) => notifier.updateMsgOpacity(val),
+          Semantics(
+            label: 'Message Bubble Opacity',
+            value: '${(appearance.msgOpacity * 100).toInt()} percent',
+            child: Slider(
+              value: appearance.msgOpacity,
+              min: 0.8,
+              max: 1.0,
+              divisions: 20,
+              label: '${(appearance.msgOpacity * 100).toInt()}%',
+              onChanged: (val) => notifier.updateMsgOpacity(val),
+            ),
           ),
         ],
       ),

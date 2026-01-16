@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/utils/url_validator.dart';
 
 class Docs extends StatefulWidget {
   const Docs({super.key});
@@ -26,6 +27,9 @@ class _DocsState extends State<Docs> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _launchUrl(String url) async {
+    // Validate URL scheme
+    if (!UrlValidator.isSecureUrlString(url)) return;
+
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);

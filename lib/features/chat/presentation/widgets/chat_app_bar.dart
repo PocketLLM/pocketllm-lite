@@ -186,7 +186,7 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
             // Check chat limit
             final limitsNotifier = ref.read(usageLimitsProvider.notifier);
             if (!limitsNotifier.canCreateChat()) {
-                await showChatLimitDialog(context, ref);
+              await showChatLimitDialog(context, ref);
               return;
             }
 
@@ -227,5 +227,4 @@ class ChatAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ],
     );
   }
-
 }

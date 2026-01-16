@@ -7,7 +7,7 @@ import '../../../../core/providers.dart';
 import '../../../../services/usage_limits_provider.dart';
 import '../providers/chat_provider.dart';
 
-// Helper function to show limit dialog, extracted from ChatScreen
+// Helper function to show limit dialog
 Future<void> showChatLimitDialog(BuildContext context, WidgetRef ref) async {
   final adService = AdService();
   final result = await showDialog<bool>(
