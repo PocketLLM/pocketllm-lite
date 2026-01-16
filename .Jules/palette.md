@@ -17,3 +17,7 @@
 ## 2024-05-24 - [Interactive Status Indicators]
 **Learning:** When displaying critical system status errors (like "Not Connected"), static text leaves users stranded without a path to resolution. Users instinctively want to tap the red text to fix the problem.
 **Action:** Convert static error text into interactive chips/buttons that open a diagnostic dialog or settings screen, guiding the user to the solution.
+
+## 2024-05-25 - [Chat Keyboard Behavior]
+**Learning:** In chat interfaces, users expect the keyboard to dismiss naturally when they scroll back to read history. Default `ListView` behavior keeps the keyboard open, obscuring content.
+**Action:** Always set `keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag` in chat message lists to align with native OS messaging patterns.
