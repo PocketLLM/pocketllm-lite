@@ -28,21 +28,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final List<Uint8List> _selectedImages = [];
 
   @override
-  void initState() {
-    super.initState();
-    _controller.addListener(_onTextChanged);
-  }
-
-  @override
   void dispose() {
-    _controller.removeListener(_onTextChanged);
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
-  }
-
-  void _onTextChanged() {
-    setState(() {});
   }
 
   Future<void> _pickImage() async {
@@ -381,9 +370,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final theme = Theme.of(context);
     final isGenerating = ref.watch(chatProvider.select((s) => s.isGenerating));
     final isDark = theme.brightness == Brightness.dark;
-    final canSend =
-        (_controller.text.trim().isNotEmpty || _selectedImages.isNotEmpty) &&
-            !isGenerating;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -568,39 +554,52 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     ),
                   ],
                 ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  decoration: BoxDecoration(
-                    color: canSend ? theme.colorScheme.primary : Colors.grey,
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    onPressed: canSend ? _send : null,
-                    icon: AnimatedSwitcher(
+                // Optimize: Only rebuild the Send button when text changes, not the whole widget
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _controller,
+                  builder: (context, value, child) {
+                    final canSend = (value.text.trim().isNotEmpty ||
+                            _selectedImages.isNotEmpty) &&
+                        !isGenerating;
+
+                    return AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      transitionBuilder: (child, animation) => ScaleTransition(
-                        scale: animation,
-                        child: child,
+                      decoration: BoxDecoration(
+                        color:
+                            canSend ? theme.colorScheme.primary : Colors.grey,
+                        shape: BoxShape.circle,
                       ),
-                      child: isGenerating
-                          ? SizedBox(
-                              key: const ValueKey('spinner'),
-                              width: 18,
-                              height: 18,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(Colors.white),
-                              ),
-                            )
-                          : const Icon(
-                              Icons.arrow_upward,
-                              key: ValueKey('send_icon'),
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                    ),
-                    tooltip: isGenerating ? 'Generating...' : 'Send',
-                  ),
+                      child: IconButton(
+                        onPressed: canSend ? _send : null,
+                        icon: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          transitionBuilder: (child, animation) =>
+                              ScaleTransition(
+                            scale: animation,
+                            child: child,
+                          ),
+                          child: isGenerating
+                              ? SizedBox(
+                                  key: const ValueKey('spinner'),
+                                  width: 18,
+                                  height: 18,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation(Colors.white),
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.arrow_upward,
+                                  key: ValueKey('send_icon'),
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                        ),
+                        tooltip: isGenerating ? 'Generating...' : 'Send',
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
