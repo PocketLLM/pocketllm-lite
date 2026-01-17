@@ -549,20 +549,51 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
                         if (!hasEnhancer) return const SizedBox.shrink();
 
-                        return IconButton(
-                          onPressed: (isGenerating || _isEnhancing)
-                              ? null
-                              : _enhancePrompt,
-                          icon: Icon(
-                            Icons.auto_awesome,
-                            size: 22,
-                            color: (isGenerating || _isEnhancing)
-                                ? Colors.grey
-                                : (isDark ? Colors.white : Colors.black),
+                        final isDisabled = isGenerating || _isEnhancing;
+                        return Semantics(
+                          label: 'Enhance Prompt',
+                          button: true,
+                          enabled: !isDisabled,
+                          child: Tooltip(
+                            message: 'Enhance Prompt',
+                            child: Material(
+                              color: (isDark
+                                      ? Colors.grey[800]
+                                      : Colors.grey[300])
+                                  ?.withOpacity(isDisabled ? 0.5 : 1.0),
+                              shape: const CircleBorder(),
+                              clipBehavior: Clip.antiAlias,
+                              child: InkWell(
+                                onTap: isDisabled ? null : _enhancePrompt,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: _isEnhancing
+                                        ? SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                theme.colorScheme.onSurface,
+                                              ),
+                                            ),
+                                          )
+                                        : Icon(
+                                            Icons.auto_awesome,
+                                            size: 20,
+                                            color: theme.colorScheme.onSurface
+                                                .withOpacity(
+                                              isDisabled ? 0.5 : 1.0,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                          tooltip: 'Enhance Prompt',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
                         );
                       },
                     ),
