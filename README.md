@@ -205,19 +205,16 @@ The app includes Google AdMob integration for monetization through banner and re
 ### Setup for Production
 
 1. **Get AdMob IDs**: Create an account at [AdMob Console](https://admob.google.com/)
-2. **Update Constants**: Replace test IDs in `lib/core/constants/app_constants.dart`:
-   ```dart
-   // Replace these with your production AdMob IDs
-   static const String admobAppIdAndroid = 'YOUR_ANDROID_APP_ID';
-   static const String bannerAdUnitId = 'YOUR_BANNER_AD_UNIT_ID';
-   static const String rewardedAdUnitId = 'YOUR_REWARDED_AD_UNIT_ID';
+2. **Android App ID**: Add `admobAppId` to your `key.properties` file (same file as signing keys):
+   ```properties
+   admobAppId=ca-app-pub-xxxxxxxxxxxxxxxx~yyyyyyyyyy
    ```
-3. **Update AndroidManifest**: Replace the test app ID in `android/app/src/main/AndroidManifest.xml`:
-   ```xml
-   <meta-data
-       android:name="com.google.android.gms.ads.APPLICATION_ID"
-       android:value="YOUR_ANDROID_APP_ID"/>
+   Alternatively, set the `ADMOB_APP_ID_ANDROID` environment variable.
+3. **Ad Unit IDs**: Pass IDs via `--dart-define` when building:
+   ```bash
+   flutter build apk --dart-define=ADMOB_BANNER_ID=ca-app-pub-xxx/yyy --dart-define=ADMOB_REWARDED_ID=...
    ```
+   (If not provided, the app will use Google Test IDs).
 4. **iOS Setup**: Add `GADApplicationIdentifier` to `ios/Runner/Info.plist`
 
 ### Usage Limits

@@ -15,6 +15,11 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// Get AdMob App ID from properties or env or default to Test ID
+val admobAppId = keystoreProperties["admobAppId"] as String?
+    ?: System.getenv("ADMOB_APP_ID_ANDROID")
+    ?: "ca-app-pub-3940256099942544~3347511713"
+
 android {
     namespace = "com.pocketllm.pocketllm_lite"
     compileSdk = flutter.compileSdkVersion
@@ -35,6 +40,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["admobAppId"] = admobAppId
     }
 
     signingConfigs {
