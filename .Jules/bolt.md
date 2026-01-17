@@ -29,3 +29,7 @@
 ## 2025-10-27 - [Stable Timestamps in Streaming Widgets]
 **Learning:** Generating `DateTime.now()` inside the `build` method of a streaming widget causes the resulting data model (e.g., `ChatMessage`) to have a new identity/value on every frame. This breaks `operator ==` optimizations in child widgets, forcing unnecessary rebuilds/diffing even if the content hasn't changed meaningfully (or if only content changed, but we want to preserve other props).
 **Action:** Capture timestamps in `initState` (or use a stable provider value) for streaming/generating content to ensure object identity stability during the stream.
+
+## 2025-10-28 - [Optimizing Mixed State Dependencies in Text Inputs]
+**Learning:** When using `ValueListenableBuilder` to optimize text input rebuilds, other dependencies (like Riverpod providers or local state) captured in the builder's closure will still update correctly because the parent widget rebuilds when *those* dependencies change. This allows safe isolation of high-frequency text updates without losing reactivity to other state changes.
+**Action:** Use `ValueListenableBuilder` to wrap only the UI elements dependent on text changes (like Send buttons), allowing the rest of the widget to remain static during typing.
