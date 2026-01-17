@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/utils/image_decoder.dart';
+import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/utils/url_validator.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
@@ -222,6 +223,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                       else
                         MarkdownBody(
                           data: message.content,
+                          imageBuilder: MarkdownHandlers.imageBuilder,
                           onTapLink: (text, href, title) async {
                             if (href != null) {
                               final uri = Uri.tryParse(href);
@@ -406,6 +408,7 @@ class _FocusedMenuOverlay extends StatelessWidget {
                     else
                       MarkdownBody(
                         data: message.content,
+                        imageBuilder: MarkdownHandlers.imageBuilder,
                         styleSheet: MarkdownStyleSheet.fromTheme(theme)
                             .copyWith(
                               p: theme.textTheme.bodyMedium?.copyWith(
