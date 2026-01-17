@@ -22,3 +22,8 @@
 **Vulnerability:** `android:allowBackup` was not explicitly set in `AndroidManifest.xml`, causing it to default to `true`. This allowed chat history and local settings to be extracted via `adb backup` or uploaded to Google Drive cloud backups, violating the app's "Privacy-First" and "Offline" principles.
 **Learning:** By default, Android apps allow data backup. For privacy-focused or offline-only apps, this must be explicitly disabled to prevent data from leaving the device without user consent.
 **Prevention:** Explicitly set `android:allowBackup="false"` and `android:fullBackupContent="false"` in `AndroidManifest.xml`.
+
+## 2025-02-18 - Hardcoded AdMob Credentials
+**Vulnerability:** AdMob App ID and Unit IDs were hardcoded in `lib/core/constants/app_constants.dart` and `AndroidManifest.xml`, exposing developer's configuration to anyone with source access.
+**Learning:** Even "public" identifiers like AdMob IDs should not be in the repo if they are specific to the developer's account, as they control monetization and account reputation.
+**Prevention:** Moved to environment variables (`--dart-define`) and external property files (`key.properties`), with Test IDs as safe defaults.
