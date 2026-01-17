@@ -25,3 +25,7 @@
 ## 2024-05-26 - [Ripple Obscured by Container]
 **Learning:** `IconButton` paints its ripple on the underlying `Material` widget. If you provide a child widget (like a `Container`) with an opaque background color, it will be drawn *over* the ripple, hiding it.
 **Action:** For custom buttons with background colors, avoid `IconButton(icon: Container(color: ...))`. Instead, use `Material(color: ...)` wrapping an `InkWell` to ensure the ripple is visible and the interaction feels tactile.
+
+## 2026-01-17 - [Destructive Action Placement]
+**Learning:** When adding destructive actions (like Delete) to a dialog that already contains primary actions (Cancel/Save), simply appending it creates clutter and risks accidental clicks. Using `MainAxisAlignment.spaceBetween` to isolate the destructive action on the far left (while grouping safe actions on the right) provides a clear mental model separation for the user.
+**Action:** Always visually separate destructive actions from primary navigation/save actions in dialogs, preferably by using spatial grouping (left vs right alignment).
