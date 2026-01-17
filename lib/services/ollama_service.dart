@@ -10,7 +10,14 @@ class OllamaService {
 
   OllamaService({String? baseUrl, http.Client? client})
     : _baseUrl = baseUrl ?? AppConstants.defaultOllamaBaseUrl,
-      _client = client ?? http.Client();
+      _client = client ?? http.Client() {
+    // Security: Validate URL scheme to prevent non-HTTP protocols
+    if (!UrlValidator.isHttpUrlString(_baseUrl)) {
+      throw ArgumentError(
+        'Invalid Ollama URL. Must start with http:// or https://',
+      );
+    }
+  }
 
   void updateBaseUrl(String url) {
     if (!UrlValidator.isHttpUrlString(url)) {
