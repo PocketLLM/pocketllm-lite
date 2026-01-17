@@ -181,72 +181,135 @@ class PromptManagementScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: prompt != null
+                    ? MainAxisAlignment.spaceBetween
+                    : MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () {
-                      // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
-                      if (GoRouter.of(context).canPop()) {
-                        Navigator.pop(context);
-                      } else {
-                        // If we can't pop, go to the settings screen directly
-                        context.go('/settings');
-                      }
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
+                  if (prompt != null)
+                    TextButton.icon(
+                      onPressed: () => _confirmDelete(context, storage, prompt),
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      label: const Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.red),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                     ),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (titleCtrl.text.isEmpty || contentCtrl.text.isEmpty) {
-                        return;
-                      }
-                      HapticFeedback.mediumImpact();
-                      final newPrompt = SystemPrompt(
-                        id: prompt?.id ?? const Uuid().v4(),
-                        title: titleCtrl.text.trim(),
-                        content: contentCtrl.text.trim(),
-                      );
-                      await storage.saveSystemPrompt(newPrompt);
-                      if (context.mounted) {
-                        // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
-                        if (GoRouter.of(context).canPop()) {
-                          Navigator.pop(context);
-                        } else {
-                          // If we can't pop, go to the settings screen directly
-                          context.go('/settings');
-                        }
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 12,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+                          if (GoRouter.of(context).canPop()) {
+                            Navigator.pop(context);
+                          } else {
+                            // If we can't pop, go to the settings screen directly
+                            context.go('/settings');
+                          }
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color: Colors.grey.withValues(alpha: 0.2),
+                            ),
+                          ),
+                        ),
+                        child: const Text('Cancel'),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (titleCtrl.text.isEmpty ||
+                              contentCtrl.text.isEmpty) {
+                            return;
+                          }
+                          HapticFeedback.mediumImpact();
+                          final newPrompt = SystemPrompt(
+                            id: prompt?.id ?? const Uuid().v4(),
+                            title: titleCtrl.text.trim(),
+                            content: contentCtrl.text.trim(),
+                          );
+                          await storage.saveSystemPrompt(newPrompt);
+                          if (context.mounted) {
+                            // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+                            if (GoRouter.of(context).canPop()) {
+                              Navigator.pop(context);
+                            } else {
+                              // If we can't pop, go to the settings screen directly
+                              context.go('/settings');
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Save'),
                       ),
-                    ),
-                    child: const Text('Save'),
+                    ],
                   ),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(
+    BuildContext context,
+    StorageService storage,
+    SystemPrompt prompt,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete System Prompt?'),
+        content: Text('Are you sure you want to delete "${prompt.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              HapticFeedback.mediumImpact();
+              await storage.deleteSystemPrompt(prompt.id);
+              if (context.mounted) {
+                // Pop confirmation dialog
+                Navigator.pop(dialogContext);
+                // Pop edit dialog safely
+                if (GoRouter.of(context).canPop()) {
+                  Navigator.pop(context);
+                } else {
+                  context.go('/settings');
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }
