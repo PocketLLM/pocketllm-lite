@@ -454,7 +454,16 @@ class _FocusedMenuOverlay extends StatelessWidget {
               children: [
                 _buildIconBtn(context, Icons.copy, 'Copy', () {
                   Clipboard.setData(ClipboardData(text: message.content));
+                  // Capture messenger before popping to ensure feedback shows on parent screen
+                  final messenger = ScaffoldMessenger.of(context);
                   Navigator.pop(context);
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Message copied to clipboard'),
+                      duration: Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
                 }),
                 const SizedBox(width: 12),
                 _buildIconBtn(context, Icons.share, 'Share', () {
