@@ -151,8 +151,18 @@ class ChatNotifier extends Notifier<ChatState> {
           .getSetting(AppConstants.hapticFeedbackKey, defaultValue: true);
 
       String assistantContent = '';
+      DateTime? lastHapticTime;
+
       await for (final chunk in stream) {
-        if (hapticEnabled) HapticFeedback.lightImpact();
+        if (hapticEnabled) {
+          final now = DateTime.now();
+          if (lastHapticTime == null ||
+              now.difference(lastHapticTime!) >
+                  const Duration(milliseconds: 100)) {
+            HapticFeedback.lightImpact();
+            lastHapticTime = now;
+          }
+        }
         assistantContent += chunk;
         state = state.copyWith(streamingContent: assistantContent);
       }
