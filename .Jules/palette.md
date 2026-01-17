@@ -21,3 +21,7 @@
 ## 2024-05-25 - [Chat Keyboard Behavior]
 **Learning:** In chat interfaces, users expect the keyboard to dismiss naturally when they scroll back to read history. Default `ListView` behavior keeps the keyboard open, obscuring content.
 **Action:** Always set `keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag` in chat message lists to align with native OS messaging patterns.
+
+## 2024-05-26 - [Ripple Obscured by Container]
+**Learning:** `IconButton` paints its ripple on the underlying `Material` widget. If you provide a child widget (like a `Container`) with an opaque background color, it will be drawn *over* the ripple, hiding it.
+**Action:** For custom buttons with background colors, avoid `IconButton(icon: Container(color: ...))`. Instead, use `Material(color: ...)` wrapping an `InkWell` to ensure the ripple is visible and the interaction feels tactile.
