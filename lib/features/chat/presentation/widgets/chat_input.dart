@@ -512,23 +512,32 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      onPressed: isGenerating ? null : _pickImage,
-                      icon: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isDark ? Colors.grey[800] : Colors.grey[300],
-                        ),
-                        child: Icon(
-                          Icons.add,
-                          size: 20,
-                          color: theme.colorScheme.onSurface,
+                    Semantics(
+                      label: 'Add Image',
+                      button: true,
+                      enabled: !isGenerating,
+                      child: Tooltip(
+                        message: 'Add Image',
+                        child: Material(
+                          color: (isDark ? Colors.grey[800] : Colors.grey[300])
+                              ?.withOpacity(isGenerating ? 0.5 : 1.0),
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: isGenerating ? null : _pickImage,
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.add,
+                                size: 20,
+                                color: theme.colorScheme.onSurface.withOpacity(
+                                  isGenerating ? 0.5 : 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      tooltip: 'Add Image',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
                     ),
                     const SizedBox(width: 8),
                     // Enhance Prompt Button - only show if enhancer model selected
