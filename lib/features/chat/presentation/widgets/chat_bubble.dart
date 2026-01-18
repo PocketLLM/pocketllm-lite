@@ -63,11 +63,40 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   List<Uint8List>? _decodedImages;
   late String _formattedTimestamp;
 
+  // Cache for MarkdownStyleSheet to prevent expensive reconstruction on every frame during streaming
+  MarkdownStyleSheet? _cachedStyleSheet;
+  ThemeData? _cachedTheme;
+  double? _cachedFontSize;
+
   @override
   void initState() {
     super.initState();
     _decodeImages();
     _formattedTimestamp = TimestampFormatter.format(widget.message.timestamp);
+  }
+
+  MarkdownStyleSheet _getStyleSheet(ThemeData theme, double fontSize) {
+    // Use identical for theme to avoid expensive equality checks.
+    // During streaming, the theme instance typically remains the same.
+    if (_cachedStyleSheet != null &&
+        identical(_cachedTheme, theme) &&
+        _cachedFontSize == fontSize) {
+      return _cachedStyleSheet!;
+    }
+
+    _cachedTheme = theme;
+    _cachedFontSize = fontSize;
+    _cachedStyleSheet = MarkdownStyleSheet.fromTheme(theme).copyWith(
+      p: theme.textTheme.bodyMedium?.copyWith(
+        color: Colors.white,
+        fontSize: fontSize,
+      ),
+      code: theme.textTheme.bodyMedium?.copyWith(
+        backgroundColor: Colors.black26,
+        fontSize: fontSize * 0.9,
+      ),
+    );
+    return _cachedStyleSheet!;
   }
 
   @override
@@ -273,17 +302,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                               }
                             }
                           },
-                          styleSheet: MarkdownStyleSheet.fromTheme(theme)
-                              .copyWith(
-                                p: theme.textTheme.bodyMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontSize: fontSize,
-                                ),
-                                code: theme.textTheme.bodyMedium?.copyWith(
-                                  backgroundColor: Colors.black26,
-                                  fontSize: fontSize * 0.9,
-                                ),
-                              ),
+                          styleSheet: _getStyleSheet(theme, fontSize),
                         ),
                       // Timestamp display
                       Padding(
