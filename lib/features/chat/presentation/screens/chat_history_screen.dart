@@ -27,14 +27,25 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   BannerAd? _topBannerAd;
   BannerAd? _bottomBannerAd;
 
+  // Search & Filter State
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String? _selectedModelFilter;
+  DateTime? _selectedDateFilter;
+
   @override
   void initState() {
     super.initState();
     _loadBannerAds();
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text);
+    });
   }
 
   @override
   void dispose() {
+    _searchController.dispose();
     _topBannerAd?.dispose();
     _bottomBannerAd?.dispose();
     super.dispose();
@@ -82,50 +93,108 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _isSelectionMode ? '${_selectedIds.length} Selected' : 'Chat History',
-        ),
-        actions: [
-          if (_isSelectionMode)
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              tooltip: 'Delete selected chats',
-              onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.checklist),
-              tooltip: 'Manage Chats',
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                setState(() {
-                  _isSelectionMode = true;
-                });
-              },
-            ),
-        ],
-        leading: _isSelectionMode
-            ? IconButton(
-                icon: const Icon(Icons.close),
-                tooltip: 'Cancel selection',
+      appBar: _isSearching
+          ? AppBar(
+              title: TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search chats...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(
+                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                ),
+                style: TextStyle(color: theme.colorScheme.onSurface),
+              ),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
                 onPressed: () {
-                  HapticFeedback.lightImpact();
                   setState(() {
-                    _isSelectionMode = false;
-                    _selectedIds.clear();
+                    _isSearching = false;
+                    _searchController.clear();
+                    _searchQuery = '';
                   });
                 },
-              )
-            : IconButton(
-                icon: const Icon(Icons.arrow_back),
-                tooltip: 'Back',
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  Navigator.pop(context);
-                },
               ),
-      ),
+              actions: [
+                if (_searchQuery.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _searchController.clear();
+                    },
+                  ),
+              ],
+            )
+          : AppBar(
+              title: Text(
+                _isSelectionMode
+                    ? '${_selectedIds.length} Selected'
+                    : 'Chat History',
+              ),
+              actions: [
+                if (_isSelectionMode)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    tooltip: 'Delete selected chats',
+                    onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
+                  )
+                else ...[
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    tooltip: 'Search chats',
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      setState(() {
+                        _isSearching = true;
+                      });
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.filter_list,
+                      color: (_selectedModelFilter != null ||
+                              _selectedDateFilter != null)
+                          ? theme.colorScheme.primary
+                          : null,
+                    ),
+                    tooltip: 'Filter chats',
+                    onPressed: () => _showFilterDialog(storage),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.checklist),
+                    tooltip: 'Manage Chats',
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      setState(() {
+                        _isSelectionMode = true;
+                      });
+                    },
+                  ),
+                ],
+              ],
+              leading: _isSelectionMode
+                  ? IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Cancel selection',
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        setState(() {
+                          _isSelectionMode = false;
+                          _selectedIds.clear();
+                        });
+                      },
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      tooltip: 'Back',
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.pop(context);
+                      },
+                    ),
+            ),
       body: Column(
         children: [
           // Top Banner Ad
@@ -167,13 +236,55 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               ),
             ),
 
+          if (_selectedModelFilter != null || _selectedDateFilter != null)
+             Container(
+               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+               child: SingleChildScrollView(
+                 scrollDirection: Axis.horizontal,
+                 child: Row(
+                   children: [
+                     if (_selectedModelFilter != null)
+                       Padding(
+                         padding: const EdgeInsets.only(right: 8),
+                         child: Chip(
+                           label: Text('Model: $_selectedModelFilter'),
+                           onDeleted: () => setState(() => _selectedModelFilter = null),
+                         ),
+                       ),
+                     if (_selectedDateFilter != null)
+                        Chip(
+                           label: Text('After: ${_formatDate(_selectedDateFilter!).split(' ')[0]}'),
+                           onDeleted: () => setState(() => _selectedDateFilter = null),
+                         ),
+                   ],
+                 ),
+               ),
+             ),
+
           Expanded(
             child: ValueListenableBuilder<Box<ChatSession>>(
               valueListenable: storage.chatBoxListenable,
               builder: (context, box, _) {
-                final sessions = storage.getChatSessions();
+                final sessions = storage.searchSessions(
+                  query: _searchQuery,
+                  model: _selectedModelFilter,
+                  fromDate: _selectedDateFilter,
+                );
 
                 if (sessions.isEmpty) {
+                   if (_searchQuery.isNotEmpty || _selectedModelFilter != null || _selectedDateFilter != null) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
+                            const SizedBox(height: 16),
+                            const Text('No results found', style: TextStyle(color: Colors.grey)),
+                          ],
+                        ),
+                      );
+                   }
+
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -312,6 +423,104 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  void _showFilterDialog(dynamic storage) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        // Temp state for dialog
+        String? tempModel = _selectedModelFilter;
+        DateTime? tempDate = _selectedDateFilter;
+        final models = storage.getAvailableModels();
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Filter Chats'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Date Range', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                       ChoiceChip(
+                        label: const Text('Anytime'),
+                        selected: tempDate == null,
+                        onSelected: (val) => setState(() => tempDate = null),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Last 7 Days'),
+                        selected: tempDate != null &&
+                          tempDate!.difference(DateTime.now()).inDays.abs() < 8,
+                        onSelected: (val) {
+                           if (val) {
+                             setState(() => tempDate = DateTime.now().subtract(const Duration(days: 7)));
+                           }
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Last 30 Days'),
+                        selected: tempDate != null &&
+                          tempDate!.difference(DateTime.now()).inDays.abs() > 8,
+                        onSelected: (val) {
+                           if (val) {
+                             setState(() => tempDate = DateTime.now().subtract(const Duration(days: 30)));
+                           }
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Model', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: tempModel,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    hint: const Text('All Models'),
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('All Models'),
+                      ),
+                      ...models.map((m) => DropdownMenuItem<String>(
+                        value: m,
+                        child: Text(m),
+                      )),
+                    ],
+                    onChanged: (val) {
+                      setState(() => tempModel = val);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    this.setState(() {
+                      _selectedModelFilter = tempModel;
+                      _selectedDateFilter = tempDate;
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Apply'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _loadSession(ChatSession session) {

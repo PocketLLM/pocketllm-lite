@@ -130,6 +130,39 @@ class StorageService {
     return _systemPromptBox.values.toList();
   }
 
+  // Search & Filter
+  List<ChatSession> searchSessions({
+    String query = '',
+    String? model,
+    DateTime? fromDate,
+  }) {
+    List<ChatSession> results = getChatSessions();
+
+    // 1. Filter by Query (Title)
+    if (query.isNotEmpty) {
+      final lowerQuery = query.toLowerCase();
+      results = results.where((s) {
+        return s.title.toLowerCase().contains(lowerQuery);
+      }).toList();
+    }
+
+    // 2. Filter by Model
+    if (model != null && model.isNotEmpty) {
+      results = results.where((s) => s.model == model).toList();
+    }
+
+    // 3. Filter by Date
+    if (fromDate != null) {
+      results = results.where((s) => s.createdAt.isAfter(fromDate)).toList();
+    }
+
+    return results;
+  }
+
+  Set<String> getAvailableModels() {
+    return getChatSessions().map((s) => s.model).toSet();
+  }
+
   Future<void> saveSystemPrompt(SystemPrompt prompt) async {
     await _systemPromptBox.put(prompt.id, prompt);
   }
