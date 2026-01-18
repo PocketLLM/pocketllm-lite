@@ -178,9 +178,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     if (!isConnected) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cannot enhance prompt: Ollama not connected'),
+          SnackBar(
+            content: const Text('Cannot enhance prompt: Ollama not connected'),
             backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Settings',
+              textColor: Colors.white,
+              onPressed: () => context.push('/settings'),
+            ),
           ),
         );
       }
@@ -190,9 +195,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final enhancerState = ref.read(promptEnhancerProvider);
     if (enhancerState.selectedModelId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Select a Prompt Enhancer model in Settings first.'),
-          duration: Duration(seconds: 3),
+        SnackBar(
+          content:
+              const Text('Select a Prompt Enhancer model in Settings first.'),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
         ),
       );
       return;
@@ -254,10 +264,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         setState(() => _isEnhancing = false);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Enhancement failed—check Ollama.'),
-            duration: Duration(seconds: 3),
+          SnackBar(
+            content: const Text('Enhancement failed—check Ollama.'),
+            duration: const Duration(seconds: 3),
             backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Settings',
+              textColor: Colors.white,
+              onPressed: () => context.push('/settings'),
+            ),
           ),
         );
       }
