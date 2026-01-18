@@ -231,4 +231,72 @@ class StorageService {
       'content': prompt.content,
     };
   }
+
+  // Import
+  Future<Map<String, int>> importData(Map<String, dynamic> data) async {
+    int chatsImported = 0;
+    int promptsImported = 0;
+
+    if (data['chats'] != null) {
+      final List chats = data['chats'];
+      for (final chatData in chats) {
+        try {
+          final session = _chatSessionFromJson(chatData);
+          await saveChatSession(session);
+          chatsImported++;
+        } catch (e) {
+          debugPrint('Error importing chat: $e');
+        }
+      }
+    }
+
+    if (data['prompts'] != null) {
+      final List prompts = data['prompts'];
+      for (final promptData in prompts) {
+        try {
+          final prompt = _systemPromptFromJson(promptData);
+          await saveSystemPrompt(prompt);
+          promptsImported++;
+        } catch (e) {
+          debugPrint('Error importing prompt: $e');
+        }
+      }
+    }
+
+    return {'chats': chatsImported, 'prompts': promptsImported};
+  }
+
+  ChatSession _chatSessionFromJson(Map<String, dynamic> json) {
+    return ChatSession(
+      id: json['id'],
+      title: json['title'],
+      model: json['model'],
+      messages: (json['messages'] as List)
+          .map((m) => _chatMessageFromJson(m))
+          .toList(),
+      createdAt: DateTime.parse(json['createdAt']),
+      systemPrompt: json['systemPrompt'],
+      temperature: json['temperature']?.toDouble(),
+      topP: json['topP']?.toDouble(),
+      topK: json['topK']?.toInt(),
+    );
+  }
+
+  ChatMessage _chatMessageFromJson(Map<String, dynamic> json) {
+    return ChatMessage(
+      role: json['role'],
+      content: json['content'],
+      timestamp: DateTime.parse(json['timestamp']),
+      images:
+          json['images'] != null ? List<String>.from(json['images']) : null,
+    );
+  }
+
+  SystemPrompt _systemPromptFromJson(Map<String, dynamic> json) {
+    return SystemPrompt(
+      id: json['id'],
+      title: json['title'],
+      content: json['content'],
+    );
+  }
 }
