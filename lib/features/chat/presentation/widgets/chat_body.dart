@@ -173,26 +173,31 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
             Positioned(
               right: 16,
               bottom: 16,
-              child: AnimatedOpacity(
-                opacity: _showScrollToBottom ? 1.0 : 0.0,
+              child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
-                child: IgnorePointer(
-                  ignoring: !_showScrollToBottom,
-                  child: Semantics(
-                    label: 'Scroll to bottom',
-                    button: true,
-                    child: FloatingActionButton.small(
-                      onPressed: _scrollToBottom,
-                      tooltip: 'Scroll to bottom',
-                      backgroundColor: isDark
-                        ? Colors.grey[800]
-                        : Colors.white,
-                      foregroundColor: theme.colorScheme.primary,
-                      elevation: 4,
-                      child: const Icon(Icons.arrow_downward),
-                    ),
+                transitionBuilder: (child, animation) => ScaleTransition(
+                  scale: animation,
+                  child: FadeTransition(
+                    opacity: animation,
+                    child: child,
                   ),
                 ),
+                child: _showScrollToBottom
+                    ? Semantics(
+                        key: const ValueKey('scroll_fab'),
+                        label: 'Scroll to bottom',
+                        button: true,
+                        child: FloatingActionButton.small(
+                          onPressed: _scrollToBottom,
+                          tooltip: 'Scroll to bottom',
+                          backgroundColor:
+                              isDark ? Colors.grey[800] : Colors.white,
+                          foregroundColor: theme.colorScheme.primary,
+                          elevation: 4,
+                          child: const Icon(Icons.arrow_downward),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ),
           ],
