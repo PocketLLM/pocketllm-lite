@@ -152,10 +152,11 @@ class ChatNotifier extends Notifier<ChatState> {
 
       String assistantContent = '';
       DateTime? lastHapticTime;
+      DateTime? lastUiUpdateTime;
 
       await for (final chunk in stream) {
+        final now = DateTime.now();
         if (hapticEnabled) {
-          final now = DateTime.now();
           if (lastHapticTime == null ||
               now.difference(lastHapticTime!) >
                   const Duration(milliseconds: 100)) {
@@ -164,9 +165,22 @@ class ChatNotifier extends Notifier<ChatState> {
           }
         }
         assistantContent += chunk;
+
+        // Optimize: Throttle UI updates to ~20 FPS (50ms) to prevent excessive
+        // rebuilds and Markdown re-parsing on every token.
+        if (lastUiUpdateTime == null ||
+            now.difference(lastUiUpdateTime!) >
+                const Duration(milliseconds: 50)) {
+          state = state.copyWith(streamingContent: assistantContent);
+          lastUiUpdateTime = now;
+        }
+      }
+
+      // Ensure the final state reflects the complete content
+      if (state.streamingContent != assistantContent) {
         state = state.copyWith(streamingContent: assistantContent);
       }
-      
+
       final assistantMessage = ChatMessage(
         role: 'assistant',
         content: assistantContent,
