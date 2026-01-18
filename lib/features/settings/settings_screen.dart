@@ -17,6 +17,7 @@ import '../../services/ad_service.dart';
 import '../../services/usage_limits_provider.dart';
 import '../chat/presentation/providers/models_provider.dart';
 import '../chat/presentation/providers/prompt_enhancer_provider.dart';
+import 'presentation/widgets/export_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -1141,6 +1142,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   HapticFeedback.lightImpact();
                   await storage.saveSetting(AppConstants.autoSaveChatsKey, val);
                   setState(() {}); // Rebuild
+                },
+              ),
+              ListTile(
+                title: const Text('Export Data'),
+                subtitle: const Text('Export chats and prompts to JSON'),
+                leading: const Icon(Icons.download),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  showDialog(
+                    context: context,
+                    builder: (context) => const ExportDialog(),
+                  );
                 },
               ),
               ListTile(

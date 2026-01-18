@@ -146,4 +146,56 @@ class StorageService {
   dynamic getSetting(String key, {dynamic defaultValue}) {
     return _settingsBox.get(key, defaultValue: defaultValue);
   }
+
+  // Export
+  Map<String, dynamic> exportData({
+    bool includeChats = true,
+    bool includePrompts = true,
+  }) {
+    final Map<String, dynamic> data = {
+      'version': 1,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    if (includeChats) {
+      data['chats'] = getChatSessions().map((s) => _chatSessionToJson(s)).toList();
+    }
+
+    if (includePrompts) {
+      data['prompts'] = getSystemPrompts().map((p) => _systemPromptToJson(p)).toList();
+    }
+
+    return data;
+  }
+
+  Map<String, dynamic> _chatSessionToJson(ChatSession session) {
+    return {
+      'id': session.id,
+      'title': session.title,
+      'model': session.model,
+      'messages': session.messages.map((m) => _chatMessageToJson(m)).toList(),
+      'createdAt': session.createdAt.toIso8601String(),
+      'systemPrompt': session.systemPrompt,
+      'temperature': session.temperature,
+      'topP': session.topP,
+      'topK': session.topK,
+    };
+  }
+
+  Map<String, dynamic> _chatMessageToJson(ChatMessage message) {
+    return {
+      'role': message.role,
+      'content': message.content,
+      'timestamp': message.timestamp.toIso8601String(),
+      'images': message.images,
+    };
+  }
+
+  Map<String, dynamic> _systemPromptToJson(SystemPrompt prompt) {
+    return {
+      'id': prompt.id,
+      'title': prompt.title,
+      'content': prompt.content,
+    };
+  }
 }
