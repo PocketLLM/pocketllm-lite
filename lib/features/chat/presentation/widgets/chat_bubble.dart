@@ -61,11 +61,13 @@ class ChatBubble extends ConsumerStatefulWidget {
 class _ChatBubbleState extends ConsumerState<ChatBubble> {
   final GlobalKey _bubbleKey = GlobalKey();
   List<Uint8List>? _decodedImages;
+  late String _formattedTimestamp;
 
   @override
   void initState() {
     super.initState();
     _decodeImages();
+    _formattedTimestamp = TimestampFormatter.format(widget.message.timestamp);
   }
 
   @override
@@ -77,6 +79,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final newImages = widget.message.images;
     if (oldImages != newImages && !listEquals(oldImages, newImages)) {
       _decodeImages();
+    }
+
+    if (oldWidget.message.timestamp != widget.message.timestamp) {
+      _formattedTimestamp = TimestampFormatter.format(widget.message.timestamp);
     }
   }
 
@@ -253,7 +259,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
-                          TimestampFormatter.format(message.timestamp),
+                          _formattedTimestamp,
                           style: TextStyle(
                             color: Colors.white70,
                             fontSize: fontSize * 0.7,
