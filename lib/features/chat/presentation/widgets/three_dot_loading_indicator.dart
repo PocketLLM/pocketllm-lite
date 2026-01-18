@@ -52,29 +52,32 @@ class _ThreeDotLoadingIndicatorState extends State<ThreeDotLoadingIndicator>
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
-        // Use nested transitions to avoid AnimatedBuilder's builder callback execution
-        // and per-frame widget recreation.
-        // The Container is built once (per ThreeDotLoadingIndicator build) and reused
-        // by ScaleTransition/FadeTransition during animation ticks.
-        return FadeTransition(
-          opacity: _animations[index],
-          child: ScaleTransition(
-            scale: _animations[index],
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                color: widget.color,
-                shape: BoxShape.circle,
+    return Semantics(
+      label: 'Loading...',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(3, (index) {
+          // Use nested transitions to avoid AnimatedBuilder's builder callback execution
+          // and per-frame widget recreation.
+          // The Container is built once (per ThreeDotLoadingIndicator build) and reused
+          // by ScaleTransition/FadeTransition during animation ticks.
+          return FadeTransition(
+            opacity: _animations[index],
+            child: ScaleTransition(
+              scale: _animations[index],
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                width: widget.size,
+                height: widget.size,
+                decoration: BoxDecoration(
+                  color: widget.color,
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
-          ),
-        );
-      }),
+          );
+        }),
+      ),
     );
   }
 }

@@ -113,7 +113,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final theme = Theme.of(context);
 
     // Select only the properties that affect the bubble's appearance
-    // to prevent unnecessary rebuilds (e.g. when showAvatars or customBgColor changes).
+    // to prevent unnecessary rebuilds (e.g. when customBgColor changes).
     final appearance = ref.watch(appearanceProvider.select((state) => (
           userMsgColor: state.userMsgColor,
           aiMsgColor: state.aiMsgColor,
@@ -122,6 +122,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           fontSize: state.fontSize,
           chatPadding: state.chatPadding,
           bubbleElevation: state.bubbleElevation,
+          showAvatars: state.showAvatars,
         )));
 
     // Appearance Values
@@ -134,6 +135,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final fontSize = appearance.fontSize;
     final padding = appearance.chatPadding;
     final hasElevation = appearance.bubbleElevation;
+    final showAvatars = appearance.showAvatars;
 
     // Show loading indicator for empty assistant messages (AI is generating)
     if (!isUser && message.content.isEmpty) {
@@ -141,7 +143,20 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            if (showAvatars) ...[
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 16,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -173,8 +188,23 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
         mainAxisAlignment: isUser
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          if (!isUser && showAvatars) ...[
+            Semantics(
+              excludeSemantics: true,
+              child: CircleAvatar(
+                radius: 14,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 16,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
           Flexible(
             child: GestureDetector(
               onLongPress: () {
@@ -273,6 +303,21 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               ),
             ),
           ),
+          if (isUser && showAvatars) ...[
+            const SizedBox(width: 8),
+            Semantics(
+              excludeSemantics: true,
+              child: CircleAvatar(
+                radius: 14,
+                backgroundColor: theme.colorScheme.secondaryContainer,
+                child: Icon(
+                  Icons.person,
+                  size: 16,
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
