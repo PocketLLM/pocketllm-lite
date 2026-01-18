@@ -29,3 +29,7 @@
 ## 2026-01-17 - [Destructive Action Placement]
 **Learning:** When adding destructive actions (like Delete) to a dialog that already contains primary actions (Cancel/Save), simply appending it creates clutter and risks accidental clicks. Using `MainAxisAlignment.spaceBetween` to isolate the destructive action on the far left (while grouping safe actions on the right) provides a clear mental model separation for the user.
 **Action:** Always visually separate destructive actions from primary navigation/save actions in dialogs, preferably by using spatial grouping (left vs right alignment).
+
+## 2024-05-27 - [Actionable Error SnackBars]
+**Learning:** Transient error messages (SnackBars) that report configuration issues (like "Not Connected") are frustrating if they are dead ends. Adding a direct action button (e.g., "SETTINGS") within the SnackBar transforms a blocker into a navigation shortcut, significantly reducing user friction.
+**Action:** Always include a `SnackBarAction` in error notifications that point to a resolvable configuration issue.
