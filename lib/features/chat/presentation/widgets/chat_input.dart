@@ -293,7 +293,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Later'),
           ),
-          ElevatedButton(
+          ElevatedButton.icon(
             onPressed: () async {
               // Check internet first
               if (!await adService.hasInternetConnection()) {
@@ -311,11 +311,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               }
               if (context.mounted) Navigator.pop(context, true);
             },
+            icon: const Icon(Icons.play_circle),
+            label: const Text('Watch Ad'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue, // Blue background
               foregroundColor: Colors.white, // White text
             ),
-            child: const Text('Watch Ad'),
           ),
         ],
       ),

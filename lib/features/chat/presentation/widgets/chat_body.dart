@@ -118,8 +118,10 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ElevatedButton(
+                    ElevatedButton.icon(
                       onPressed: () => context.push('/settings'),
+                      icon: const Icon(Icons.settings),
+                      label: const Text('Configure Connection'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
@@ -128,11 +130,12 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
                           vertical: 12,
                         ),
                       ),
-                      child: const Text('Configure Connection'),
                     ),
                     const SizedBox(width: 16),
-                    ElevatedButton(
+                    ElevatedButton.icon(
                       onPressed: () => context.push('/settings/docs'),
+                      icon: const Icon(Icons.description),
+                      label: const Text('Docs'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
@@ -141,7 +144,6 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
                           vertical: 12,
                         ),
                       ),
-                      child: const Text('Docs'),
                     ),
                   ],
                 ),
