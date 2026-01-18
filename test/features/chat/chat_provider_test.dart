@@ -22,6 +22,16 @@ class MockOllamaService extends OllamaService {
      // Verify messages order
      if (messages.last['content'] == 'ping') {
        yield 'pong';
+     } else if (messages.last['content'] == 'stream') {
+       yield 'c';
+       await Future.delayed(const Duration(milliseconds: 10));
+       yield 'h';
+       await Future.delayed(const Duration(milliseconds: 10));
+       yield 'u';
+       await Future.delayed(const Duration(milliseconds: 10));
+       yield 'n';
+       await Future.delayed(const Duration(milliseconds: 10));
+       yield 'k';
      }
   }
 }
@@ -64,6 +74,29 @@ void main() {
     expect(messages[0].content, 'ping');
     expect(messages[0].role, 'user');
     expect(messages[1].content, 'pong');
+    expect(messages[1].role, 'assistant');
+  });
+
+  test('ChatNotifier handles streamed response correctly', () async {
+    final mockOllama = MockOllamaService();
+    final mockStorage = MockStorageService();
+
+    final container = ProviderContainer(
+      overrides: [
+        ollamaServiceProvider.overrideWithValue(mockOllama),
+        storageServiceProvider.overrideWithValue(mockStorage),
+        usageLimitsProvider.overrideWith(UsageLimitsNotifier.new),
+      ],
+    );
+
+    final notifier = container.read(chatProvider.notifier);
+
+    // Send a message that triggers the streaming response
+    await notifier.sendMessage('stream');
+
+    final messages = container.read(chatProvider).messages;
+    expect(messages.length, 2);
+    expect(messages[1].content, 'chunk');
     expect(messages[1].role, 'assistant');
   });
   
