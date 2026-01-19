@@ -33,3 +33,7 @@
 ## 2024-05-27 - [Actionable Error SnackBars]
 **Learning:** Transient error messages (SnackBars) that report configuration issues (like "Not Connected") are frustrating if they are dead ends. Adding a direct action button (e.g., "SETTINGS") within the SnackBar transforms a blocker into a navigation shortcut, significantly reducing user friction.
 **Action:** Always include a `SnackBarAction` in error notifications that point to a resolvable configuration issue.
+
+## 2024-05-27 - [Contextual Message Actions]
+**Learning:** Users often need to delete specific messages in a chat (e.g., to remove sensitive info or clean up). Providing a "Delete" option in the long-press context menu is a standard pattern. However, because it's destructive, it must be visually distinct (red) and require confirmation.
+**Action:** Add "Delete" to message context menus with a red accent color and a confirmation dialog to prevent accidental data loss.

@@ -362,6 +362,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           bubbleSize: size,
           bubbleOffset: offset,
           isUser: isUser,
+          onDelete: () {
+            ref.read(chatProvider.notifier).deleteMessage(widget.message);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Message deleted'),
+                duration: Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
           ref: ref,
         ),
         transitionsBuilder: (context, animation, _, child) {
@@ -380,6 +390,7 @@ class _FocusedMenuOverlay extends StatelessWidget {
   final Offset bubbleOffset;
   final bool isUser;
   final WidgetRef ref;
+  final VoidCallback onDelete;
 
   const _FocusedMenuOverlay({
     required this.child,
@@ -388,6 +399,7 @@ class _FocusedMenuOverlay extends StatelessWidget {
     required this.bubbleOffset,
     required this.isUser,
     required this.ref,
+    required this.onDelete,
   });
 
   @override
@@ -560,6 +572,10 @@ class _FocusedMenuOverlay extends StatelessWidget {
                     Navigator.pop(context);
                   }),
                 ],
+                const SizedBox(width: 12),
+                _buildIconBtn(context, Icons.delete_outline, 'Delete', () {
+                  _confirmDelete(context);
+                }, color: Colors.redAccent),
               ],
             ),
           ),
@@ -572,8 +588,9 @@ class _FocusedMenuOverlay extends StatelessWidget {
     BuildContext context,
     IconData icon,
     String tooltip,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    Color? color,
+  }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -581,7 +598,7 @@ class _FocusedMenuOverlay extends StatelessWidget {
           label: tooltip,
           button: true,
           child: Material(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: (color ?? Colors.white).withValues(alpha: 0.2),
             shape: const CircleBorder(),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -595,10 +612,10 @@ class _FocusedMenuOverlay extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: (color ?? Colors.white).withValues(alpha: 0.3),
                   ),
                 ),
-                child: Icon(icon, color: Colors.white, size: 24),
+                child: Icon(icon, color: color ?? Colors.white, size: 24),
               ),
             ),
           ),
@@ -607,14 +624,43 @@ class _FocusedMenuOverlay extends StatelessWidget {
         ExcludeSemantics(
           child: Text(
             tooltip,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: color ?? Colors.white,
               fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
       ],
+    );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    // Hide menu first
+    Navigator.pop(context);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Message?'),
+        content: const Text(
+          'This message will be permanently removed from the chat.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onDelete();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 }
