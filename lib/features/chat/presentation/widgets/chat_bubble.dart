@@ -240,10 +240,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                 HapticFeedback.mediumImpact();
                 _showFocusedMenu(context, isUser);
               },
-              child: Container(
-                key: _bubbleKey,
-                padding: EdgeInsets.all(padding),
-                decoration: BoxDecoration(
+              child: RepaintBoundary(
+                child: Container(
+                  key: _bubbleKey,
+                  padding: EdgeInsets.all(padding),
+                  decoration: BoxDecoration(
                     color: bubbleColor,
                     borderRadius: BorderRadius.circular(radius).copyWith(
                       bottomRight: isUser ? const Radius.circular(0) : null,

@@ -166,7 +166,10 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
                   (isGenerating && hasStreamingContent ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index < messages.length) {
-                  return ChatBubble(message: messages[index]);
+                  return ChatBubble(
+                    key: ValueKey(messages[index]),
+                    message: messages[index],
+                  );
                 } else {
                   return const _StreamingChatBubble();
                 }
