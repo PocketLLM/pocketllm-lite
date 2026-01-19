@@ -124,155 +124,185 @@ class PromptManagementScreen extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                prompt == null
-                    ? 'Create New System Prompt'
-                    : 'Edit System Prompt',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Prompt Title',
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: titleCtrl,
-                decoration: InputDecoration(
-                  hintText: 'e.g., Creative Writer',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                ),
-                textCapitalization: TextCapitalization.sentences,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Prompt Content',
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: contentCtrl,
-                decoration: InputDecoration(
-                  hintText: 'Enter the detailed instructions for the AI...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  contentPadding: const EdgeInsets.all(12),
-                ),
-                maxLines: 5,
-                textCapitalization: TextCapitalization.sentences,
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: prompt != null
-                    ? MainAxisAlignment.spaceBetween
-                    : MainAxisAlignment.end,
+      builder: (context) {
+        String? titleError;
+        String? contentError;
+
+        return StatefulBuilder(
+          builder: (context, setState) => Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (prompt != null)
-                    TextButton.icon(
-                      onPressed: () => _confirmDelete(context, storage, prompt),
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      label: const Text(
-                        'Delete',
-                        style: TextStyle(color: Colors.red),
+                  Text(
+                    prompt == null
+                        ? 'Create New System Prompt'
+                        : 'Edit System Prompt',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Prompt Title',
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: titleCtrl,
+                    onChanged: (_) {
+                      if (titleError != null) setState(() => titleError = null);
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'e.g., Creative Writer',
+                      errorText: titleError,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
                       ),
                     ),
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Prompt Content',
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: contentCtrl,
+                    onChanged: (_) {
+                      if (contentError != null) setState(() => contentError = null);
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Enter the detailed instructions for the AI...',
+                      errorText: contentError,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                    maxLines: 5,
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 24),
                   Row(
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: prompt != null
+                        ? MainAxisAlignment.spaceBetween
+                        : MainAxisAlignment.end,
                     children: [
-                      TextButton(
-                        onPressed: () {
-                          // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
-                          if (GoRouter.of(context).canPop()) {
-                            Navigator.pop(context);
-                          } else {
-                            // If we can't pop, go to the settings screen directly
-                            context.go('/settings');
-                          }
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.grey,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
+                      if (prompt != null)
+                        TextButton.icon(
+                          onPressed:
+                              () => _confirmDelete(context, storage, prompt),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(
-                              color: Colors.grey.withValues(alpha: 0.2),
+                          label: const Text(
+                            'Delete',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
                             ),
                           ),
                         ),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: () async {
-                          if (titleCtrl.text.isEmpty ||
-                              contentCtrl.text.isEmpty) {
-                            return;
-                          }
-                          HapticFeedback.mediumImpact();
-                          final newPrompt = SystemPrompt(
-                            id: prompt?.id ?? const Uuid().v4(),
-                            title: titleCtrl.text.trim(),
-                            content: contentCtrl.text.trim(),
-                          );
-                          await storage.saveSystemPrompt(newPrompt);
-                          if (context.mounted) {
-                            // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
-                            if (GoRouter.of(context).canPop()) {
-                              Navigator.pop(context);
-                            } else {
-                              // If we can't pop, go to the settings screen directly
-                              context.go('/settings');
-                            }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 12,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+                              if (GoRouter.of(context).canPop()) {
+                                Navigator.pop(context);
+                              } else {
+                                // If we can't pop, go to the settings screen directly
+                                context.go('/settings');
+                              }
+                            },
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.grey,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(
+                                  color: Colors.grey.withValues(alpha: 0.2),
+                                ),
+                              ),
+                            ),
+                            child: const Text('Cancel'),
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: () async {
+                              final titleEmpty = titleCtrl.text.trim().isEmpty;
+                              final contentEmpty = contentCtrl.text.trim().isEmpty;
+
+                              if (titleEmpty || contentEmpty) {
+                                setState(() {
+                                  titleError =
+                                      titleEmpty ? 'Title is required' : null;
+                                  contentError =
+                                      contentEmpty
+                                          ? 'Content is required'
+                                          : null;
+                                });
+                                HapticFeedback.lightImpact();
+                                return;
+                              }
+                              HapticFeedback.mediumImpact();
+                              final newPrompt = SystemPrompt(
+                                id: prompt?.id ?? const Uuid().v4(),
+                                title: titleCtrl.text.trim(),
+                                content: contentCtrl.text.trim(),
+                              );
+                              await storage.saveSystemPrompt(newPrompt);
+                              if (context.mounted) {
+                                // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+                                if (GoRouter.of(context).canPop()) {
+                                  Navigator.pop(context);
+                                } else {
+                                  // If we can't pop, go to the settings screen directly
+                                  context.go('/settings');
+                                }
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text('Save'),
                           ),
-                        ),
-                        child: const Text('Save'),
+                        ],
                       ),
                     ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
