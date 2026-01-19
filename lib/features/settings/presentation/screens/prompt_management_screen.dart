@@ -142,13 +142,28 @@ class PromptManagementScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Prompt Title',
-                style: TextStyle(fontWeight: FontWeight.w500),
+              RichText(
+                text: TextSpan(
+                  text: 'Prompt Title',
+                  style: DefaultTextStyle.of(
+                    context,
+                  ).style.copyWith(fontWeight: FontWeight.w500),
+                  children: const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: titleCtrl,
+                autofocus: prompt == null,
+                textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   hintText: 'e.g., Creative Writer',
                   border: OutlineInputBorder(
@@ -162,13 +177,27 @@ class PromptManagementScreen extends ConsumerWidget {
                 textCapitalization: TextCapitalization.sentences,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Prompt Content',
-                style: TextStyle(fontWeight: FontWeight.w500),
+              RichText(
+                text: TextSpan(
+                  text: 'Prompt Content',
+                  style: DefaultTextStyle.of(
+                    context,
+                  ).style.copyWith(fontWeight: FontWeight.w500),
+                  children: const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: contentCtrl,
+                textInputAction: TextInputAction.newline,
                 decoration: InputDecoration(
                   hintText: 'Enter the detailed instructions for the AI...',
                   border: OutlineInputBorder(
@@ -229,41 +258,50 @@ class PromptManagementScreen extends ConsumerWidget {
                         child: const Text('Cancel'),
                       ),
                       const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: () async {
-                          if (titleCtrl.text.isEmpty ||
-                              contentCtrl.text.isEmpty) {
-                            return;
-                          }
-                          HapticFeedback.mediumImpact();
-                          final newPrompt = SystemPrompt(
-                            id: prompt?.id ?? const Uuid().v4(),
-                            title: titleCtrl.text.trim(),
-                            content: contentCtrl.text.trim(),
+                      AnimatedBuilder(
+                        animation: Listenable.merge([titleCtrl, contentCtrl]),
+                        builder: (context, child) {
+                          final isValid =
+                              titleCtrl.text.trim().isNotEmpty &&
+                              contentCtrl.text.trim().isNotEmpty;
+                          return ElevatedButton(
+                            onPressed:
+                                isValid
+                                    ? () async {
+                                      HapticFeedback.mediumImpact();
+                                      final newPrompt = SystemPrompt(
+                                        id: prompt?.id ?? const Uuid().v4(),
+                                        title: titleCtrl.text.trim(),
+                                        content: contentCtrl.text.trim(),
+                                      );
+                                      await storage.saveSystemPrompt(newPrompt);
+                                      if (context.mounted) {
+                                        // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+                                        if (GoRouter.of(context).canPop()) {
+                                          Navigator.pop(context);
+                                        } else {
+                                          // If we can't pop, go to the settings screen directly
+                                          context.go('/settings');
+                                        }
+                                      }
+                                    }
+                                    : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: Colors.grey[300],
+                              disabledForegroundColor: Colors.grey[600],
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text('Save'),
                           );
-                          await storage.saveSystemPrompt(newPrompt);
-                          if (context.mounted) {
-                            // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
-                            if (GoRouter.of(context).canPop()) {
-                              Navigator.pop(context);
-                            } else {
-                              // If we can't pop, go to the settings screen directly
-                              context.go('/settings');
-                            }
-                          }
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text('Save'),
                       ),
                     ],
                   ),
