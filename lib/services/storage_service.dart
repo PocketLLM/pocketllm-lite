@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../core/constants/app_constants.dart';
 import '../features/chat/domain/models/chat_session.dart';
@@ -12,6 +13,7 @@ class StorageService {
   late Box<ChatSession> _chatBox;
   late Box<SystemPrompt> _systemPromptBox;
   late Box _settingsBox;
+  late Box _activityLogBox;
 
   // Cache for sorted chat sessions
   List<ChatSession>? _cachedSessions;
@@ -29,6 +31,7 @@ class StorageService {
       AppConstants.systemPromptsBoxName,
     );
     _settingsBox = await Hive.openBox(AppConstants.settingsBoxName);
+    _activityLogBox = await Hive.openBox(AppConstants.activityLogBoxName);
 
     // Seed system prompts if empty
     if (_systemPromptBox.isEmpty) {
@@ -82,7 +85,9 @@ class StorageService {
     return UnmodifiableListView(_cachedSessions!);
   }
 
-  Future<void> saveChatSession(ChatSession session) async {
+  Future<void> saveChatSession(ChatSession session, {bool log = true}) async {
+    final isNew = !_chatBox.containsKey(session.id);
+
     // Optimistic update for immediate UI response
     if (_cachedSessions != null) {
       final index =
@@ -103,19 +108,28 @@ class StorageService {
       }
     }
     await _chatBox.put(session.id, session);
+
+    if (log && isNew) {
+      await logActivity('Chat Created', 'Created new chat "${session.title}" with model ${session.model}');
+    }
   }
 
   Future<void> deleteChatSession(String id) async {
+    final session = _chatBox.get(id);
+    final title = session?.title ?? 'Unknown';
+
     // Optimistic update
     if (_cachedSessions != null) {
       _cachedSessions!.removeWhere((s) => s.id == id);
     }
     await _chatBox.delete(id);
+    await logActivity('Chat Deleted', 'Deleted chat "$title"');
   }
 
   Future<void> clearAllChats() async {
     _cachedSessions = null;
     await _chatBox.clear();
+    await logActivity('History Cleared', 'Deleted all chat history');
   }
 
   ChatSession? getChatSession(String id) {
@@ -125,6 +139,9 @@ class StorageService {
   // System Prompts
   ValueListenable<Box<SystemPrompt>> get promptBoxListenable =>
       _systemPromptBox.listenable();
+
+  ValueListenable<Box> get activityLogBoxListenable =>
+      _activityLogBox.listenable();
 
   List<SystemPrompt> getSystemPrompts() {
     return _systemPromptBox.values.toList();
@@ -174,20 +191,63 @@ class StorageService {
   }
 
   Future<void> saveSystemPrompt(SystemPrompt prompt) async {
+    final isNew = !_systemPromptBox.containsKey(prompt.id);
     await _systemPromptBox.put(prompt.id, prompt);
+
+    if (isNew) {
+      await logActivity('System Prompt Created', 'Created prompt "${prompt.title}"');
+    } else {
+      await logActivity('System Prompt Updated', 'Updated prompt "${prompt.title}"');
+    }
   }
 
   Future<void> deleteSystemPrompt(String id) async {
+    final prompt = _systemPromptBox.get(id);
     await _systemPromptBox.delete(id);
+    if (prompt != null) {
+      await logActivity('System Prompt Deleted', 'Deleted prompt "${prompt.title}"');
+    }
   }
 
   // Settings
   Future<void> saveSetting(String key, dynamic value) async {
     await _settingsBox.put(key, value);
+    // Don't log every setting change to avoid noise, or log specific important ones?
+    // logging Ollama URL change might be good.
+    if (key == AppConstants.ollamaBaseUrlKey) {
+       await logActivity('Settings Changed', 'Updated Ollama Base URL to $value');
+    }
   }
 
   dynamic getSetting(String key, {dynamic defaultValue}) {
     return _settingsBox.get(key, defaultValue: defaultValue);
+  }
+
+  // Activity Log
+  Future<void> logActivity(String action, String details) async {
+    final log = {
+      'id': const Uuid().v4(),
+      'timestamp': DateTime.now().toIso8601String(),
+      'action': action,
+      'details': details,
+    };
+    await _activityLogBox.add(log);
+  }
+
+  List<Map<String, dynamic>> getActivityLogs() {
+    final logs = _activityLogBox.values.map((e) => Map<String, dynamic>.from(e)).toList();
+    // Sort by timestamp desc
+    logs.sort((a, b) {
+      final tA = DateTime.parse(a['timestamp']);
+      final tB = DateTime.parse(b['timestamp']);
+      return tB.compareTo(tA);
+    });
+    return logs;
+  }
+
+  Future<void> clearActivityLogs() async {
+    await _activityLogBox.clear();
+    await logActivity('Logs Cleared', 'Cleared activity log history');
   }
 
   // Export
@@ -195,6 +255,8 @@ class StorageService {
     bool includeChats = true,
     bool includePrompts = true,
   }) {
+    logActivity('Data Export', 'Exported data (Chats: $includeChats, Prompts: $includePrompts)');
+
     final Map<String, dynamic> data = {
       'version': 1,
       'timestamp': DateTime.now().toIso8601String(),
@@ -212,6 +274,7 @@ class StorageService {
   }
 
   String exportToCsv() {
+    logActivity('Data Export', 'Exported data as CSV');
     final buffer = StringBuffer();
     // Header
     buffer.writeln('ID,Title,Model,Created At,Message Count,System Prompt');
@@ -232,6 +295,7 @@ class StorageService {
   }
 
   String exportToMarkdown() {
+    logActivity('Data Export', 'Exported data as Markdown');
     final buffer = StringBuffer();
     buffer.writeln('# PocketLLM Lite Chat Export');
     buffer.writeln('Exported on: ${DateTime.now().toString()}\n');
@@ -306,7 +370,7 @@ class StorageService {
       for (final chatData in chats) {
         try {
           final session = _chatSessionFromJson(chatData);
-          await saveChatSession(session);
+          await saveChatSession(session, log: false); // Don't log individual creates
           chatsImported++;
         } catch (e) {
           debugPrint('Error importing chat: $e');
@@ -319,13 +383,16 @@ class StorageService {
       for (final promptData in prompts) {
         try {
           final prompt = _systemPromptFromJson(promptData);
-          await saveSystemPrompt(prompt);
+          await saveSystemPrompt(prompt); // System prompts are fewer, maybe ok to log? Or supress?
+          // I didn't add log arg to saveSystemPrompt, but it's fine.
           promptsImported++;
         } catch (e) {
           debugPrint('Error importing prompt: $e');
         }
       }
     }
+
+    await logActivity('Data Import', 'Imported $chatsImported chats and $promptsImported prompts');
 
     return {'chats': chatsImported, 'prompts': promptsImported};
   }

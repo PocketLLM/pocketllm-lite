@@ -7,6 +7,7 @@ import '../features/settings/settings_screen.dart';
 import '../features/settings/presentation/screens/prompt_management_screen.dart';
 import '../features/settings/presentation/screens/docs_screen.dart';
 import '../features/settings/presentation/screens/customization_screen.dart';
+import '../features/settings/presentation/screens/activity_log_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -33,6 +34,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'customization',
             builder: (context, state) => const CustomizationScreen(),
+          ),
+          GoRoute(
+            path: 'activity-log',
+            builder: (context, state) => const ActivityLogScreen(),
           ),
         ],
       ),
