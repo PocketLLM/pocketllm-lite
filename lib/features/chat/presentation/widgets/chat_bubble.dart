@@ -293,8 +293,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                             if (href != null) {
                               final uri = Uri.tryParse(href);
                               // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
-                              if (UrlValidator.isSecureUrl(uri) &&
-                                  await canLaunchUrl(uri!)) {
+                              if (uri != null && UrlValidator.isSecureUrl(uri) &&
+                                  await canLaunchUrl(uri)) {
                                 await launchUrl(
                                   uri,
                                   mode: LaunchMode.externalApplication,
@@ -479,6 +479,18 @@ class _FocusedMenuOverlay extends StatelessWidget {
                       MarkdownBody(
                         data: message.content,
                         imageBuilder: MarkdownHandlers.imageBuilder,
+                        onTapLink: (text, href, title) async {
+                          if (href != null) {
+                            final uri = Uri.tryParse(href);
+                            if (uri != null && UrlValidator.isSecureUrl(uri) &&
+                                await canLaunchUrl(uri)) {
+                              await launchUrl(
+                                uri,
+                                mode: LaunchMode.externalApplication,
+                              );
+                            }
+                          }
+                        },
                         styleSheet: MarkdownStyleSheet.fromTheme(theme)
                             .copyWith(
                               p: theme.textTheme.bodyMedium?.copyWith(
