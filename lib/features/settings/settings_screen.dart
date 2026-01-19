@@ -19,6 +19,7 @@ import '../chat/presentation/providers/models_provider.dart';
 import '../chat/presentation/providers/prompt_enhancer_provider.dart';
 import 'presentation/widgets/export_dialog.dart';
 import 'presentation/widgets/import_dialog.dart';
+import 'presentation/widgets/model_settings_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -531,15 +532,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 ),
                                 onPressed: () {
                                   // Open dialog to set per-model system prompt and settings
-                                  // For now just show "feature coming soon" or simple dialog
-                                  //    _showModelSettingsDialog(context, model.name);
-                                  // We will just show a snackbar since I haven't defined _showModelSettingsDialog yet
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Model specific settings coming soon',
-                                      ),
-                                    ),
+                                  HapticFeedback.lightImpact();
+                                  showDialog(
+                                    context: context,
+                                    builder:
+                                        (context) => ModelSettingsDialog(
+                                          modelName: model.name,
+                                        ),
                                   );
                                 },
                                 visualDensity: VisualDensity.compact,

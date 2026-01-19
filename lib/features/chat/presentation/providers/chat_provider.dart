@@ -15,6 +15,7 @@ class ChatState {
   final String? systemPrompt;
   final double temperature;
   final double topP;
+  final int topK;
   final String streamingContent;
 
   ChatState({
@@ -25,6 +26,7 @@ class ChatState {
     this.systemPrompt,
     this.temperature = 0.7,
     this.topP = 0.9,
+    this.topK = 40,
     this.streamingContent = '',
   });
 
@@ -36,6 +38,7 @@ class ChatState {
     String? systemPrompt,
     double? temperature,
     double? topP,
+    int? topK,
     String? streamingContent,
   }) {
     return ChatState(
@@ -46,6 +49,7 @@ class ChatState {
       systemPrompt: systemPrompt ?? this.systemPrompt,
       temperature: temperature ?? this.temperature,
       topP: topP ?? this.topP,
+      topK: topK ?? this.topK,
       streamingContent: streamingContent ?? this.streamingContent,
     );
   }
@@ -60,6 +64,23 @@ class ChatNotifier extends Notifier<ChatState> {
   }
 
   void setModel(String model) {
+    // If we are starting a new chat (no messages), load the model's settings
+    if (state.messages.isEmpty) {
+      final storage = ref.read(storageServiceProvider);
+      final key = '${AppConstants.modelSettingsPrefixKey}$model';
+      final settings = storage.getSetting(key);
+
+      if (settings != null && settings is Map) {
+        state = state.copyWith(
+          selectedModel: model,
+          systemPrompt: settings['systemPrompt'],
+          temperature: (settings['temperature'] as num?)?.toDouble() ?? 0.7,
+          topP: (settings['topP'] as num?)?.toDouble() ?? 0.9,
+          topK: (settings['topK'] as num?)?.toInt() ?? 40,
+        );
+        return;
+      }
+    }
     state = state.copyWith(selectedModel: model);
   }
 
@@ -67,11 +88,13 @@ class ChatNotifier extends Notifier<ChatState> {
     String? systemPrompt,
     double? temperature,
     double? topP,
+    int? topK,
   }) {
     state = state.copyWith(
       systemPrompt: systemPrompt,
       temperature: temperature,
       topP: topP,
+      topK: topK,
     );
   }
 
@@ -83,6 +106,7 @@ class ChatNotifier extends Notifier<ChatState> {
       systemPrompt: session.systemPrompt,
       temperature: session.temperature ?? 0.7,
       topP: session.topP ?? 0.9,
+      topK: session.topK ?? 40,
     );
   }
 
@@ -92,13 +116,30 @@ class ChatNotifier extends Notifier<ChatState> {
     final defaultModel = storage.getSetting(AppConstants.defaultModelKey);
     final modelToUse = defaultModel ?? state.selectedModel;
 
+    // Load settings for modelToUse
+    final key = '${AppConstants.modelSettingsPrefixKey}$modelToUse';
+    final settings = storage.getSetting(key);
+
+    String? sysPrompt;
+    double temp = 0.7;
+    double topP = 0.9;
+    int topK = 40;
+
+    if (settings != null && settings is Map) {
+      sysPrompt = settings['systemPrompt'];
+      temp = (settings['temperature'] as num?)?.toDouble() ?? 0.7;
+      topP = (settings['topP'] as num?)?.toDouble() ?? 0.9;
+      topK = (settings['topK'] as num?)?.toInt() ?? 40;
+    }
+
     state = ChatState(
       messages: [],
       isGenerating: false,
       selectedModel: modelToUse,
-      systemPrompt: state.systemPrompt,
-      temperature: 0.7,
-      topP: 0.9,
+      systemPrompt: sysPrompt,
+      temperature: temp,
+      topP: topP,
+      topK: topK,
       streamingContent: '',
     );
   }
@@ -137,7 +178,11 @@ class ChatNotifier extends Notifier<ChatState> {
         .toList();
 
     try {
-      final options = {"temperature": state.temperature, "top_p": state.topP};
+      final options = {
+        "temperature": state.temperature,
+        "top_p": state.topP,
+        "top_k": state.topK,
+      };
 
       final stream = ollama.generateChatStream(
         state.selectedModel,
@@ -237,6 +282,7 @@ class ChatNotifier extends Notifier<ChatState> {
       systemPrompt: state.systemPrompt,
       temperature: state.temperature,
       topP: state.topP,
+      topK: state.topK,
     );
 
     await storage.saveChatSession(session);

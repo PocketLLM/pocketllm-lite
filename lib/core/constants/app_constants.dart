@@ -19,6 +19,9 @@ class AppConstants {
   static const String bubbleRadiusKey = 'bubble_radius';
   static const String fontSizeKey = 'font_size';
 
+  // Model Settings
+  static const String modelSettingsPrefixKey = 'model_settings_';
+
   // New Appearance Keys
   static const String chatPaddingKey = 'chat_padding';
   static const String showAvatarsKey = 'show_avatars';
