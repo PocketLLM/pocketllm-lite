@@ -209,6 +209,60 @@ class StorageService {
     return data;
   }
 
+  String exportToCsv() {
+    final buffer = StringBuffer();
+    // Header
+    buffer.writeln('ID,Title,Model,Created At,Message Count,System Prompt');
+
+    // Rows
+    for (final session in getChatSessions()) {
+      final id = _escapeCsv(session.id);
+      final title = _escapeCsv(session.title);
+      final model = _escapeCsv(session.model);
+      final createdAt = _escapeCsv(session.createdAt.toIso8601String());
+      final msgCount = session.messages.length;
+      final sysPrompt = _escapeCsv(session.systemPrompt ?? '');
+
+      buffer.writeln('$id,$title,$model,$createdAt,$msgCount,$sysPrompt');
+    }
+
+    return buffer.toString();
+  }
+
+  String exportToMarkdown() {
+    final buffer = StringBuffer();
+    buffer.writeln('# PocketLLM Lite Chat Export');
+    buffer.writeln('Exported on: ${DateTime.now().toString()}\n');
+
+    for (final session in getChatSessions()) {
+      buffer.writeln('## ${session.title}');
+      buffer.writeln('**Model:** ${session.model}');
+      buffer.writeln('**Date:** ${session.createdAt.toString()}\n');
+
+      if (session.systemPrompt != null && session.systemPrompt!.isNotEmpty) {
+        buffer.writeln('### System Prompt');
+        buffer.writeln('> ${session.systemPrompt}\n');
+      }
+
+      for (final msg in session.messages) {
+        final role = msg.role == 'user' ? 'User' : 'Assistant';
+        buffer.writeln('### $role');
+        buffer.writeln('${msg.content}\n');
+      }
+
+      buffer.writeln('---\n');
+    }
+
+    return buffer.toString();
+  }
+
+  String _escapeCsv(String field) {
+    if (field.contains(',') || field.contains('"') || field.contains('\n')) {
+      return '"${field.replaceAll('"', '""')}"';
+    }
+    return field;
+  }
+
   Map<String, dynamic> _chatSessionToJson(ChatSession session) {
     return {
       'id': session.id,
