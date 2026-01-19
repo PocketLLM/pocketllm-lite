@@ -138,11 +138,19 @@ class StorageService {
   }) {
     List<ChatSession> results = getChatSessions();
 
-    // 1. Filter by Query (Title)
+    // 1. Filter by Query (Title & Content)
     if (query.isNotEmpty) {
       final lowerQuery = query.toLowerCase();
       results = results.where((s) {
-        return s.title.toLowerCase().contains(lowerQuery);
+        // Check title
+        if (s.title.toLowerCase().contains(lowerQuery)) return true;
+
+        // Check messages content
+        for (final message in s.messages) {
+          if (message.content.toLowerCase().contains(lowerQuery)) return true;
+        }
+
+        return false;
       }).toList();
     }
 

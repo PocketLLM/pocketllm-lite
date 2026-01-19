@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_session.dart';
+import 'package:pocketllm_lite/features/chat/domain/models/chat_message.dart';
 import 'package:pocketllm_lite/services/storage_service.dart';
 import 'package:mockito/mockito.dart';
 
@@ -34,14 +35,19 @@ void main() {
           id: '1',
           title: 'Flutter Help',
           model: 'llama3',
-          messages: [],
+          messages: [
+            ChatMessage(role: 'user', content: 'How do I use Riverpod?', timestamp: now),
+          ],
           createdAt: now, // Today
         ),
         ChatSession(
           id: '2',
           title: 'Cooking Recipes',
           model: 'mistral',
-          messages: [],
+          messages: [
+            ChatMessage(role: 'user', content: 'Pizza ingredients', timestamp: now),
+            ChatMessage(role: 'assistant', content: 'Flour, tomato sauce, cheese', timestamp: now),
+          ],
           createdAt: now.subtract(const Duration(days: 2)), // 2 days ago
         ),
         ChatSession(
@@ -73,6 +79,20 @@ void main() {
     test('Search by query (no match)', () {
       final results = storageService.searchSessions(query: 'java');
       expect(results.isEmpty, true);
+    });
+
+    test('Search by message content', () {
+      // "Riverpod" is in the message of "Flutter Help" (id: 1), but not in title.
+      final results = storageService.searchSessions(query: 'Riverpod');
+      expect(results.length, 1);
+      expect(results.first.id, '1');
+    });
+
+    test('Search by message content (assistant response)', () {
+      // "cheese" is in the assistant response of "Cooking Recipes" (id: 2)
+      final results = storageService.searchSessions(query: 'cheese');
+      expect(results.length, 1);
+      expect(results.first.id, '2');
     });
 
     test('Filter by Model', () {
