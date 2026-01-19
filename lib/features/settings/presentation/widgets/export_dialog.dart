@@ -9,6 +9,8 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/providers.dart';
 
+enum ExportFormat { json, csv, markdown }
+
 class ExportDialog extends ConsumerStatefulWidget {
   const ExportDialog({super.key});
 
@@ -19,6 +21,7 @@ class ExportDialog extends ConsumerStatefulWidget {
 class _ExportDialogState extends ConsumerState<ExportDialog> {
   bool _includeChats = true;
   bool _includePrompts = true;
+  ExportFormat _selectedFormat = ExportFormat.json;
   bool _isLoading = false;
 
   Future<void> _handleExport() async {
@@ -26,21 +29,35 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
     try {
       final storage = ref.read(storageServiceProvider);
-
-      // Get data from storage
-      final data = storage.exportData(
-        includeChats: _includeChats,
-        includePrompts: _includePrompts,
-      );
-
-      // Convert to JSON
-      final jsonString = const JsonEncoder.withIndent('  ').convert(data);
-
-      // Save to temp file
       final directory = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final file = File('${directory.path}/pocketllm_export_$timestamp.json');
-      await file.writeAsString(jsonString);
+
+      File file;
+      String subject;
+
+      if (_selectedFormat == ExportFormat.json) {
+        // JSON Export (Backup)
+        final data = storage.exportData(
+          includeChats: _includeChats,
+          includePrompts: _includePrompts,
+        );
+        final jsonString = const JsonEncoder.withIndent('  ').convert(data);
+        file = File('${directory.path}/pocketllm_backup_$timestamp.json');
+        await file.writeAsString(jsonString);
+        subject = 'pocketllm_backup_$timestamp.json';
+      } else if (_selectedFormat == ExportFormat.csv) {
+        // CSV Export (Summary)
+        final csvString = storage.exportToCsv();
+        file = File('${directory.path}/pocketllm_chats_$timestamp.csv');
+        await file.writeAsString(csvString);
+        subject = 'pocketllm_chats_$timestamp.csv';
+      } else {
+        // Markdown Export (Readable)
+        final mdString = storage.exportToMarkdown();
+        file = File('${directory.path}/pocketllm_chats_$timestamp.md');
+        await file.writeAsString(mdString);
+        subject = 'pocketllm_chats_$timestamp.md';
+      }
 
       // Share file
       if (mounted) {
@@ -49,7 +66,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         await Share.shareXFiles(
           [XFile(file.path)],
           text: 'PocketLLM Lite Export',
-          subject: 'pocketllm_export_$timestamp.json',
+          subject: subject,
           sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
         );
 
@@ -75,39 +92,100 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isJson = _selectedFormat == ExportFormat.json;
+
     return AlertDialog(
       title: const Text('Export Data'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CheckboxListTile(
-            title: const Text('Export Chats'),
-            subtitle: const Text('Includes all chat history and images'),
-            value: _includeChats,
-            onChanged: (val) {
-              if (val != null) setState(() => _includeChats = val);
-            },
-          ),
-          CheckboxListTile(
-            title: const Text('Export Prompts'),
-            subtitle: const Text('Includes custom system prompts'),
-            value: _includePrompts,
-            onChanged: (val) {
-              if (val != null) setState(() => _includePrompts = val);
-            },
-          ),
-          if (!_includeChats && !_includePrompts)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                'Please select at least one item to export.',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                  fontSize: 12,
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Format', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<ExportFormat>(
+              value: _selectedFormat,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: ExportFormat.json,
+                  child: Text('JSON (Full Backup)'),
+                ),
+                DropdownMenuItem(
+                  value: ExportFormat.csv,
+                  child: Text('CSV (Excel/Sheets)'),
+                ),
+                DropdownMenuItem(
+                  value: ExportFormat.markdown,
+                  child: Text('Markdown (Readable)'),
+                ),
+              ],
+              onChanged: (val) {
+                if (val != null) setState(() => _selectedFormat = val);
+              },
+            ),
+            const SizedBox(height: 16),
+
+            if (isJson) ...[
+              const Text('Content', style: TextStyle(fontWeight: FontWeight.bold)),
+              CheckboxListTile(
+                title: const Text('Export Chats'),
+                subtitle: const Text('Includes all chat history and images'),
+                value: _includeChats,
+                onChanged: (val) {
+                  if (val != null) setState(() => _includeChats = val);
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+              CheckboxListTile(
+                title: const Text('Export Prompts'),
+                subtitle: const Text('Includes custom system prompts'),
+                value: _includePrompts,
+                onChanged: (val) {
+                  if (val != null) setState(() => _includePrompts = val);
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+              if (!_includeChats && !_includePrompts)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    'Please select at least one item to export.',
+                    style: TextStyle(
+                      color: theme.colorScheme.error,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+            ] else ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 20, color: theme.colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _selectedFormat == ExportFormat.csv
+                          ? 'Exports a summary of all chats (ID, Title, Model, Date) suitable for spreadsheets.'
+                          : 'Exports full conversation logs formatted for reading or sharing.',
+                        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-        ],
+            ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -115,7 +193,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: (_isLoading || (!_includeChats && !_includePrompts))
+          onPressed: (_isLoading || (isJson && !_includeChats && !_includePrompts))
               ? null
               : _handleExport,
           child: _isLoading
