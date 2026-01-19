@@ -87,6 +87,83 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     )..load();
   }
 
+  String? _getMatchingSnippet(ChatSession session, String query) {
+    if (query.isEmpty) return null;
+    final lowerQuery = query.toLowerCase();
+
+    // Search in messages
+    for (final message in session.messages) {
+      final content = message.content;
+      final index = content.toLowerCase().indexOf(lowerQuery);
+      if (index != -1) {
+        // Found match. Extract snippet.
+        int start = (index - 20).clamp(0, content.length);
+        int end = (index + query.length + 50).clamp(0, content.length);
+        String snippet = content.substring(start, end);
+        if (start > 0) snippet = '...$snippet';
+        if (end < content.length) snippet = '$snippet...';
+        return snippet.replaceAll('\n', ' ');
+      }
+    }
+    return null;
+  }
+
+  Widget _buildHighlightedText(
+      String text, String query, TextStyle style, Color highlightColor) {
+    final lowerText = text.toLowerCase();
+    final lowerQuery = query.toLowerCase();
+
+    final children = <TextSpan>[];
+    int start = 0;
+    int index = lowerText.indexOf(lowerQuery, start);
+
+    while (index != -1) {
+      if (index > start) {
+        children.add(TextSpan(text: text.substring(start, index)));
+      }
+      children.add(TextSpan(
+        text: text.substring(index, index + query.length),
+        style: style.copyWith(
+            fontWeight: FontWeight.bold, color: highlightColor),
+      ));
+      start = index + query.length;
+      index = lowerText.indexOf(lowerQuery, start);
+    }
+
+    if (start < text.length) {
+      children.add(TextSpan(text: text.substring(start)));
+    }
+
+    return RichText(
+      text: TextSpan(style: style, children: children),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  Widget _buildSubtitle(
+      ChatSession session, String query, BuildContext context) {
+    final theme = Theme.of(context);
+    final defaultStyle = TextStyle(
+      fontSize: 12,
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+
+    if (query.isEmpty) {
+      return Text(_formatDate(session.createdAt), style: defaultStyle);
+    }
+
+    final snippet = _getMatchingSnippet(session, query);
+    if (snippet == null) {
+      // Matched in title
+      return Text(_formatDate(session.createdAt), style: defaultStyle);
+    }
+
+    // Matched in content - highlight
+    return _buildHighlightedText(
+        snippet, query, defaultStyle, theme.colorScheme.primary);
+  }
+
   @override
   Widget build(BuildContext context) {
     final storage = ref.watch(storageServiceProvider);
@@ -345,13 +422,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      subtitle: Text(
-                        _formatDate(session.createdAt),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                      subtitle: _buildSubtitle(session, _searchQuery, context),
                       trailing: !_isSelectionMode
                           ? IconButton(
                               icon: const Icon(Icons.chevron_right),
