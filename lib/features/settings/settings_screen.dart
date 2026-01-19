@@ -1510,7 +1510,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     final uri = Uri.parse(href);
                     if (UrlValidator.isSecureUrl(uri) &&
                         await canLaunchUrl(uri)) {
-                      await launchUrl(uri);
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
                     }
                   }
                 },

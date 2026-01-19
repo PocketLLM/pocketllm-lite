@@ -7,3 +7,8 @@
 **Vulnerability:** The Android upload keystore (`upload-keystore.jks`) was committed to the repository root.
 **Learning:** Keystores are often generated in the project root by default and can be easily committed if not explicitly ignored.
 **Prevention:** Add `*.jks`, `*.keystore`, and `key.properties` to `.gitignore` immediately upon project creation.
+
+## 2025-05-21 - Insecure Launch Mode
+**Vulnerability:** The app used `launchUrl` without specifying `LaunchMode.externalApplication`, potentially opening malicious links in a WebView where the app's context could be exposed or phishing could occur.
+**Learning:** Default launch modes vary by platform and configuration. Opening links in an external browser isolates the web content from the app's process and cookies.
+**Prevention:** Always use `mode: LaunchMode.externalApplication` when launching untrusted or external URLs.
