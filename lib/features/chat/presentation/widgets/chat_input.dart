@@ -28,6 +28,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final List<Uint8List> _selectedImages = [];
 
   @override
+  void initState() {
+    super.initState();
+    // Listen to focus changes to update the UI
+    _focusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();
@@ -397,7 +406,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F2F5),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isDark ? Colors.grey[800]! : Colors.transparent,
+            color: _focusNode.hasFocus
+                ? theme.colorScheme.primary
+                : (isDark ? Colors.grey[800]! : Colors.transparent),
+            width: 1.0, // Constant width to prevent layout shift
           ),
         ),
         padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
