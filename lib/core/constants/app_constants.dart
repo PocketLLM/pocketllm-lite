@@ -6,6 +6,7 @@ class AppConstants {
   static const String chatBoxName = 'chats';
   static const String settingsBoxName = 'settings';
   static const String systemPromptsBoxName = 'system_prompts';
+  static const String activityLogBoxName = 'activity_logs';
 
   // Keys
   static const String isFirstLaunchKey = 'is_first_launch';
