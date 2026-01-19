@@ -89,13 +89,15 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
   String? _getMatchingSnippet(ChatSession session, String query) {
     if (query.isEmpty) return null;
-    final lowerQuery = query.toLowerCase();
+    // Use RegExp to find the match index without converting the entire content to lowercase
+    final queryRegex = RegExp(RegExp.escape(query), caseSensitive: false);
 
     // Search in messages
     for (final message in session.messages) {
       final content = message.content;
-      final index = content.toLowerCase().indexOf(lowerQuery);
-      if (index != -1) {
+      final match = queryRegex.firstMatch(content);
+      if (match != null) {
+        final index = match.start;
         // Found match. Extract snippet.
         int start = (index - 20).clamp(0, content.length);
         int end = (index + query.length + 50).clamp(0, content.length);

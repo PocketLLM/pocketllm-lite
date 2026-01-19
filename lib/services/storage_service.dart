@@ -140,14 +140,16 @@ class StorageService {
 
     // 1. Filter by Query (Title & Content)
     if (query.isNotEmpty) {
-      final lowerQuery = query.toLowerCase();
+      // Use RegExp with caseSensitive: false to avoid allocating lowercased strings
+      // for potentially large message content, reducing memory churn during search.
+      final queryRegex = RegExp(RegExp.escape(query), caseSensitive: false);
       results = results.where((s) {
         // Check title
-        if (s.title.toLowerCase().contains(lowerQuery)) return true;
+        if (queryRegex.hasMatch(s.title)) return true;
 
         // Check messages content
         for (final message in s.messages) {
-          if (message.content.toLowerCase().contains(lowerQuery)) return true;
+          if (queryRegex.hasMatch(message.content)) return true;
         }
 
         return false;
