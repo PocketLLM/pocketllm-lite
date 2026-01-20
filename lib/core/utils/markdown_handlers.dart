@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 
 /// Centralized handlers for Markdown rendering to ensure security and privacy.
 class MarkdownHandlers {
@@ -17,9 +16,9 @@ class MarkdownHandlers {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: Colors.grey.withOpacity(0.5)),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

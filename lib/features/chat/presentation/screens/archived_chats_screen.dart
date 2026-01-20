@@ -10,7 +10,8 @@ class ArchivedChatsScreen extends ConsumerStatefulWidget {
   const ArchivedChatsScreen({super.key});
 
   @override
-  ConsumerState<ArchivedChatsScreen> createState() => _ArchivedChatsScreenState();
+  ConsumerState<ArchivedChatsScreen> createState() =>
+      _ArchivedChatsScreenState();
 }
 
 class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
@@ -31,7 +32,9 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
         valueListenable: storage.chatBoxListenable,
         builder: (context, box, _) {
           final sessions = storage.getChatSessions();
-          final archivedSessions = sessions.where((s) => storage.isArchived(s.id)).toList();
+          final archivedSessions = sessions
+              .where((s) => storage.isArchived(s.id))
+              .toList();
 
           if (archivedSessions.isEmpty) {
             return Center(
@@ -41,7 +44,9 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
                   Icon(
                     Icons.archive_outlined,
                     size: 64,
-                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.5,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -84,23 +89,22 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
                   ),
                 ),
                 onTap: () {
-                    // Peek at chat or restore?
-                    // Let's show options sheet
-                    _showArchivedSessionOptions(session);
+                  // Peek at chat or restore?
+                  // Let's show options sheet
+                  _showArchivedSessionOptions(session);
                 },
                 trailing: IconButton(
-                    icon: const Icon(Icons.unarchive),
-                    tooltip: 'Unarchive',
-                    onPressed: () async {
-                        HapticFeedback.mediumImpact();
-                        await storage.toggleArchive(session.id);
-                        if (mounted) {
-                           setState(() {}); // Refresh list to remove unarchived item
-                           ScaffoldMessenger.of(context).showSnackBar(
-                             const SnackBar(content: Text('Chat unarchived')),
-                           );
-                        }
-                    },
+                  icon: const Icon(Icons.unarchive),
+                  tooltip: 'Unarchive',
+                  onPressed: () async {
+                    HapticFeedback.mediumImpact();
+                    await storage.toggleArchive(session.id);
+                    if (!context.mounted) return;
+                    setState(() {}); // Refresh list to remove unarchived item
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Chat unarchived')),
+                    );
+                  },
                 ),
               );
             },
@@ -119,7 +123,7 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
 
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -127,39 +131,41 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
               leading: const Icon(Icons.unarchive),
               title: const Text('Unarchive Chat'),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 await storage.toggleArchive(session.id);
-                if (mounted) {
-                   setState(() {}); // Refresh list to remove unarchived item
-                   ScaffoldMessenger.of(context).showSnackBar(
-                     const SnackBar(content: Text('Chat unarchived')),
-                   );
-                }
+                if (!mounted) return;
+                setState(() {}); // Refresh list to remove unarchived item
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Chat unarchived')),
+                );
               },
             ),
-             ListTile(
+            ListTile(
               leading: const Icon(Icons.open_in_new),
               title: const Text('Open Chat'),
               subtitle: const Text('Will unarchive automatically'),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 // Unarchive and open
                 await storage.toggleArchive(session.id);
+                if (!mounted) return;
+                ref.read(chatProvider.notifier).loadSession(session);
+                // Pop Archive screen to go back to History -> Chat or just go to Chat?
+                // ChatProvider loads session, but we need to navigate to ChatScreen.
+                // Assuming ChatHistoryScreen was pushed from ChatScreen or Main wrapper.
+                // If we are in ArchivedChatsScreen, we need to pop to main, then to Chat.
+                // Simplest: Pop this screen, Pop History (if pushed), etc.
+                // But if History is a tab, we just need to switch to Chat tab.
+                // Wait, ChatHistoryScreen is usually a pushed screen from ChatScreen (drawer or button).
+                // If we assume standard nav:
+                // ChatScreen -> History -> Archive
+                // We want: ChatScreen (with session loaded).
+                // So we pop Archive, pop History.
+                Navigator.of(context).pop(); // Pop Archive
                 if (mounted) {
-                    ref.read(chatProvider.notifier).loadSession(session);
-                    // Pop Archive screen to go back to History -> Chat or just go to Chat?
-                    // ChatProvider loads session, but we need to navigate to ChatScreen.
-                    // Assuming ChatHistoryScreen was pushed from ChatScreen or Main wrapper.
-                    // If we are in ArchivedChatsScreen, we need to pop to main, then to Chat.
-                    // Simplest: Pop this screen, Pop History (if pushed), etc.
-                    // But if History is a tab, we just need to switch to Chat tab.
-                    // Wait, ChatHistoryScreen is usually a pushed screen from ChatScreen (drawer or button).
-                    // If we assume standard nav:
-                    // ChatScreen -> History -> Archive
-                    // We want: ChatScreen (with session loaded).
-                    // So we pop Archive, pop History.
-                    Navigator.of(context).pop(); // Pop Archive
-                    Navigator.of(context).pop(); // Pop History (back to ChatScreen)
+                  Navigator.of(
+                    context,
+                  ).pop(); // Pop History (back to ChatScreen)
                 }
               },
             ),
@@ -170,7 +176,7 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
                 style: TextStyle(color: Colors.red),
               ),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 _confirmDelete(session.id);
               },
             ),
@@ -181,14 +187,14 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
   }
 
   Future<void> _confirmDelete(String id) async {
-      // Direct delete for archived items? Or still require ad?
-      // Consistency says require ad/confirmation.
-      // Reuse logic? It's duplicated code.
-      // For this task, I'll simple confirmation dialog without ad for now (Archived items might be less critical or just standard delete).
-      // Or I should copy the ad logic to be "Professional".
-      // Let's stick to simple confirmation for speed/cleanliness unless "Professional" demands ad.
-      // The ad logic is specific to `ChatHistoryScreen` ad service. I don't want to duplicate 50 lines of ad logic here.
-      // Simple delete is fine for "Archived".
+    // Direct delete for archived items? Or still require ad?
+    // Consistency says require ad/confirmation.
+    // Reuse logic? It's duplicated code.
+    // For this task, I'll simple confirmation dialog without ad for now (Archived items might be less critical or just standard delete).
+    // Or I should copy the ad logic to be "Professional".
+    // Let's stick to simple confirmation for speed/cleanliness unless "Professional" demands ad.
+    // The ad logic is specific to `ChatHistoryScreen` ad service. I don't want to duplicate 50 lines of ad logic here.
+    // Simple delete is fine for "Archived".
 
     final confirm = await showDialog<bool>(
       context: context,
@@ -210,13 +216,13 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
     );
 
     if (confirm == true && mounted) {
-        final storage = ref.read(storageServiceProvider);
-        await storage.deleteChatSession(id);
-        if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Chat deleted')),
-             );
-        }
+      final storage = ref.read(storageServiceProvider);
+      await storage.deleteChatSession(id);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Chat deleted')));
+      }
     }
   }
 }

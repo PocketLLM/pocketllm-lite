@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:isolate';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 
 /// Decodes base64 strings to Uint8List in a separate isolate to avoid blocking the UI thread.
@@ -21,7 +19,10 @@ class IsolateImageDecoder {
   static Future<List<Uint8List>> decodeImages(List<String> base64Images) async {
     if (base64Images.isEmpty) return [];
 
-    final List<Uint8List> results = List<Uint8List>.filled(base64Images.length, Uint8List(0));
+    final List<Uint8List> results = List<Uint8List>.filled(
+      base64Images.length,
+      Uint8List(0),
+    );
     final List<String> toDecode = [];
     final List<int> toDecodeIndices = [];
 
@@ -51,7 +52,9 @@ class IsolateImageDecoder {
         // If key already exists (unlikely given logic above), it updates and moves to end.
         // If new, checks size.
         if (_cache.length >= _maxCacheSize && !_cache.containsKey(key)) {
-          _cache.remove(_cache.keys.first); // Remove Least Recently Used (first key)
+          _cache.remove(
+            _cache.keys.first,
+          ); // Remove Least Recently Used (first key)
         }
         _cache[key] = value;
 

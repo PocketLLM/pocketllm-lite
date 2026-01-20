@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -150,13 +149,16 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       HapticFeedback.lightImpact();
     }
 
-    final imagesToSend =
-        _selectedImages.map((bytes) => base64Encode(bytes)).toList();
+    final imagesToSend = _selectedImages
+        .map((bytes) => base64Encode(bytes))
+        .toList();
 
-    ref.read(chatProvider.notifier).sendMessage(
-      _controller.text,
-      images: imagesToSend.isNotEmpty ? imagesToSend : null,
-    );
+    ref
+        .read(chatProvider.notifier)
+        .sendMessage(
+          _controller.text,
+          images: imagesToSend.isNotEmpty ? imagesToSend : null,
+        );
 
     _controller.clear();
     setState(() {
@@ -197,8 +199,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              const Text('Select a Prompt Enhancer model in Settings first.'),
+          content: const Text(
+            'Select a Prompt Enhancer model in Settings first.',
+          ),
           duration: const Duration(seconds: 3),
           action: SnackBarAction(
             label: 'Settings',
@@ -534,7 +537,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         message: 'Add Image',
                         child: Material(
                           color: (isDark ? Colors.grey[800] : Colors.grey[300])
-                              ?.withOpacity(isGenerating ? 0.5 : 1.0),
+                              ?.withValues(alpha: isGenerating ? 0.5 : 1.0),
                           shape: const CircleBorder(),
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
@@ -544,8 +547,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               child: Icon(
                                 Icons.add,
                                 size: 20,
-                                color: theme.colorScheme.onSurface.withOpacity(
-                                  isGenerating ? 0.5 : 1.0,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: isGenerating ? 0.5 : 1.0,
                                 ),
                               ),
                             ),
@@ -571,10 +574,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           child: Tooltip(
                             message: 'Enhance Prompt',
                             child: Material(
-                              color: (isDark
-                                      ? Colors.grey[800]
-                                      : Colors.grey[300])
-                                  ?.withOpacity(isDisabled ? 0.5 : 1.0),
+                              color:
+                                  (isDark ? Colors.grey[800] : Colors.grey[300])
+                                      ?.withValues(
+                                        alpha: isDisabled ? 0.5 : 1.0,
+                                      ),
                               shape: const CircleBorder(),
                               clipBehavior: Clip.antiAlias,
                               child: InkWell(
@@ -591,17 +595,17 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                               strokeWidth: 2,
                                               valueColor:
                                                   AlwaysStoppedAnimation<Color>(
-                                                theme.colorScheme.onSurface,
-                                              ),
+                                                    theme.colorScheme.onSurface,
+                                                  ),
                                             ),
                                           )
                                         : Icon(
                                             Icons.auto_awesome,
                                             size: 20,
                                             color: theme.colorScheme.onSurface
-                                                .withOpacity(
-                                              isDisabled ? 0.5 : 1.0,
-                                            ),
+                                                .withValues(
+                                                  alpha: isDisabled ? 0.5 : 1.0,
+                                                ),
                                           ),
                                   ),
                                 ),
@@ -617,15 +621,17 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 ValueListenableBuilder<TextEditingValue>(
                   valueListenable: _controller,
                   builder: (context, value, child) {
-                    final canSend = (value.text.trim().isNotEmpty ||
+                    final canSend =
+                        (value.text.trim().isNotEmpty ||
                             _selectedImages.isNotEmpty) &&
                         !isGenerating;
 
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       decoration: BoxDecoration(
-                        color:
-                            canSend ? theme.colorScheme.primary : Colors.grey,
+                        color: canSend
+                            ? theme.colorScheme.primary
+                            : Colors.grey,
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
@@ -633,10 +639,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         icon: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 200),
                           transitionBuilder: (child, animation) =>
-                              ScaleTransition(
-                            scale: animation,
-                            child: child,
-                          ),
+                              ScaleTransition(scale: animation, child: child),
                           child: isGenerating
                               ? SizedBox(
                                   key: const ValueKey('spinner'),
@@ -644,8 +647,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   height: 18,
                                   child: const CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor:
-                                        AlwaysStoppedAnimation(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation(
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
                               : const Icon(

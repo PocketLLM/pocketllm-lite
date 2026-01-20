@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -63,6 +62,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
       if (mounted) {
         final box = context.findRenderObject() as RenderBox?;
 
+        // ignore: deprecated_member_use
         await Share.shareXFiles(
           [XFile(file.path)],
           text: 'PocketLLM Lite Export',
@@ -105,10 +105,13 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
             const Text('Format', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             DropdownButtonFormField<ExportFormat>(
-              value: _selectedFormat,
+              initialValue: _selectedFormat,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               items: const [
                 DropdownMenuItem(
@@ -131,7 +134,10 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
             const SizedBox(height: 16),
 
             if (isJson) ...[
-              const Text('Content', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Content',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               CheckboxListTile(
                 title: const Text('Export Chats'),
                 subtitle: const Text('Includes all chat history and images'),
@@ -165,19 +171,28 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                  color: theme.colorScheme.primaryContainer.withValues(
+                    alpha: 0.3,
+                  ),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 20, color: theme.colorScheme.primary),
+                    Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      color: theme.colorScheme.primary,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         _selectedFormat == ExportFormat.csv
-                          ? 'Exports a summary of all chats (ID, Title, Model, Date) suitable for spreadsheets.'
-                          : 'Exports full conversation logs formatted for reading or sharing.',
-                        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                            ? 'Exports a summary of all chats (ID, Title, Model, Date) suitable for spreadsheets.'
+                            : 'Exports full conversation logs formatted for reading or sharing.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ],
@@ -193,7 +208,8 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: (_isLoading || (isJson && !_includeChats && !_includePrompts))
+          onPressed:
+              (_isLoading || (isJson && !_includeChats && !_includePrompts))
               ? null
               : _handleExport,
           child: _isLoading

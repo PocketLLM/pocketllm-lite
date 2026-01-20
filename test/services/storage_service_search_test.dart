@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_session.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_message.dart';
 import 'package:pocketllm_lite/services/storage_service.dart';
-import 'package:mockito/mockito.dart';
 
 // Since we cannot run real tests with Hive in this environment,
 // we will verify the logic by creating a partial mock or subclass
@@ -36,7 +35,11 @@ void main() {
           title: 'Flutter Help',
           model: 'llama3',
           messages: [
-            ChatMessage(role: 'user', content: 'How do I use Riverpod?', timestamp: now),
+            ChatMessage(
+              role: 'user',
+              content: 'How do I use Riverpod?',
+              timestamp: now,
+            ),
           ],
           createdAt: now, // Today
         ),
@@ -45,8 +48,16 @@ void main() {
           title: 'Cooking Recipes',
           model: 'mistral',
           messages: [
-            ChatMessage(role: 'user', content: 'Pizza ingredients', timestamp: now),
-            ChatMessage(role: 'assistant', content: 'Flour, tomato sauce, cheese', timestamp: now),
+            ChatMessage(
+              role: 'user',
+              content: 'Pizza ingredients',
+              timestamp: now,
+            ),
+            ChatMessage(
+              role: 'assistant',
+              content: 'Flour, tomato sauce, cheese',
+              timestamp: now,
+            ),
           ],
           createdAt: now.subtract(const Duration(days: 2)), // 2 days ago
         ),
@@ -110,7 +121,10 @@ void main() {
     });
 
     test('Combined Filter (Query + Model)', () {
-      final results = storageService.searchSessions(query: 'flutter', model: 'llama3');
+      final results = storageService.searchSessions(
+        query: 'flutter',
+        model: 'llama3',
+      );
       expect(results.length, 2);
     });
 
@@ -118,7 +132,10 @@ void main() {
       final fromDate = DateTime.now().subtract(const Duration(days: 7));
       // "Flutter Help" is today, "Flutter State" is 10 days ago.
       // So filtering "flutter" + "last 7 days" should only return "Flutter Help".
-      final results = storageService.searchSessions(query: 'flutter', fromDate: fromDate);
+      final results = storageService.searchSessions(
+        query: 'flutter',
+        fromDate: fromDate,
+      );
       expect(results.length, 1);
       expect(results.first.id, '1');
     });

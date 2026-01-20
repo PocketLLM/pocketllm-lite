@@ -148,7 +148,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   }
 
   Widget _buildHighlightedText(
-      String text, String query, TextStyle style, Color highlightColor) {
+    String text,
+    String query,
+    TextStyle style,
+    Color highlightColor,
+  ) {
     final lowerText = text.toLowerCase();
     final lowerQuery = query.toLowerCase();
 
@@ -160,11 +164,15 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       if (index > start) {
         children.add(TextSpan(text: text.substring(start, index)));
       }
-      children.add(TextSpan(
-        text: text.substring(index, index + query.length),
-        style: style.copyWith(
-            fontWeight: FontWeight.bold, color: highlightColor),
-      ));
+      children.add(
+        TextSpan(
+          text: text.substring(index, index + query.length),
+          style: style.copyWith(
+            fontWeight: FontWeight.bold,
+            color: highlightColor,
+          ),
+        ),
+      );
       start = index + query.length;
       index = lowerText.indexOf(lowerQuery, start);
     }
@@ -181,7 +189,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   }
 
   Widget _buildSubtitle(
-      ChatSession session, String query, BuildContext context) {
+    ChatSession session,
+    String query,
+    BuildContext context,
+  ) {
     final theme = Theme.of(context);
     final defaultStyle = TextStyle(
       fontSize: 12,
@@ -200,7 +211,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
     // Matched in content - highlight
     return _buildHighlightedText(
-        snippet, query, defaultStyle, theme.colorScheme.primary);
+      snippet,
+      query,
+      defaultStyle,
+      theme.colorScheme.primary,
+    );
   }
 
   @override
@@ -218,7 +233,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   hintText: 'Search chats...',
                   border: InputBorder.none,
                   hintStyle: TextStyle(
-                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
                 style: TextStyle(color: theme.colorScheme.onSurface),
@@ -270,7 +285,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   IconButton(
                     icon: Icon(
                       Icons.filter_list,
-                      color: (_selectedModelFilter != null ||
+                      color:
+                          (_selectedModelFilter != null ||
                               _selectedDateFilter != null)
                           ? theme.colorScheme.primary
                           : null,
@@ -285,7 +301,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                       HapticFeedback.lightImpact();
                       // Wait for return to refresh list (in case items unarchived)
                       await Navigator.of(context).push(
-                         MaterialPageRoute(builder: (context) => const ArchivedChatsScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const ArchivedChatsScreen(),
+                        ),
                       );
                       if (mounted) setState(() {});
                     },
@@ -421,29 +439,33 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             ),
 
           if (_selectedModelFilter != null || _selectedDateFilter != null)
-             Container(
-               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-               child: SingleChildScrollView(
-                 scrollDirection: Axis.horizontal,
-                 child: Row(
-                   children: [
-                     if (_selectedModelFilter != null)
-                       Padding(
-                         padding: const EdgeInsets.only(right: 8),
-                         child: Chip(
-                           label: Text('Model: $_selectedModelFilter'),
-                           onDeleted: () => setState(() => _selectedModelFilter = null),
-                         ),
-                       ),
-                     if (_selectedDateFilter != null)
-                        Chip(
-                           label: Text('After: ${_formatDate(_selectedDateFilter!).split(' ')[0]}'),
-                           onDeleted: () => setState(() => _selectedDateFilter = null),
-                         ),
-                   ],
-                 ),
-               ),
-             ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    if (_selectedModelFilter != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Chip(
+                          label: Text('Model: $_selectedModelFilter'),
+                          onDeleted: () =>
+                              setState(() => _selectedModelFilter = null),
+                        ),
+                      ),
+                    if (_selectedDateFilter != null)
+                      Chip(
+                        label: Text(
+                          'After: ${_formatDate(_selectedDateFilter!).split(' ')[0]}',
+                        ),
+                        onDeleted: () =>
+                            setState(() => _selectedDateFilter = null),
+                      ),
+                  ],
+                ),
+              ),
+            ),
 
           Expanded(
             child: ValueListenableBuilder<Box<ChatSession>>(
@@ -456,18 +478,27 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 );
 
                 if (sessions.isEmpty) {
-                   if (_searchQuery.isNotEmpty || _selectedModelFilter != null || _selectedDateFilter != null) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
-                            const SizedBox(height: 16),
-                            const Text('No results found', style: TextStyle(color: Colors.grey)),
-                          ],
-                        ),
-                      );
-                   }
+                  if (_searchQuery.isNotEmpty ||
+                      _selectedModelFilter != null ||
+                      _selectedDateFilter != null) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 60,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No results found',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
                   return Center(
                     child: Column(
@@ -489,11 +520,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 }
 
                 // Split into Pinned and Recent if not searching
-                List<ChatSession> displayedSessions = sessions;
                 List<ChatSession> pinnedSessions = [];
                 List<ChatSession> recentSessions = [];
 
-                final isFiltering = _searchQuery.isNotEmpty ||
+                final isFiltering =
+                    _searchQuery.isNotEmpty ||
                     _selectedModelFilter != null ||
                     _selectedDateFilter != null;
 
@@ -519,11 +550,15 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   // For now, let's exclude them to keep "Archive" meaning "Hidden".
                   // OR include them but mark as archived?
                   // Let's exclude for consistency.
-                  recentSessions = sessions.where((s) => !storage.isArchived(s.id)).toList();
+                  recentSessions = sessions
+                      .where((s) => !storage.isArchived(s.id))
+                      .toList();
                 }
 
-                if (!isFiltering && pinnedSessions.isEmpty && recentSessions.isEmpty) {
-                   return Center(
+                if (!isFiltering &&
+                    pinnedSessions.isEmpty &&
+                    recentSessions.isEmpty) {
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -538,10 +573,13 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                           style: TextStyle(color: Colors.grey),
                         ),
                         const SizedBox(height: 8),
-                         TextButton.icon(
+                        TextButton.icon(
                           onPressed: () async {
-                             await Navigator.of(context).push(
-                               MaterialPageRoute(builder: (context) => const ArchivedChatsScreen()),
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const ArchivedChatsScreen(),
+                              ),
                             );
                             if (mounted) setState(() {});
                           },
@@ -569,12 +607,14 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                           ),
                         ),
                       ),
-                      ...pinnedSessions.map((session) => _buildChatListTile(
-                        session: session,
-                        storage: storage,
-                        theme: theme,
-                        isPinned: true,
-                      )),
+                      ...pinnedSessions.map(
+                        (session) => _buildChatListTile(
+                          session: session,
+                          storage: storage,
+                          theme: theme,
+                          isPinned: true,
+                        ),
+                      ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                         child: Text(
@@ -588,12 +628,18 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         ),
                       ),
                     ],
-                    ...recentSessions.map((session) => _buildChatListTile(
-                      session: session,
-                      storage: storage,
-                      theme: theme,
-                      isPinned: !isFiltering && storage.isPinned(session.id), // If filtering, show pin status but no sections
-                    )),
+                    ...recentSessions.map(
+                      (session) => _buildChatListTile(
+                        session: session,
+                        storage: storage,
+                        theme: theme,
+                        isPinned:
+                            !isFiltering &&
+                            storage.isPinned(
+                              session.id,
+                            ), // If filtering, show pin status but no sections
+                      ),
+                    ),
                   ],
                 );
               },
@@ -713,46 +759,67 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Date Range', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Date Range',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     children: [
-                       ChoiceChip(
+                      ChoiceChip(
                         label: const Text('Anytime'),
                         selected: tempDate == null,
                         onSelected: (val) => setState(() => tempDate = null),
                       ),
                       ChoiceChip(
                         label: const Text('Last 7 Days'),
-                        selected: tempDate != null &&
-                          tempDate!.difference(DateTime.now()).inDays.abs() < 8,
+                        selected:
+                            tempDate != null &&
+                            tempDate!.difference(DateTime.now()).inDays.abs() <
+                                8,
                         onSelected: (val) {
-                           if (val) {
-                             setState(() => tempDate = DateTime.now().subtract(const Duration(days: 7)));
-                           }
+                          if (val) {
+                            setState(
+                              () => tempDate = DateTime.now().subtract(
+                                const Duration(days: 7),
+                              ),
+                            );
+                          }
                         },
                       ),
                       ChoiceChip(
                         label: const Text('Last 30 Days'),
-                        selected: tempDate != null &&
-                          tempDate!.difference(DateTime.now()).inDays.abs() > 8,
+                        selected:
+                            tempDate != null &&
+                            tempDate!.difference(DateTime.now()).inDays.abs() >
+                                8,
                         onSelected: (val) {
-                           if (val) {
-                             setState(() => tempDate = DateTime.now().subtract(const Duration(days: 30)));
-                           }
+                          if (val) {
+                            setState(
+                              () => tempDate = DateTime.now().subtract(
+                                const Duration(days: 30),
+                              ),
+                            );
+                          }
                         },
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text('Model', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Model',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: tempModel,
+                    initialValue: tempModel,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
                     hint: const Text('All Models'),
                     items: [
@@ -760,10 +827,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         value: null,
                         child: Text('All Models'),
                       ),
-                      ...models.map((m) => DropdownMenuItem<String>(
-                        value: m,
-                        child: Text(m),
-                      )),
+                      ...models.map(
+                        (m) =>
+                            DropdownMenuItem<String>(value: m, child: Text(m)),
+                      ),
                     ],
                     onChanged: (val) {
                       setState(() => tempModel = val);
@@ -805,23 +872,26 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin),
+              leading: Icon(
+                isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+              ),
               title: Text(isPinned ? 'Unpin Chat' : 'Pin Chat'),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 await storage.togglePin(session.id);
                 // Force rebuild to show changes
+                if (!mounted) return;
                 setState(() {});
-                if (mounted) {
-                   ScaffoldMessenger.of(context).showSnackBar(
-                     SnackBar(content: Text(isPinned ? 'Chat unpinned' : 'Chat pinned')),
-                   );
-                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(isPinned ? 'Chat unpinned' : 'Chat pinned'),
+                  ),
+                );
               },
             ),
             ListTile(
@@ -830,19 +900,18 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               onTap: () async {
                 Navigator.pop(context);
                 await storage.toggleArchive(session.id);
+                if (!mounted) return;
                 setState(() {});
-                if (mounted) {
-                   ScaffoldMessenger.of(context).showSnackBar(
-                     const SnackBar(content: Text('Chat archived')),
-                   );
-                }
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Chat archived')));
               },
             ),
             ListTile(
               leading: const Icon(Icons.edit),
               title: const Text('Rename Chat'),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 _showRenameDialog(session);
               },
             ),
@@ -853,7 +922,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 style: TextStyle(color: Colors.red),
               ),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 _deleteSession(session.id);
               },
             ),
@@ -872,10 +941,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     final isSelected = _selectedIds.contains(session.id);
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 4,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: _isSelectionMode
           ? Checkbox(
               value: isSelected,

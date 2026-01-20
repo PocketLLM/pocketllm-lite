@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -17,14 +18,18 @@ void main() {
     // Simulate what happens in the build method
     final decoded = base64Decode(base64Image);
     // Use the bytes to ensure it's not optimized away
-    if (decoded.length != originalBytes.length) throw Exception('Validation failed');
+    if (decoded.length != originalBytes.length) {
+      throw Exception('Validation failed');
+    }
   }
 
   stopwatch.stop();
   final double averageTimeUs = stopwatch.elapsedMicroseconds / iterations;
 
   print('Baseline: Repeated base64Decode');
-  print('Total time for $iterations iterations: ${stopwatch.elapsedMilliseconds}ms');
+  print(
+    'Total time for $iterations iterations: ${stopwatch.elapsedMilliseconds}ms',
+  );
   print('Average time per decode: ${averageTimeUs.toStringAsFixed(2)}µs');
 
   // Measure optimized approach (Decode once, reuse)
@@ -36,14 +41,18 @@ void main() {
   for (int i = 0; i < iterations; i++) {
     // Simulate reuse
     final bytes = decodedOnce;
-    if (bytes.length != originalBytes.length) throw Exception('Validation failed');
+    if (bytes.length != originalBytes.length) {
+      throw Exception('Validation failed');
+    }
   }
 
   stopwatchOpt.stop();
   final double averageTimeOptUs = stopwatchOpt.elapsedMicroseconds / iterations;
 
   print('\nOptimization: Decode once, reuse bytes');
-  print('Total time for $iterations iterations: ${stopwatchOpt.elapsedMilliseconds}ms');
+  print(
+    'Total time for $iterations iterations: ${stopwatchOpt.elapsedMilliseconds}ms',
+  );
   print('Average time per access: ${averageTimeOptUs.toStringAsFixed(2)}µs');
 
   final speedup = averageTimeUs / averageTimeOptUs;

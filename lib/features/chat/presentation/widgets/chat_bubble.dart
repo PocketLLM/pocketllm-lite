@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'dart:ui';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +11,7 @@ import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/utils/url_validator.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
+import '../providers/chat_provider.dart';
 import 'three_dot_loading_indicator.dart';
 
 // Helper class for formatting timestamps
@@ -40,19 +39,6 @@ class ChatBubble extends ConsumerStatefulWidget {
   final ChatMessage message;
 
   const ChatBubble({super.key, required this.message});
-
-  // Optimize performance by preventing rebuilds when the message instance hasn't changed.
-  // This is crucial during streaming, where the parent list rebuilds frequently.
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is ChatBubble &&
-        other.key == key &&
-        other.message == message;
-  }
-
-  @override
-  int get hashCode => Object.hash(key, message);
 
   @override
   ConsumerState<ChatBubble> createState() => _ChatBubbleState();
@@ -119,8 +105,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     if (widget.message.images != null && widget.message.images!.isNotEmpty) {
       // Use Isolate to decode images off the main thread to avoid UI jank
       // during scrolling or message reception.
-      final images =
-          await IsolateImageDecoder.decodeImages(widget.message.images!);
+      final images = await IsolateImageDecoder.decodeImages(
+        widget.message.images!,
+      );
       if (mounted) {
         setState(() {
           _decodedImages = images;
@@ -143,7 +130,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
 
     // Select only the properties that affect the bubble's appearance
     // to prevent unnecessary rebuilds (e.g. when customBgColor changes).
-    final appearance = ref.watch(appearanceProvider.select((state) => (
+    final appearance = ref.watch(
+      appearanceProvider.select(
+        (state) => (
           userMsgColor: state.userMsgColor,
           aiMsgColor: state.aiMsgColor,
           msgOpacity: state.msgOpacity,
@@ -152,7 +141,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           chatPadding: state.chatPadding,
           bubbleElevation: state.bubbleElevation,
           showAvatars: state.showAvatars,
-        )));
+        ),
+      ),
+    );
 
     // Appearance Values
     final bubbleColor = isUser
@@ -248,87 +239,90 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                   _showFocusedMenu(context, isUser);
                 },
                 child: RepaintBoundary(
-                child: Container(
-                  key: _bubbleKey,
-                  padding: EdgeInsets.all(padding),
-                  decoration: BoxDecoration(
-                    color: bubbleColor,
-                    borderRadius: BorderRadius.circular(radius).copyWith(
-                      bottomRight: isUser ? const Radius.circular(0) : null,
-                      bottomLeft: !isUser ? const Radius.circular(0) : null,
+                  child: Container(
+                    key: _bubbleKey,
+                    padding: EdgeInsets.all(padding),
+                    decoration: BoxDecoration(
+                      color: bubbleColor,
+                      borderRadius: BorderRadius.circular(radius).copyWith(
+                        bottomRight: isUser ? const Radius.circular(0) : null,
+                        bottomLeft: !isUser ? const Radius.circular(0) : null,
+                      ),
+                      boxShadow: hasElevation
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
+                              ),
+                            ]
+                          : null,
                     ),
-                    boxShadow: hasElevation
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 2,
-                              offset: const Offset(0, 1),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_decodedImages != null && _decodedImages!.isNotEmpty)
-                        ..._decodedImages!.map(
-                          (bytes) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.memory(
-                                bytes,
-                                height: 150,
-                                fit: BoxFit.cover,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_decodedImages != null &&
+                            _decodedImages!.isNotEmpty)
+                          ..._decodedImages!.map(
+                            (bytes) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.memory(
+                                  bytes,
+                                  height: 150,
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      if (isUser)
-                        Text(
-                          message.content,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: Colors.white,
-                            fontSize: fontSize,
-                          ),
-                        )
-                      else
-                        MarkdownBody(
-                          data: message.content,
-                          imageBuilder: MarkdownHandlers.imageBuilder,
-                          onTapLink: (text, href, title) async {
-                            if (href != null) {
-                              final uri = Uri.tryParse(href);
-                              // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
-                              if (uri != null && UrlValidator.isSecureUrl(uri) &&
-                                  await canLaunchUrl(uri)) {
-                                await launchUrl(
-                                  uri,
-                                  mode: LaunchMode.externalApplication,
-                                );
+                        if (isUser)
+                          Text(
+                            message.content,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: Colors.white,
+                              fontSize: fontSize,
+                            ),
+                          )
+                        else
+                          MarkdownBody(
+                            data: message.content,
+                            // ignore: deprecated_member_use
+                            imageBuilder: MarkdownHandlers.imageBuilder,
+                            onTapLink: (text, href, title) async {
+                              if (href != null) {
+                                final uri = Uri.tryParse(href);
+                                // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
+                                if (uri != null &&
+                                    UrlValidator.isSecureUrl(uri) &&
+                                    await canLaunchUrl(uri)) {
+                                  await launchUrl(
+                                    uri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                }
                               }
-                            }
-                          },
-                          styleSheet: _getStyleSheet(theme, fontSize),
-                        ),
-                      // Timestamp display
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(
-                          _formattedTimestamp,
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: fontSize * 0.7,
-                            fontStyle: FontStyle.italic,
+                            },
+                            styleSheet: _getStyleSheet(theme, fontSize),
+                          ),
+                        // Timestamp display
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            _formattedTimestamp,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: fontSize * 0.7,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
             ),
           ),
           if (isUser && showAvatars) ...[
@@ -503,11 +497,13 @@ class _FocusedMenuOverlay extends StatelessWidget {
                     else
                       MarkdownBody(
                         data: message.content,
+                        // ignore: deprecated_member_use
                         imageBuilder: MarkdownHandlers.imageBuilder,
                         onTapLink: (text, href, title) async {
                           if (href != null) {
                             final uri = Uri.tryParse(href);
-                            if (uri != null && UrlValidator.isSecureUrl(uri) &&
+                            if (uri != null &&
+                                UrlValidator.isSecureUrl(uri) &&
                                 await canLaunchUrl(uri)) {
                               await launchUrl(
                                 uri,

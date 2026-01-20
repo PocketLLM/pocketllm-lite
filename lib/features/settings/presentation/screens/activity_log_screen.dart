@@ -122,12 +122,12 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
       }
 
       if (mounted) {
-        final box = context.findRenderObject() as RenderBox?;
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: 'PocketLLM Lite Activity Logs',
-          subject: subject,
-          sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path)],
+            text: 'PocketLLM Lite Activity Logs',
+            subject: subject,
+          ),
         );
       }
     } catch (e) {
@@ -182,7 +182,7 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
               color: theme.colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -251,7 +251,9 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
                         Icon(
                           Icons.history_toggle_off,
                           size: 64,
-                          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -282,10 +284,13 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (index == 0 || !_isSameDay(
-                            DateTime.parse(filteredLogs[index - 1]['timestamp']),
-                            timestamp
-                        ))
+                        if (index == 0 ||
+                            !_isSameDay(
+                              DateTime.parse(
+                                filteredLogs[index - 1]['timestamp'],
+                              ),
+                              timestamp,
+                            ))
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
                             child: Text(
@@ -301,7 +306,10 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
                           leading: _buildIconForAction(action),
                           title: Text(
                             action,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +318,9 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
                               Text(
                                 details,
                                 style: TextStyle(
-                                  color: theme.colorScheme.onSurface.withOpacity(0.8),
+                                  color: theme.colorScheme.onSurface.withValues(
+                                    alpha: 0.8,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -324,12 +334,19 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
                             ],
                           ),
                           isThreeLine: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
                           onLongPress: () {
-                            Clipboard.setData(ClipboardData(text: '$action: $details'));
+                            Clipboard.setData(
+                              ClipboardData(text: '$action: $details'),
+                            );
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Log details copied to clipboard'),
+                                content: Text(
+                                  'Log details copied to clipboard',
+                                ),
                                 behavior: SnackBarBehavior.floating,
                                 duration: Duration(seconds: 1),
                               ),
@@ -342,7 +359,7 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
                             height: 1,
                             indent: 72,
                             endIndent: 16,
-                            color: theme.dividerColor.withOpacity(0.1),
+                            color: theme.dividerColor.withValues(alpha: 0.1),
                           ),
                       ],
                     );
@@ -371,7 +388,9 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
         fontWeight: isSelected ? FontWeight.w600 : null,
       ),
       selectedColor: Theme.of(context).colorScheme.primary,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
       side: BorderSide.none,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
@@ -384,7 +403,9 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
   String _formatDateHeader(DateTime date) {
     final now = DateTime.now();
     if (_isSameDay(date, now)) return 'Today';
-    if (_isSameDay(date, now.subtract(const Duration(days: 1)))) return 'Yesterday';
+    if (_isSameDay(date, now.subtract(const Duration(days: 1)))) {
+      return 'Yesterday';
+    }
     return DateFormat('EEEE, MMMM d, y').format(date);
   }
 
@@ -395,12 +416,13 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
     if (action.contains('Chat Created')) {
       icon = Icons.chat_bubble_outline;
       color = Colors.blue;
-    } else if (action.contains('Chat Deleted') || action.contains('History Cleared')) {
+    } else if (action.contains('Chat Deleted') ||
+        action.contains('History Cleared')) {
       icon = Icons.delete_outline;
       color = Colors.red;
     } else if (action.contains('Prompt')) {
       if (action.contains('Deleted')) {
-        icon = Icons.note_remove;
+        icon = Icons.delete_outline;
         color = Colors.deepOrange;
       } else {
         icon = Icons.edit_note;
@@ -419,15 +441,15 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
       icon = Icons.cleaning_services;
       color = Colors.amber;
     } else if (action.contains('Pinned')) {
-        icon = Icons.push_pin_outlined;
-        color = Colors.orange;
+      icon = Icons.push_pin_outlined;
+      color = Colors.orange;
     } else {
       icon = Icons.info_outline;
       color = Colors.blueGrey;
     }
 
     return CircleAvatar(
-      backgroundColor: color?.withValues(alpha: 0.1) ?? Colors.grey.withValues(alpha: 0.1),
+      backgroundColor: color.withValues(alpha: 0.1),
       child: Icon(icon, color: color, size: 20),
     );
   }

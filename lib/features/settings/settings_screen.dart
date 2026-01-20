@@ -597,23 +597,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           storage.getSetting(AppConstants.defaultModelKey) ??
                           '';
 
-                return Container(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest.withValues(
-                      alpha: 0.3,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    title: Text(
-                      model.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Row(
-                      children: [
-                        Text(
-                          '${(model.size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB',
-                          style: const TextStyle(fontSize: 12),
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: ListTile(
                           title: Text(
@@ -639,6 +627,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
                                         Icons.visibility,
@@ -663,7 +652,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             children: [
                               Radio<String>(
                                 value: model.name,
+                                // ignore: deprecated_member_use
                                 groupValue: defaultModel,
+                                // ignore: deprecated_member_use
                                 onChanged: (val) {
                                   storage.saveSetting(
                                     AppConstants.defaultModelKey,
@@ -681,14 +672,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   color: Colors.grey,
                                 ),
                                 onPressed: () {
-                                  // Open dialog to set per-model system prompt and settings
                                   HapticFeedback.lightImpact();
                                   showDialog(
                                     context: context,
-                                    builder:
-                                        (context) => ModelSettingsDialog(
-                                          modelName: model.name,
-                                        ),
+                                    builder: (context) => ModelSettingsDialog(
+                                      modelName: model.name,
+                                    ),
                                   );
                                 },
                                 visualDensity: VisualDensity.compact,
@@ -703,7 +692,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   await ref
                                       .read(ollamaServiceProvider)
                                       .deleteModel(model.name);
-                                  // Use our refresh method to show loading indicator
                                   await _refreshModels();
                                 },
                                 visualDensity: VisualDensity.compact,
@@ -711,8 +699,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ],
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ],
               ],
@@ -825,7 +813,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           RadioListTile<String?>(
                             title: const Text('None (Disabled)'),
                             value: null,
+                            // ignore: deprecated_member_use
                             groupValue: selectedModel,
+                            // ignore: deprecated_member_use
                             onChanged: (val) {
                               HapticFeedback.selectionClick();
                               ref
@@ -880,7 +870,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 ],
                               ),
                               value: m.name,
+                              // ignore: deprecated_member_use
                               groupValue: selectedModel,
+                              // ignore: deprecated_member_use
                               onChanged: (val) {
                                 HapticFeedback.selectionClick();
                                 ref
@@ -1762,10 +1754,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     final uri = Uri.parse(href);
                     if (UrlValidator.isSecureUrl(uri) &&
                         await canLaunchUrl(uri)) {
-                        await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        );
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
                     }
                   }
                 },

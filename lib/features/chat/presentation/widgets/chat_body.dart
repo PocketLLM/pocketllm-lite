@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../domain/models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../providers/connection_status_provider.dart';
@@ -72,8 +71,9 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
     final connectionStatusAsync = ref.watch(autoConnectionStatusProvider);
     final messages = ref.watch(chatProvider.select((s) => s.messages));
     final isGenerating = ref.watch(chatProvider.select((s) => s.isGenerating));
-    final hasStreamingContent =
-        ref.watch(chatProvider.select((s) => s.streamingContent.isNotEmpty));
+    final hasStreamingContent = ref.watch(
+      chatProvider.select((s) => s.streamingContent.isNotEmpty),
+    );
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -85,8 +85,10 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
     });
 
     // Throttled scroll for streaming content
-    ref.listen(chatProvider.select((s) => s.streamingContent.length),
-        (prev, next) {
+    ref.listen(chatProvider.select((s) => s.streamingContent.length), (
+      prev,
+      next,
+    ) {
       if (next > (prev ?? 0)) {
         _throttledScrollToBottom();
       }
@@ -162,7 +164,8 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
               controller: _scrollController,
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.only(top: 16, bottom: 16),
-              itemCount: messages.length +
+              itemCount:
+                  messages.length +
                   (isGenerating && hasStreamingContent ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index < messages.length) {
@@ -182,10 +185,7 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
                 duration: const Duration(milliseconds: 200),
                 transitionBuilder: (child, animation) => ScaleTransition(
                   scale: animation,
-                  child: FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  ),
+                  child: FadeTransition(opacity: animation, child: child),
                 ),
                 child: _showScrollToBottom
                     ? Semantics(
@@ -195,8 +195,9 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
                         child: FloatingActionButton.small(
                           onPressed: _scrollToBottom,
                           tooltip: 'Scroll to bottom',
-                          backgroundColor:
-                              isDark ? Colors.grey[800] : Colors.white,
+                          backgroundColor: isDark
+                              ? Colors.grey[800]
+                              : Colors.white,
                           foregroundColor: theme.colorScheme.primary,
                           elevation: 4,
                           child: const Icon(Icons.arrow_downward),
@@ -236,14 +237,16 @@ class _EmptyState extends ConsumerWidget {
               Icon(
                 Icons.chat_bubble_outline,
                 size: 80,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.5),
               ),
               const SizedBox(height: 24),
               Text(
                 'How can I help you?',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -260,7 +263,8 @@ class _EmptyState extends ConsumerWidget {
                     label: Text(suggestion),
                     avatar: const Icon(Icons.auto_awesome, size: 16),
                     onPressed: () {
-                      ref.read(draftMessageProvider.notifier).state = suggestion;
+                      ref.read(draftMessageProvider.notifier).state =
+                          suggestion;
                     },
                   );
                 }).toList(),

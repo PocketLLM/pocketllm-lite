@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketllm_lite/core/utils/image_decoder.dart';
@@ -6,7 +5,8 @@ import 'package:pocketllm_lite/core/utils/image_decoder.dart';
 void main() {
   group('IsolateImageDecoder', () {
     // A small red dot base64 PNG
-    const String base64Image = 'iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==';
+    const String base64Image =
+        'iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==';
 
     setUp(() {
       IsolateImageDecoder.clearCache();

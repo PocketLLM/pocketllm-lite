@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'dart:collection';
 
 class MockSession {
@@ -29,7 +30,9 @@ void main() {
   // Randomize source order to simulate unsorted storage
   sourceData.shuffle();
 
-  print('Benchmark: Managing $sessionCount sessions with $updatesCount updates');
+  print(
+    'Benchmark: Managing $sessionCount sessions with $updatesCount updates',
+  );
 
   // ---------------------------------------------------------
   // Approach 1: Naive (Current) - Invalidate and Resort
@@ -78,8 +81,9 @@ void main() {
   }
 
   stopwatchNaive.stop();
-  print('Naive Approach (Invalidate & Resort): ${stopwatchNaive.elapsedMilliseconds}ms');
-
+  print(
+    'Naive Approach (Invalidate & Resort): ${stopwatchNaive.elapsedMilliseconds}ms',
+  );
 
   // ---------------------------------------------------------
   // Approach 2: Optimized - Smart Update
@@ -88,7 +92,7 @@ void main() {
   List<MockSession>? cachedSessionsOpt;
 
   List<MockSession> getSessionsOpt(List<MockSession> storage) {
-     if (cachedSessionsOpt != null) {
+    if (cachedSessionsOpt != null) {
       return UnmodifiableListView(cachedSessionsOpt!);
     }
     // Initial sort still happens once
@@ -106,22 +110,26 @@ void main() {
 
     // Smart update cache
     if (cachedSessionsOpt != null) {
-       final cacheIndex = cachedSessionsOpt!.indexWhere((s) => s.id == updated.id);
-       if (cacheIndex != -1) {
-         // Replace in place - O(1) assuming we found index (O(N) search)
-         // Since list is array backed, search is O(N), replace is O(1).
-         // Total O(N). Naive sort is O(N log N).
-         cachedSessionsOpt![cacheIndex] = updated;
-       } else {
-         // Insert new (not handled in this bench for simplicity of comparison on updates)
-         cachedSessionsOpt!.insert(0, updated);
-         // If strict order needed, we might need to sort or find index, but here we test update.
-       }
+      final cacheIndex = cachedSessionsOpt!.indexWhere(
+        (s) => s.id == updated.id,
+      );
+      if (cacheIndex != -1) {
+        // Replace in place - O(1) assuming we found index (O(N) search)
+        // Since list is array backed, search is O(N), replace is O(1).
+        // Total O(N). Naive sort is O(N log N).
+        cachedSessionsOpt![cacheIndex] = updated;
+      } else {
+        // Insert new (not handled in this bench for simplicity of comparison on updates)
+        cachedSessionsOpt!.insert(0, updated);
+        // If strict order needed, we might need to sort or find index, but here we test update.
+      }
     }
   }
 
   // Reset source data copy for fair test
-  final List<MockSession> sourceDataOpt = List.from(sourceData); // Shallow copy is enough as we replace objects
+  final List<MockSession> sourceDataOpt = List.from(
+    sourceData,
+  ); // Shallow copy is enough as we replace objects
 
   // Run Benchmark 2
   final stopwatchOpt = Stopwatch()..start();
@@ -141,8 +149,11 @@ void main() {
   }
 
   stopwatchOpt.stop();
-  print('Optimized Approach (Smart Update): ${stopwatchOpt.elapsedMilliseconds}ms');
+  print(
+    'Optimized Approach (Smart Update): ${stopwatchOpt.elapsedMilliseconds}ms',
+  );
 
-  final improvement = stopwatchNaive.elapsedMilliseconds / stopwatchOpt.elapsedMilliseconds;
+  final improvement =
+      stopwatchNaive.elapsedMilliseconds / stopwatchOpt.elapsedMilliseconds;
   print('Improvement: ${improvement.toStringAsFixed(1)}x');
 }

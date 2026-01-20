@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 /// Provider to handle draft messages sent from other widgets (like suggestion chips)
 /// to the ChatInput.

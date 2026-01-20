@@ -11,7 +11,7 @@ import 'package:pocketllm_lite/services/usage_limits_provider.dart';
 // Mock Classes
 class MockOllamaService extends OllamaService {
   MockOllamaService() : super(); // Call default super constructor
-  
+
   @override
   Stream<String> generateChatStream(
     String model,
@@ -19,20 +19,20 @@ class MockOllamaService extends OllamaService {
     Map<String, dynamic>? options,
     String? system,
   }) async* {
-     // Verify messages order
-     if (messages.last['content'] == 'ping') {
-       yield 'pong';
-     } else if (messages.last['content'] == 'stream') {
-       yield 'c';
-       await Future.delayed(const Duration(milliseconds: 10));
-       yield 'h';
-       await Future.delayed(const Duration(milliseconds: 10));
-       yield 'u';
-       await Future.delayed(const Duration(milliseconds: 10));
-       yield 'n';
-       await Future.delayed(const Duration(milliseconds: 10));
-       yield 'k';
-     }
+    // Verify messages order
+    if (messages.last['content'] == 'ping') {
+      yield 'pong';
+    } else if (messages.last['content'] == 'stream') {
+      yield 'c';
+      await Future.delayed(const Duration(milliseconds: 10));
+      yield 'h';
+      await Future.delayed(const Duration(milliseconds: 10));
+      yield 'u';
+      await Future.delayed(const Duration(milliseconds: 10));
+      yield 'n';
+      await Future.delayed(const Duration(milliseconds: 10));
+      yield 'k';
+    }
   }
 }
 
@@ -41,9 +41,9 @@ class MockStorageService extends StorageService {
   dynamic getSetting(String key, {dynamic defaultValue}) {
     return defaultValue;
   }
-  
+
   @override
-  Future<void> saveChatSession(ChatSession session) async {}
+  Future<void> saveChatSession(ChatSession session, {bool log = true}) async {}
 }
 
 void main() {
@@ -62,7 +62,7 @@ void main() {
     );
 
     final notifier = container.read(chatProvider.notifier);
-    
+
     // Initial state
     expect(container.read(chatProvider).messages.isEmpty, true);
 
@@ -99,22 +99,22 @@ void main() {
     expect(messages[1].content, 'chunk');
     expect(messages[1].role, 'assistant');
   });
-  
+
   test('ChatNotifier updates settings correctly', () {
-      final container = ProviderContainer(
+    final container = ProviderContainer(
       overrides: [
         storageServiceProvider.overrideWithValue(MockStorageService()),
       ],
     );
-    
+
     final notifier = container.read(chatProvider.notifier);
-    
+
     notifier.updateSettings(
-        temperature: 0.8,
-        topP: 0.5,
-        systemPrompt: 'Be concise',
+      temperature: 0.8,
+      topP: 0.5,
+      systemPrompt: 'Be concise',
     );
-    
+
     final state = container.read(chatProvider);
     expect(state.temperature, 0.8);
     expect(state.topP, 0.5);

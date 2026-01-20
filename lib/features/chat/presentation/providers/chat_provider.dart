@@ -168,13 +168,7 @@ class ChatNotifier extends Notifier<ChatState> {
     final ollama = ref.read(ollamaServiceProvider);
 
     final history = state.messages
-        .map(
-          (m) => {
-            "role": m.role,
-            "content": m.content,
-            "images": m.images,
-          },
-        )
+        .map((m) => {"role": m.role, "content": m.content, "images": m.images})
         .toList();
 
     try {
@@ -203,7 +197,7 @@ class ChatNotifier extends Notifier<ChatState> {
         final now = DateTime.now();
         if (hapticEnabled) {
           if (lastHapticTime == null ||
-              now.difference(lastHapticTime!) >
+              now.difference(lastHapticTime) >
                   const Duration(milliseconds: 100)) {
             HapticFeedback.lightImpact();
             lastHapticTime = now;
@@ -214,7 +208,7 @@ class ChatNotifier extends Notifier<ChatState> {
         // Optimize: Throttle UI updates to ~20 FPS (50ms) to prevent excessive
         // rebuilds and Markdown re-parsing on every token.
         if (lastUiUpdateTime == null ||
-            now.difference(lastUiUpdateTime!) >
+            now.difference(lastUiUpdateTime) >
                 const Duration(milliseconds: 50)) {
           state = state.copyWith(streamingContent: assistantContent);
           lastUiUpdateTime = now;
@@ -240,7 +234,7 @@ class ChatNotifier extends Notifier<ChatState> {
       final userTokens = _estimateTokens(text);
       final aiTokens = _estimateTokens(assistantContent);
       final totalTokens = userTokens + aiTokens;
-      
+
       await ref.read(usageLimitsProvider.notifier).consumeTokens(totalTokens);
     } catch (e) {
       // Handle potential errors, e.g., show a message to the user

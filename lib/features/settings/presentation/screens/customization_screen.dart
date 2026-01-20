@@ -401,40 +401,46 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: Color(preset.userColor),
-                            radius: 6,
-                          ),
-                          const SizedBox(width: 4),
-                          CircleAvatar(
-                            backgroundColor: Color(preset.aiColor),
-                            radius: 6,
-                          ),
-                          const Spacer(),
-                          if (isSelected)
-                            const Icon(
-                              Icons.check_circle,
-                              size: 16,
-                              color: Colors.blue,
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: Color(preset.userColor),
+                                  radius: 6,
+                                ),
+                                const SizedBox(width: 4),
+                                CircleAvatar(
+                                  backgroundColor: Color(preset.aiColor),
+                                  radius: 6,
+                                ),
+                                const Spacer(),
+                                if (isSelected)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    size: 16,
+                                    color: Colors.blue,
+                                  ),
+                              ],
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        preset.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                            const SizedBox(height: 8),
+                            Text(
+                              preset.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              preset.note,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        preset.note,
-                        style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-                        maxLines: 1,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -534,8 +540,9 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                                       width: 3,
                                     )
                                   : Border.all(
-                                      color: Colors.black
-                                          .withValues(alpha: 0.1),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       width: 1,
                                     ),
                             ),
