@@ -273,6 +273,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                   bytes,
                                   height: 150,
                                   fit: BoxFit.cover,
+                                  // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
+                                  cacheHeight: 450,
                                 ),
                               ),
                             ),

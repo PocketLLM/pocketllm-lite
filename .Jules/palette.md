@@ -45,3 +45,7 @@
 ## 2024-05-28 - [Accessible Overlay Buttons]
 **Learning:** For small overlay buttons (like "remove image" on a thumbnail), simply making the icon small results in inaccessible touch targets (<48px). Wrapping in a larger transparent container can work but loses standard Material ink effects.
 **Action:** Use `IconButton` with `padding: EdgeInsets.zero`, custom `constraints` (e.g., min 40x40), and `alignment` (e.g., `Alignment.topRight`) to create a large touch target that visually aligns a small icon to a corner without custom gesture handling.
+
+## 2026-01-20 - [Stateless Entrance Animations]
+**Learning:** You don't always need a `StatefulWidget` and `AnimationController` for simple "entrance" animations (like fading in content). `TweenAnimationBuilder` allows you to add polished micro-interactions (fade + slide) to static content with zero boilerplate and no manual disposal logic.
+**Action:** Use `TweenAnimationBuilder` for simple one-off entrance animations on empty states or dialogs to delight users without complex state management.

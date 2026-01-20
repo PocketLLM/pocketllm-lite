@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/models/chat_message.dart';
@@ -234,18 +235,25 @@ class _EmptyState extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.chat_bubble_outline,
-                size: 80,
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.5),
+              Semantics(
+                excludeSemantics: true,
+                child: Icon(
+                  Icons.chat_bubble_outline,
+                  size: 80,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.5),
+                ),
               ),
               const SizedBox(height: 24),
-              Text(
-                'How can I help you?',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+              Semantics(
+                header: true,
+                child: Text(
+                  'How can I help you?',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -254,20 +262,39 @@ class _EmptyState extends ConsumerWidget {
                 style: TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 32),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.center,
-                children: suggestions.map((suggestion) {
-                  return ActionChip(
-                    label: Text(suggestion),
-                    avatar: const Icon(Icons.auto_awesome, size: 16),
-                    onPressed: () {
-                      ref.read(draftMessageProvider.notifier).state =
-                          suggestion;
-                    },
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOutQuart,
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 20 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: child,
+                    ),
                   );
-                }).toList(),
+                },
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: suggestions.map((suggestion) {
+                    return Semantics(
+                      button: true,
+                      hint: 'Populates the message input',
+                      child: ActionChip(
+                        label: Text(suggestion),
+                        avatar: const Icon(Icons.auto_awesome, size: 16),
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          ref.read(draftMessageProvider.notifier).state =
+                              suggestion;
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
             ],
           ),
