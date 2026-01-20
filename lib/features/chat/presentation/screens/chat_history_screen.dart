@@ -31,6 +31,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  RegExp? _searchRegex;
   String? _selectedModelFilter;
   DateTime? _selectedDateFilter;
 
@@ -39,7 +40,13 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     super.initState();
     _loadBannerAds();
     _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text);
+      final query = _searchController.text;
+      setState(() {
+        _searchQuery = query;
+        _searchRegex = query.isNotEmpty
+            ? RegExp(RegExp.escape(query), caseSensitive: false)
+            : null;
+      });
     });
   }
 
@@ -87,20 +94,18 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     )..load();
   }
 
-  String? _getMatchingSnippet(ChatSession session, String query) {
-    if (query.isEmpty) return null;
-    // Use RegExp to find the match index without converting the entire content to lowercase
-    final queryRegex = RegExp(RegExp.escape(query), caseSensitive: false);
+  String? _getMatchingSnippet(ChatSession session) {
+    if (_searchRegex == null || _searchQuery.isEmpty) return null;
 
     // Search in messages
     for (final message in session.messages) {
       final content = message.content;
-      final match = queryRegex.firstMatch(content);
+      final match = _searchRegex!.firstMatch(content);
       if (match != null) {
         final index = match.start;
         // Found match. Extract snippet.
         int start = (index - 20).clamp(0, content.length);
-        int end = (index + query.length + 50).clamp(0, content.length);
+        int end = (index + _searchQuery.length + 50).clamp(0, content.length);
         String snippet = content.substring(start, end);
         if (start > 0) snippet = '...$snippet';
         if (end < content.length) snippet = '$snippet...';
@@ -143,19 +148,18 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     );
   }
 
-  Widget _buildSubtitle(
-      ChatSession session, String query, BuildContext context) {
+  Widget _buildSubtitle(ChatSession session, BuildContext context) {
     final theme = Theme.of(context);
     final defaultStyle = TextStyle(
       fontSize: 12,
       color: theme.colorScheme.onSurfaceVariant,
     );
 
-    if (query.isEmpty) {
+    if (_searchQuery.isEmpty) {
       return Text(_formatDate(session.createdAt), style: defaultStyle);
     }
 
-    final snippet = _getMatchingSnippet(session, query);
+    final snippet = _getMatchingSnippet(session);
     if (snippet == null) {
       // Matched in title
       return Text(_formatDate(session.createdAt), style: defaultStyle);
@@ -163,7 +167,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
     // Matched in content - highlight
     return _buildHighlightedText(
-        snippet, query, defaultStyle, theme.colorScheme.primary);
+        snippet, _searchQuery, defaultStyle, theme.colorScheme.primary);
   }
 
   @override
@@ -424,7 +428,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      subtitle: _buildSubtitle(session, _searchQuery, context),
+                      subtitle: _buildSubtitle(session, context),
                       trailing: !_isSelectionMode
                           ? IconButton(
                               icon: const Icon(Icons.chevron_right),
