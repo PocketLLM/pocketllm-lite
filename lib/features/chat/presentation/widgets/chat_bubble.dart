@@ -365,7 +365,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           alpha: 0.2,
         ), // Slight dim initially, animated in widget
         pageBuilder: (context, _, __) => _FocusedMenuOverlay(
-          child: widget, // Pass actual widget or reconstructed bubble
           message: widget.message,
           bubbleSize: size,
           bubbleOffset: offset,
@@ -381,6 +380,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
             );
           },
           ref: ref,
+          child: widget, // Pass actual widget or reconstructed bubble
         ),
         transitionsBuilder: (context, animation, _, child) {
           return FadeTransition(opacity: animation, child: child);
@@ -574,7 +574,7 @@ class _FocusedMenuOverlay extends StatelessWidget {
                 }),
                 const SizedBox(width: 12),
                 _buildIconBtn(context, Icons.share, 'Share', () {
-                  Share.share(message.content);
+                  SharePlus.instance.share(ShareParams(text: message.content));
                   Navigator.pop(context);
                 }),
                 if (isUser) ...[

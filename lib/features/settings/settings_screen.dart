@@ -13,7 +13,9 @@ import '../../core/utils/url_validator.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme_provider.dart';
+import '../../core/widgets/update_dialog.dart';
 import '../../services/ad_service.dart';
+import '../../services/update_service.dart';
 import '../../services/usage_limits_provider.dart';
 import '../chat/presentation/providers/models_provider.dart';
 import '../chat/presentation/providers/prompt_enhancer_provider.dart';
@@ -38,6 +40,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // Banner Ad
   final AdService _adService = AdService();
   bool _isBannerLoaded = false;
+  BannerAd? _bannerAd;
+  int _bannerRetryCount = 0;
+  static const int _maxBannerRetries = 5;
+
+  // Update Service
+  final UpdateService _updateService = UpdateService();
+  bool _autoUpdateEnabled = true;
+  bool _isCheckingForUpdates = false;
 
   @override
   void initState() {
@@ -50,8 +60,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _urlController = TextEditingController(text: url);
     _loadVersion();
     _checkConnection();
-    _loadBannerAd();
-    
+
+    // Add a small delay to ensure the widget is built before loading the banner
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadBannerAd();
+    });
+
+    // Load update settings
+    _loadUpdateSettings();
+
     // Automatically refresh usage limits and models when settings page is opened
     // Use Future.delayed to avoid modifying providers during widget build
     Future.delayed(Duration.zero, () {
@@ -70,13 +87,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() {
       _isRefreshingModels = true;
     });
-    
+
     // Refresh the models provider
     ref.invalidate(modelsProvider);
-    
+
     // Small delay to ensure UI updates
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     if (mounted) {
       setState(() {
         _isRefreshingModels = false;
@@ -84,23 +101,100 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _loadUpdateSettings() async {
+    final enabled = await _updateService.isAutoUpdateEnabled();
+    if (mounted) {
+      setState(() {
+        _autoUpdateEnabled = enabled;
+      });
+    }
+  }
+
+  Future<void> _toggleAutoUpdate(bool value) async {
+    HapticFeedback.selectionClick();
+    await _updateService.setAutoUpdateEnabled(value);
+    if (mounted) {
+      setState(() {
+        _autoUpdateEnabled = value;
+      });
+    }
+  }
+
+  Future<void> _checkForUpdatesManually() async {
+    HapticFeedback.mediumImpact();
+
+    setState(() {
+      _isCheckingForUpdates = true;
+    });
+
+    try {
+      // Clear any dismissed version to force showing update even if previously skipped
+      await _updateService.clearDismissedVersion();
+
+      final result = await _updateService.checkForUpdates(force: true);
+
+      if (!mounted) return;
+
+      if (result.updateAvailable && result.release != null) {
+        await UpdateDialog.show(context, result.release!);
+      } else if (result.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error checking for updates: ${result.error}'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You are using the latest version! 🎉'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingForUpdates = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _urlController.dispose();
-    _adService.disposeBannerAd();
+    _bannerAd?.dispose();
     super.dispose();
   }
 
-  void _loadBannerAd() {
-    _adService.loadBannerAd(
+  Future<void> _loadBannerAd() async {
+    _bannerAd?.dispose();
+    _bannerAd = await _adService.createAndLoadBannerAd(
       onLoaded: () {
-        if (mounted) setState(() => _isBannerLoaded = true);
+        if (mounted) {
+          setState(() {
+            _isBannerLoaded = true;
+            _bannerRetryCount = 0; // Reset retry count on success
+          });
+        }
       },
       onFailed: (error) {
         if (kDebugMode) {
-          debugPrint('Banner ad failed to load: $error');
+          // print('Banner ad failed to load: $error');
         }
-        if (mounted) setState(() => _isBannerLoaded = false);
+        if (mounted) {
+          setState(() => _isBannerLoaded = false);
+          // Retry loading the banner ad after a longer delay with max retries
+          if (_bannerRetryCount < _maxBannerRetries) {
+            _bannerRetryCount++;
+            Future.delayed(const Duration(seconds: 5), () {
+              if (mounted && !_isBannerLoaded) {
+                _loadBannerAd();
+              }
+            });
+          }
+        }
       },
     );
   }
@@ -200,6 +294,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 24),
                   _buildAppearanceSection(theme, storage),
                   const SizedBox(height: 24),
+                  _buildUpdatesSection(theme),
+                  const SizedBox(height: 24),
                   _buildAboutSection(theme),
                   const SizedBox(height: 60), // Space for banner
                 ],
@@ -214,23 +310,61 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildBannerAd() {
-    if (_isBannerLoaded && _adService.bannerAd != null) {
+    if (_isBannerLoaded && _bannerAd != null) {
       return SafeArea(
         child: Container(
           alignment: Alignment.center,
           width: double.infinity,
-          height: 50,
-          child: AdWidget(ad: _adService.bannerAd!),
+          height: 60,
+          child: Stack(
+            alignment: Alignment.topRight,
+            children: [
+              SizedBox(height: 60, child: AdWidget(ad: _bannerAd!)),
+              Positioned(
+                top: -10,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[600],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: IconButton(
+                    icon: Icon(Icons.refresh, size: 16, color: Colors.white),
+                    onPressed: () {
+                      _bannerRetryCount = 0; // Reset retry count
+                      _loadBannerAd();
+                    },
+                    padding: EdgeInsets.all(4),
+                    constraints: BoxConstraints.tight(Size(20, 20)),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
     return Container(
-      height: 50,
+      height: 60,
       alignment: Alignment.center,
       color: Colors.grey[200],
-      child: const Text(
-        'Ad loading...',
-        style: TextStyle(color: Colors.grey, fontSize: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'Ad loading...',
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+          IconButton(
+            icon: Icon(Icons.refresh, size: 16),
+            onPressed: () {
+              _bannerRetryCount = 0; // Reset retry count
+              _loadBannerAd();
+            },
+            padding: EdgeInsets.all(4),
+          ),
+        ],
       ),
     );
   }
@@ -259,7 +393,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: theme.colorScheme.outlineVariant),
           ),
@@ -396,7 +532,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Prompts'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: ListTile(
@@ -459,11 +597,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           storage.getSetting(AppConstants.defaultModelKey) ??
                           '';
 
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(12),
+                return Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.3,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    title: Text(
+                      model.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Row(
+                      children: [
+                        Text(
+                          '${(model.size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB',
+                          style: const TextStyle(fontSize: 12),
                         ),
                         child: ListTile(
                           title: Text(
@@ -561,8 +711,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ],
                           ),
                         ),
-                      );
-                    },
+                      ],
+                    ),
                   ),
                 ],
               ],
@@ -589,7 +739,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Prompt Enhancer'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Theme(
@@ -709,7 +861,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.blue.withValues(alpha: 0.2),
+                                          color: Colors.blue.withValues(
+                                            alpha: 0.2,
+                                          ),
                                           borderRadius: BorderRadius.circular(
                                             4,
                                           ),
@@ -852,7 +1006,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1130,7 +1286,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Chats & Storage'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1244,7 +1402,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Appearance'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1315,6 +1475,96 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _buildUpdatesSection(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Updates'),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              SwitchListTile(
+                title: const Text('Auto-check for Updates'),
+                subtitle: const Text('Check for updates when app opens'),
+                value: _autoUpdateEnabled,
+                onChanged: _toggleAutoUpdate,
+                secondary: Icon(
+                  Icons.update,
+                  color: _autoUpdateEnabled
+                      ? theme.colorScheme.primary
+                      : Colors.grey,
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                title: const Text('Check for Updates Now'),
+                subtitle: const Text('Manually check for new version'),
+                leading: _isCheckingForUpdates
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                trailing: _isCheckingForUpdates
+                    ? null
+                    : const Icon(Icons.chevron_right),
+                onTap: _isCheckingForUpdates ? null : _checkForUpdatesManually,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                title: const Text('View All Releases'),
+                subtitle: const Text('Open GitHub releases page'),
+                leading: const Icon(Icons.open_in_new),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  HapticFeedback.lightImpact();
+                  final url = Uri.parse(_updateService.getReleasesPageUrl());
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+              // Info box
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 18, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Updates are downloaded directly from GitHub releases. '
+                          'You may need to enable "Install from unknown sources" in your device settings.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[800],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildAboutSection(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1322,7 +1572,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('About'),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1413,19 +1665,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Supporting Development',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   const Text(
@@ -1453,10 +1699,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const Text(
                     'Ads help us continue improving the app and adding new features '
                     'while keeping it free to use. Thank you for your support!',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontStyle: FontStyle.italic,
-                    ),
+                    style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
                   ),
                 ],
               ),

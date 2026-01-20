@@ -50,7 +50,7 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
       name: 'Midnight Glow',
       userColor: 0xFF8B5CF6,
       aiColor: 0xFFEC4899,
-      backgroundColor: Color(0xFF0F172AD),
+      backgroundColor: Color(0xFF0F172A),
       note: 'Dark mode favourite',
     ),
     ThemePreset(
