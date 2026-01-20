@@ -41,3 +41,7 @@
 ## 2024-05-22 - [Hidden Actions in Custom Gestures]
 **Learning:** Custom gestures like `onLongPress` in `GestureDetector` are invisible to screen readers unless explicitly exposed via `Semantics`.
 **Action:** Always wrap `GestureDetector` with `Semantics` and provide a corresponding action (e.g., `onLongPress`) and a `hint` to aid discoverability.
+
+## 2024-05-28 - [Accessible Overlay Buttons]
+**Learning:** For small overlay buttons (like "remove image" on a thumbnail), simply making the icon small results in inaccessible touch targets (<48px). Wrapping in a larger transparent container can work but loses standard Material ink effects.
+**Action:** Use `IconButton` with `padding: EdgeInsets.zero`, custom `constraints` (e.g., min 40x40), and `alignment` (e.g., `Alignment.topRight`) to create a large touch target that visually aligns a small icon to a corner without custom gesture handling.
