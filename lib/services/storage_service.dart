@@ -252,8 +252,37 @@ class StorageService {
     }
 
     await _settingsBox.put(AppConstants.pinnedChatsKey, pinned);
-    // Notify listeners? The box update might notify if we listen to it.
-    // _settingsBox is not watched in searchSessions directly, but UI can use ValueListenableBuilder.
+  }
+
+  // Archived Chats
+  List<String> getArchivedChatIds() {
+    return List<String>.from(
+      _settingsBox.get(AppConstants.archivedChatsKey, defaultValue: <String>[]),
+    );
+  }
+
+  bool isArchived(String chatId) {
+    final archived = getArchivedChatIds();
+    return archived.contains(chatId);
+  }
+
+  Future<void> toggleArchive(String chatId) async {
+    final archived = getArchivedChatIds();
+    final isArchived = archived.contains(chatId);
+
+    if (isArchived) {
+      archived.remove(chatId);
+      await logActivity('Chat Unarchived', 'Unarchived chat with ID $chatId');
+    } else {
+      archived.add(chatId);
+      // Unpin if archived
+      if (isPinned(chatId)) {
+        await togglePin(chatId);
+      }
+      await logActivity('Chat Archived', 'Archived chat with ID $chatId');
+    }
+
+    await _settingsBox.put(AppConstants.archivedChatsKey, archived);
   }
 
   // Activity Log
