@@ -111,14 +111,11 @@ class StorageService {
     await _chatBox.put(session.id, session);
 
     if (log && isNew) {
-      await logActivity('Chat Created', 'Created new chat "${session.title}" with model ${session.model}');
+      await logActivity('Chat Created', 'Created new chat (ID: ${session.id}) with model ${session.model}');
     }
   }
 
   Future<void> deleteChatSession(String id) async {
-    final session = _chatBox.get(id);
-    final title = session?.title ?? 'Unknown';
-
     // Optimistic update
     if (_cachedSessions != null) {
       _cachedSessions!.removeWhere((s) => s.id == id);
@@ -132,7 +129,7 @@ class StorageService {
       await _settingsBox.put(AppConstants.pinnedChatsKey, pinned);
     }
 
-    await logActivity('Chat Deleted', 'Deleted chat "$title"');
+    await logActivity('Chat Deleted', 'Deleted chat (ID: $id)');
   }
 
   Future<void> clearAllChats() async {
@@ -205,18 +202,15 @@ class StorageService {
     await _systemPromptBox.put(prompt.id, prompt);
 
     if (isNew) {
-      await logActivity('System Prompt Created', 'Created prompt "${prompt.title}"');
+      await logActivity('System Prompt Created', 'Created system prompt (ID: ${prompt.id})');
     } else {
-      await logActivity('System Prompt Updated', 'Updated prompt "${prompt.title}"');
+      await logActivity('System Prompt Updated', 'Updated system prompt (ID: ${prompt.id})');
     }
   }
 
   Future<void> deleteSystemPrompt(String id) async {
-    final prompt = _systemPromptBox.get(id);
     await _systemPromptBox.delete(id);
-    if (prompt != null) {
-      await logActivity('System Prompt Deleted', 'Deleted prompt "${prompt.title}"');
-    }
+    await logActivity('System Prompt Deleted', 'Deleted system prompt (ID: $id)');
   }
 
   // Settings
@@ -225,7 +219,7 @@ class StorageService {
     // Don't log every setting change to avoid noise, or log specific important ones?
     // logging Ollama URL change might be good.
     if (key == AppConstants.ollamaBaseUrlKey) {
-       await logActivity('Settings Changed', 'Updated Ollama Base URL to $value');
+       await logActivity('Settings Changed', 'Updated Ollama Base URL');
     }
   }
 
