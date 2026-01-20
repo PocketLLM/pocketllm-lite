@@ -235,12 +235,19 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
             const SizedBox(width: 8),
           ],
           Flexible(
-            child: GestureDetector(
+            child: Semantics(
+              container: true,
+              hint: 'Double tap and hold for options',
               onLongPress: () {
                 HapticFeedback.mediumImpact();
                 _showFocusedMenu(context, isUser);
               },
-              child: RepaintBoundary(
+              child: GestureDetector(
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  _showFocusedMenu(context, isUser);
+                },
+                child: RepaintBoundary(
                 child: Container(
                   key: _bubbleKey,
                   padding: EdgeInsets.all(padding),
@@ -321,6 +328,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                   ),
                 ),
               ),
+            ),
             ),
           ),
           if (isUser && showAvatars) ...[
@@ -437,9 +445,13 @@ class _FocusedMenuOverlay extends StatelessWidget {
 
           // 2. Dismiss logic (tap anywhere)
           Positioned.fill(
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(color: Colors.transparent),
+            child: Semantics(
+              label: 'Dismiss menu',
+              button: true,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(color: Colors.transparent),
+              ),
             ),
           ),
 

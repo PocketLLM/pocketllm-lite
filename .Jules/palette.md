@@ -37,3 +37,7 @@
 ## 2024-05-27 - [Contextual Message Actions]
 **Learning:** Users often need to delete specific messages in a chat (e.g., to remove sensitive info or clean up). Providing a "Delete" option in the long-press context menu is a standard pattern. However, because it's destructive, it must be visually distinct (red) and require confirmation.
 **Action:** Add "Delete" to message context menus with a red accent color and a confirmation dialog to prevent accidental data loss.
+
+## 2024-05-22 - [Hidden Actions in Custom Gestures]
+**Learning:** Custom gestures like `onLongPress` in `GestureDetector` are invisible to screen readers unless explicitly exposed via `Semantics`.
+**Action:** Always wrap `GestureDetector` with `Semantics` and provide a corresponding action (e.g., `onLongPress`) and a `hint` to aid discoverability.
