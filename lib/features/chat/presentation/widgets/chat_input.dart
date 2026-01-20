@@ -437,25 +437,27 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         Positioned(
                           right: 0,
                           top: 0,
-                          child: Semantics(
-                            label: 'Remove image',
-                            button: true,
-                            child: Material(
-                              color: Colors.black54,
-                              shape: const CircleBorder(),
-                              child: InkWell(
-                                onTap: () =>
-                                    setState(() => _selectedImages.removeAt(i)),
-                                customBorder: const CircleBorder(),
-                                child: const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 12,
-                                  ),
-                                ),
+                          child: IconButton(
+                            alignment: Alignment.topRight,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 40,
+                              minHeight: 40,
+                            ),
+                            tooltip: 'Remove image',
+                            onPressed: () =>
+                                setState(() => _selectedImages.removeAt(i)),
+                            icon: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 14,
                               ),
                             ),
                           ),
