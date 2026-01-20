@@ -316,8 +316,9 @@ class StorageService {
   Map<String, dynamic> exportData({
     bool includeChats = true,
     bool includePrompts = true,
+    List<String>? chatIds,
   }) {
-    logActivity('Data Export', 'Exported data (Chats: $includeChats, Prompts: $includePrompts)');
+    logActivity('Data Export', 'Exported data (Chats: $includeChats, Prompts: $includePrompts, Selected: ${chatIds?.length ?? 'All'})');
 
     final Map<String, dynamic> data = {
       'version': 1,
@@ -325,24 +326,34 @@ class StorageService {
     };
 
     if (includeChats) {
-      data['chats'] = getChatSessions().map((s) => _chatSessionToJson(s)).toList();
+      var sessions = getChatSessions();
+      if (chatIds != null) {
+        sessions = sessions.where((s) => chatIds.contains(s.id)).toList();
+      }
+      data['chats'] = sessions.map((s) => _chatSessionToJson(s)).toList();
     }
 
     if (includePrompts) {
+      // Prompts are not filtered by chatIds
       data['prompts'] = getSystemPrompts().map((p) => _systemPromptToJson(p)).toList();
     }
 
     return data;
   }
 
-  String exportToCsv() {
+  String exportToCsv({List<String>? chatIds}) {
     logActivity('Data Export', 'Exported data as CSV');
     final buffer = StringBuffer();
     // Header
     buffer.writeln('ID,Title,Model,Created At,Message Count,System Prompt');
 
+    var sessions = getChatSessions();
+    if (chatIds != null) {
+      sessions = sessions.where((s) => chatIds.contains(s.id)).toList();
+    }
+
     // Rows
-    for (final session in getChatSessions()) {
+    for (final session in sessions) {
       final id = _escapeCsv(session.id);
       final title = _escapeCsv(session.title);
       final model = _escapeCsv(session.model);
@@ -380,13 +391,18 @@ class StorageService {
     return const JsonEncoder.withIndent('  ').convert(logs);
   }
 
-  String exportToMarkdown() {
+  String exportToMarkdown({List<String>? chatIds}) {
     logActivity('Data Export', 'Exported data as Markdown');
     final buffer = StringBuffer();
     buffer.writeln('# PocketLLM Lite Chat Export');
     buffer.writeln('Exported on: ${DateTime.now().toString()}\n');
 
-    for (final session in getChatSessions()) {
+    var sessions = getChatSessions();
+    if (chatIds != null) {
+      sessions = sessions.where((s) => chatIds.contains(s.id)).toList();
+    }
+
+    for (final session in sessions) {
       buffer.writeln('## ${session.title}');
       buffer.writeln('**Model:** ${session.model}');
       buffer.writeln('**Date:** ${session.createdAt.toString()}\n');

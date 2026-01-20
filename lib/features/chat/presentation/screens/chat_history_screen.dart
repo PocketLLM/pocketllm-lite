@@ -10,6 +10,7 @@ import '../../../../services/ad_service.dart';
 import '../../../../services/usage_limits_provider.dart';
 import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
+import '../../../settings/presentation/widgets/export_dialog.dart';
 import 'archived_chats_screen.dart';
 
 class ChatHistoryScreen extends ConsumerStatefulWidget {
@@ -265,13 +266,18 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                     : 'Chat History',
               ),
               actions: [
-                if (_isSelectionMode)
+                if (_isSelectionMode) ...[
+                  IconButton(
+                    icon: const Icon(Icons.download),
+                    tooltip: 'Export selected chats',
+                    onPressed: _selectedIds.isEmpty ? null : _exportSelected,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
                     tooltip: 'Delete selected chats',
                     onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
-                  )
-                else ...[
+                  ),
+                ] else ...[
                   IconButton(
                     icon: const Icon(Icons.search),
                     tooltip: 'Search chats',
@@ -1218,6 +1224,15 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
         },
       );
     }
+  }
+
+  Future<void> _exportSelected() async {
+    if (_selectedIds.isEmpty) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => ExportDialog(selectedChatIds: _selectedIds),
+    );
   }
 
   Future<void> _deleteSelected() async {
