@@ -7,6 +7,18 @@ class MockStorageService extends StorageService {
   final List<Map<String, dynamic>> logs = [];
   final List<ChatSession> mockSessions = [];
   final List<SystemPrompt> mockPrompts = [];
+  final List<Map<String, dynamic>> activityLogs = [
+    {
+      'timestamp': '2025-05-24T10:00:00.000',
+      'action': 'Chat Created',
+      'details': 'Created new chat',
+    },
+    {
+      'timestamp': '2025-05-24T10:05:00.000',
+      'action': 'Settings Changed',
+      'details': 'Updated theme',
+    },
+  ];
 
   @override
   Future<void> logActivity(String action, String details) async {
@@ -18,6 +30,9 @@ class MockStorageService extends StorageService {
 
   @override
   List<SystemPrompt> getSystemPrompts() => mockPrompts;
+
+  @override
+  List<Map<String, dynamic>> getActivityLogs() => activityLogs;
 }
 
 void main() {
@@ -47,6 +62,27 @@ void main() {
       expect(storage.logs.length, 1);
       expect(storage.logs.first['action'], 'Data Export');
       expect(storage.logs.first['details'], contains('Markdown'));
+    });
+
+    test('exportActivityLogsToCsv logs activity and returns correct format', () {
+      final csv = storage.exportActivityLogsToCsv();
+      expect(storage.logs.length, 1);
+      expect(storage.logs.first['action'], 'Data Export');
+      expect(storage.logs.first['details'], contains('activity logs as CSV'));
+
+      expect(csv, contains('Timestamp,Action,Details'));
+      expect(csv, contains('Chat Created'));
+      expect(csv, contains('Settings Changed'));
+    });
+
+    test('exportActivityLogsToJson logs activity and returns correct format', () {
+      final json = storage.exportActivityLogsToJson();
+      expect(storage.logs.length, 1);
+      expect(storage.logs.first['action'], 'Data Export');
+      expect(storage.logs.first['details'], contains('activity logs as JSON'));
+
+      expect(json, contains('"action": "Chat Created"'));
+      expect(json, contains('"action": "Settings Changed"'));
     });
   });
 }

@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -330,6 +331,30 @@ class StorageService {
     }
 
     return buffer.toString();
+  }
+
+  String exportActivityLogsToCsv() {
+    logActivity('Data Export', 'Exported activity logs as CSV');
+    final buffer = StringBuffer();
+    // Header
+    buffer.writeln('Timestamp,Action,Details');
+
+    // Rows
+    for (final log in getActivityLogs()) {
+      final timestamp = _escapeCsv(log['timestamp'] ?? '');
+      final action = _escapeCsv(log['action'] ?? '');
+      final details = _escapeCsv(log['details'] ?? '');
+
+      buffer.writeln('$timestamp,$action,$details');
+    }
+
+    return buffer.toString();
+  }
+
+  String exportActivityLogsToJson() {
+    logActivity('Data Export', 'Exported activity logs as JSON');
+    final logs = getActivityLogs();
+    return const JsonEncoder.withIndent('  ').convert(logs);
   }
 
   String exportToMarkdown() {
