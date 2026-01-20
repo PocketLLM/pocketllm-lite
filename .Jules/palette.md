@@ -37,3 +37,7 @@
 ## 2024-05-27 - [Contextual Message Actions]
 **Learning:** Users often need to delete specific messages in a chat (e.g., to remove sensitive info or clean up). Providing a "Delete" option in the long-press context menu is a standard pattern. However, because it's destructive, it must be visually distinct (red) and require confirmation.
 **Action:** Add "Delete" to message context menus with a red accent color and a confirmation dialog to prevent accidental data loss.
+
+## 2024-05-28 - [Accessible Touch Targets for Overlays]
+**Learning:** Small overlay actions (like close buttons on image thumbnails) often default to their visual size for hit testing, creating frustration for mobile users. Wrapping the visual component in a transparent container that is larger (e.g., 40x40) and aligned (e.g., `Alignment.topRight`) allows the accessible touch target to expand inwards without disrupting the layout or requiring complex overflow handling.
+**Action:** For small overlay icons, decouple the touch target size from the visual size using a transparent wrapper container to ensure a minimum 40x40 hit area.
