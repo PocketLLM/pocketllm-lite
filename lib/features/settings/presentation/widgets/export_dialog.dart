@@ -11,7 +11,12 @@ import '../../../../core/providers.dart';
 enum ExportFormat { json, csv, markdown }
 
 class ExportDialog extends ConsumerStatefulWidget {
-  const ExportDialog({super.key});
+  final Set<String>? selectedChatIds;
+
+  const ExportDialog({
+    super.key,
+    this.selectedChatIds,
+  });
 
   @override
   ConsumerState<ExportDialog> createState() => _ExportDialogState();
@@ -22,6 +27,15 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
   bool _includePrompts = true;
   ExportFormat _selectedFormat = ExportFormat.json;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.selectedChatIds != null) {
+      _includeChats = true;
+      _includePrompts = false;
+    }
+  }
 
   Future<void> _handleExport() async {
     setState(() => _isLoading = true);
@@ -39,6 +53,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         final data = storage.exportData(
           includeChats: _includeChats,
           includePrompts: _includePrompts,
+          chatIds: widget.selectedChatIds?.toList(),
         );
         final jsonString = const JsonEncoder.withIndent('  ').convert(data);
         file = File('${directory.path}/pocketllm_backup_$timestamp.json');
@@ -46,13 +61,17 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         subject = 'pocketllm_backup_$timestamp.json';
       } else if (_selectedFormat == ExportFormat.csv) {
         // CSV Export (Summary)
-        final csvString = storage.exportToCsv();
+        final csvString = storage.exportToCsv(
+          chatIds: widget.selectedChatIds?.toList(),
+        );
         file = File('${directory.path}/pocketllm_chats_$timestamp.csv');
         await file.writeAsString(csvString);
         subject = 'pocketllm_chats_$timestamp.csv';
       } else {
         // Markdown Export (Readable)
-        final mdString = storage.exportToMarkdown();
+        final mdString = storage.exportToMarkdown(
+          chatIds: widget.selectedChatIds?.toList(),
+        );
         file = File('${directory.path}/pocketllm_chats_$timestamp.md');
         await file.writeAsString(mdString);
         subject = 'pocketllm_chats_$timestamp.md';
@@ -96,12 +115,25 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
     final isJson = _selectedFormat == ExportFormat.json;
 
     return AlertDialog(
-      title: const Text('Export Data'),
+      title: Text(
+        widget.selectedChatIds != null ? 'Export Selected' : 'Export Data',
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (widget.selectedChatIds != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'Exporting ${widget.selectedChatIds!.length} chats',
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             const Text('Format', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             DropdownButtonFormField<ExportFormat>(
@@ -142,20 +174,23 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                 title: const Text('Export Chats'),
                 subtitle: const Text('Includes all chat history and images'),
                 value: _includeChats,
-                onChanged: (val) {
-                  if (val != null) setState(() => _includeChats = val);
-                },
+                onChanged: widget.selectedChatIds != null
+                    ? null
+                    : (val) {
+                        if (val != null) setState(() => _includeChats = val);
+                      },
                 contentPadding: EdgeInsets.zero,
               ),
-              CheckboxListTile(
-                title: const Text('Export Prompts'),
-                subtitle: const Text('Includes custom system prompts'),
-                value: _includePrompts,
-                onChanged: (val) {
-                  if (val != null) setState(() => _includePrompts = val);
-                },
-                contentPadding: EdgeInsets.zero,
-              ),
+              if (widget.selectedChatIds == null)
+                CheckboxListTile(
+                  title: const Text('Export Prompts'),
+                  subtitle: const Text('Includes custom system prompts'),
+                  value: _includePrompts,
+                  onChanged: (val) {
+                    if (val != null) setState(() => _includePrompts = val);
+                  },
+                  contentPadding: EdgeInsets.zero,
+                ),
               if (!_includeChats && !_includePrompts)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
