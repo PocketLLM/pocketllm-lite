@@ -20,6 +20,7 @@ class AppConstants {
   static const String bubbleRadiusKey = 'bubble_radius';
   static const String fontSizeKey = 'font_size';
   static const String pinnedChatsKey = 'pinned_chats';
+  static const String archivedChatsKey = 'archived_chats';
 
   // Model Settings
   static const String modelSettingsPrefixKey = 'model_settings_';

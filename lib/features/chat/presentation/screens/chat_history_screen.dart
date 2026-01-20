@@ -10,6 +10,7 @@ import '../../../../services/ad_service.dart';
 import '../../../../services/usage_limits_provider.dart';
 import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
+import 'archived_chats_screen.dart';
 
 class ChatHistoryScreen extends ConsumerStatefulWidget {
   const ChatHistoryScreen({super.key});
@@ -242,6 +243,18 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                     onPressed: () => _showFilterDialog(storage),
                   ),
                   IconButton(
+                    icon: const Icon(Icons.archive_outlined),
+                    tooltip: 'Archived Chats',
+                    onPressed: () async {
+                      HapticFeedback.lightImpact();
+                      // Wait for return to refresh list (in case items unarchived)
+                      await Navigator.of(context).push(
+                         MaterialPageRoute(builder: (context) => const ArchivedChatsScreen()),
+                      );
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.checklist),
                     tooltip: 'Manage Chats',
                     onPressed: () {
@@ -394,6 +407,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
                 if (!isFiltering) {
                   for (var session in sessions) {
+                    if (storage.isArchived(session.id)) {
+                      continue; // Skip archived chats in main history
+                    }
                     if (storage.isPinned(session.id)) {
                       pinnedSessions.add(session);
                     } else {
@@ -403,8 +419,46 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   // Sort recent sessions by date just in case
                   // (Assuming sessions are already sorted by date from storageService)
                 } else {
-                  // If filtering, just show the filtered list
-                  recentSessions = sessions;
+                  // If filtering, still exclude archived?
+                  // Usually search searches everything, but Archive is meant to be hidden.
+                  // Let's hide archived unless explicitly searching in Archive screen.
+                  // Or should search find archived items?
+                  // Standard behavior: Archive hides from main list. Search might find them.
+                  // For now, let's exclude them to keep "Archive" meaning "Hidden".
+                  // OR include them but mark as archived?
+                  // Let's exclude for consistency.
+                  recentSessions = sessions.where((s) => !storage.isArchived(s.id)).toList();
+                }
+
+                if (!isFiltering && pinnedSessions.isEmpty && recentSessions.isEmpty) {
+                   return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.history_toggle_off,
+                          size: 60,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No active chats',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                        const SizedBox(height: 8),
+                         TextButton.icon(
+                          onPressed: () async {
+                             await Navigator.of(context).push(
+                               MaterialPageRoute(builder: (context) => const ArchivedChatsScreen()),
+                            );
+                            if (mounted) setState(() {});
+                          },
+                          icon: const Icon(Icons.archive_outlined),
+                          label: const Text('View Archived'),
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
                 return ListView(
@@ -616,6 +670,20 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 if (mounted) {
                    ScaffoldMessenger.of(context).showSnackBar(
                      SnackBar(content: Text(isPinned ? 'Chat unpinned' : 'Chat pinned')),
+                   );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.archive_outlined),
+              title: const Text('Archive Chat'),
+              onTap: () async {
+                Navigator.pop(context);
+                await storage.toggleArchive(session.id);
+                setState(() {});
+                if (mounted) {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     const SnackBar(content: Text('Chat archived')),
                    );
                 }
               },
