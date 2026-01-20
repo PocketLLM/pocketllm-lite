@@ -1,0 +1,228 @@
+name: Bi-Weekly Release Build
+
+on:
+  # Run on the 1st and 15th of every month at 00:00 UTC
+  schedule:
+    - cron: "0 0 1 * *"
+    - cron: "0 0 15 * *"
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Type of release"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: "3.27.1"
+  JAVA_VERSION: "17"
+
+jobs:
+  build-and-release:
+    name: Build APK and Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for changelog generation
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: "stable"
+          cache: true
+
+      - name: Get Flutter Dependencies
+        run: flutter pub get
+
+      - name: Run Build Runner
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Get Current Version
+        id: current_version
+        run: |
+          VERSION=$(grep 'version:' pubspec.yaml | head -1 | sed 's/version: //' | tr -d '\r')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # Parse version components (e.g., 1.0.9+9)
+          VERSION_NAME=$(echo $VERSION | cut -d'+' -f1)
+          BUILD_NUMBER=$(echo $VERSION | cut -d'+' -f2)
+          MAJOR=$(echo $VERSION_NAME | cut -d'.' -f1)
+          MINOR=$(echo $VERSION_NAME | cut -d'.' -f2)
+          PATCH=$(echo $VERSION_NAME | cut -d'.' -f3)
+          echo "major=$MAJOR" >> $GITHUB_OUTPUT
+          echo "minor=$MINOR" >> $GITHUB_OUTPUT
+          echo "patch=$PATCH" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Calculate Next Version
+        id: next_version
+        run: |
+          MAJOR=${{ steps.current_version.outputs.major }}
+          MINOR=${{ steps.current_version.outputs.minor }}
+          PATCH=${{ steps.current_version.outputs.patch }}
+          BUILD=${{ steps.current_version.outputs.build_number }}
+
+          RELEASE_TYPE="${{ github.event.inputs.release_type || 'patch' }}"
+
+          case $RELEASE_TYPE in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch|*)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          BUILD=$((BUILD + 1))
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}+${BUILD}"
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+          echo "New tag: $NEW_TAG"
+
+      - name: Update Version in pubspec.yaml
+        run: |
+          sed -i "s/^version: .*/version: ${{ steps.next_version.outputs.new_version }}/" pubspec.yaml
+          cat pubspec.yaml | grep "version:"
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # Get the last tag or start from beginning if no tags exist
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tag found, getting all commits"
+            COMMITS=$(git log --pretty=format:"- %s (%h)" -30)
+          else
+            echo "Getting commits since $LAST_TAG"
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)")
+          fi
+
+          # Create a formatted changelog
+          CURRENT_DATE=$(date +"%B %d, %Y")
+
+          CHANGELOG="## What's New in ${{ steps.next_version.outputs.new_tag }}
+
+          **Release Date:** ${CURRENT_DATE}
+
+          ### Changes
+
+          ${COMMITS}
+
+          ---
+
+          ### Installation
+
+          1. Download the APK file below
+          2. Enable 'Install from unknown sources' in your device settings
+          3. Open the downloaded APK to install
+
+          ### In-App Updates
+
+          If you have a previous version installed, the app will automatically notify you about this update. You can also check for updates in **Settings > Updates**.
+
+          ---
+
+          **Full Changelog:** https://github.com/${{ github.repository }}/compare/${LAST_TAG}...${{ steps.next_version.outputs.new_tag }}"
+
+          # Save to file for multi-line handling
+          echo "$CHANGELOG" > changelog.md
+          echo "changelog_file=changelog.md" >> $GITHUB_OUTPUT
+
+      - name: Setup Keystore
+        run: |
+          # Create key.properties with placeholder values for CI
+          # In production, use GitHub Secrets for actual keystore
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD || 'debug' }}" > android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD || 'debug' }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS || 'androiddebugkey' }}" >> android/key.properties
+          echo "storeFile=${{ secrets.KEYSTORE_FILE_PATH || 'debug.keystore' }}" >> android/key.properties
+
+          # If using secrets, decode the keystore
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+            echo "storeFile=upload-keystore.jks" >> android/key.properties
+          fi
+
+      - name: Build Release APK
+        run: |
+          flutter build apk --release \
+            --obfuscate \
+            --split-debug-info=./debug_symbols \
+            --no-tree-shake-icons
+
+      - name: Rename APK
+        id: rename_apk
+        run: |
+          VERSION="${{ steps.next_version.outputs.new_tag }}"
+          mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/pocketllm-lite-${VERSION}.apk
+          echo "apk_path=build/app/outputs/flutter-apk/pocketllm-lite-${VERSION}.apk" >> $GITHUB_OUTPUT
+          echo "apk_name=pocketllm-lite-${VERSION}.apk" >> $GITHUB_OUTPUT
+
+      - name: Commit Version Update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml
+          git commit -m "chore: bump version to ${{ steps.next_version.outputs.new_version }}" || true
+          git push origin ${{ github.ref_name }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.next_version.outputs.new_tag }}
+          name: Pocket LLM Lite ${{ steps.next_version.outputs.new_tag }}
+          body_path: changelog.md
+          draft: false
+          prerelease: false
+          files: |
+            ${{ steps.rename_apk.outputs.apk_path }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Debug Symbols Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-symbols-${{ steps.next_version.outputs.new_tag }}
+          path: debug_symbols/
+          retention-days: 90
+
+      - name: Summary
+        run: |
+          echo "## 🎉 Release Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.next_version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ steps.next_version.outputs.new_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**APK:** ${{ steps.rename_apk.outputs.apk_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 [Download from Releases](https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.new_tag }})" >> $GITHUB_STEP_SUMMARY

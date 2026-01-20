@@ -78,7 +78,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     await connectionChecker.refresh(); // Force a refresh before checking
     final connectionState = await ref.read(autoConnectionStatusProvider.future);
     final isConnected = connectionState;
-    
+
     if (!isConnected) {
       // Show dialog prompting user to connect Ollama with improved button design
       if (mounted) {
@@ -88,7 +88,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             title: const Text('Ollama Not Connected'),
             content: const Text(
               'Please ensure Ollama is running and connected. '
-              'Check your setup and try again.'
+              'Check your setup and try again.',
             ),
             actions: [
               TextButton(
@@ -149,7 +149,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     await connectionChecker.refresh(); // Force a refresh before checking
     final connectionState = await ref.read(autoConnectionStatusProvider.future);
     final isConnected = connectionState;
-    
+
     if (!isConnected) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -164,6 +164,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
     final enhancerState = ref.read(promptEnhancerProvider);
     if (enhancerState.selectedModelId == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Select a Prompt Enhancer model in Settings first.'),
@@ -199,7 +200,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       if (mounted) {
         // Consume one enhancer use
         await limitsNotifier.useEnhancer();
-        
+
         if (!mounted) return;
 
         setState(() {

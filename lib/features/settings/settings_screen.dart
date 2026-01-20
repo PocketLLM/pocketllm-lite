@@ -12,7 +12,9 @@ import '../../../../core/constants/legal_constants.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme_provider.dart';
+import '../../core/widgets/update_dialog.dart';
 import '../../services/ad_service.dart';
+import '../../services/update_service.dart';
 import '../../services/usage_limits_provider.dart';
 import '../chat/presentation/providers/models_provider.dart';
 import '../chat/presentation/providers/prompt_enhancer_provider.dart';
@@ -38,6 +40,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int _bannerRetryCount = 0;
   static const int _maxBannerRetries = 5;
 
+  // Update Service
+  final UpdateService _updateService = UpdateService();
+  bool _autoUpdateEnabled = true;
+  bool _isCheckingForUpdates = false;
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +61,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadBannerAd();
     });
+
+    // Load update settings
+    _loadUpdateSettings();
 
     // Automatically refresh usage limits and models when settings page is opened
     // Use Future.delayed to avoid modifying providers during widget build
@@ -84,6 +94,66 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       setState(() {
         _isRefreshingModels = false;
       });
+    }
+  }
+
+  Future<void> _loadUpdateSettings() async {
+    final enabled = await _updateService.isAutoUpdateEnabled();
+    if (mounted) {
+      setState(() {
+        _autoUpdateEnabled = enabled;
+      });
+    }
+  }
+
+  Future<void> _toggleAutoUpdate(bool value) async {
+    HapticFeedback.selectionClick();
+    await _updateService.setAutoUpdateEnabled(value);
+    if (mounted) {
+      setState(() {
+        _autoUpdateEnabled = value;
+      });
+    }
+  }
+
+  Future<void> _checkForUpdatesManually() async {
+    HapticFeedback.mediumImpact();
+
+    setState(() {
+      _isCheckingForUpdates = true;
+    });
+
+    try {
+      // Clear any dismissed version to force showing update even if previously skipped
+      await _updateService.clearDismissedVersion();
+
+      final result = await _updateService.checkForUpdates(force: true);
+
+      if (!mounted) return;
+
+      if (result.updateAvailable && result.release != null) {
+        await UpdateDialog.show(context, result.release!);
+      } else if (result.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error checking for updates: ${result.error}'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You are using the latest version! 🎉'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingForUpdates = false;
+        });
+      }
     }
   }
 
@@ -208,6 +278,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 24),
                   _buildAppearanceSection(theme, storage),
                   const SizedBox(height: 24),
+                  _buildUpdatesSection(theme),
+                  const SizedBox(height: 24),
                   _buildAboutSection(theme),
                   const SizedBox(height: 60), // Space for banner
                 ],
@@ -231,7 +303,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Stack(
             alignment: Alignment.topRight,
             children: [
-              Container(height: 60, child: AdWidget(ad: _bannerAd!)),
+              SizedBox(height: 60, child: AdWidget(ad: _bannerAd!)),
               Positioned(
                 top: -10,
                 right: 0,
@@ -1330,6 +1402,96 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   HapticFeedback.lightImpact();
                   context.go('/settings/customization');
                 },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUpdatesSection(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Updates'),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              SwitchListTile(
+                title: const Text('Auto-check for Updates'),
+                subtitle: const Text('Check for updates when app opens'),
+                value: _autoUpdateEnabled,
+                onChanged: _toggleAutoUpdate,
+                secondary: Icon(
+                  Icons.update,
+                  color: _autoUpdateEnabled
+                      ? theme.colorScheme.primary
+                      : Colors.grey,
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                title: const Text('Check for Updates Now'),
+                subtitle: const Text('Manually check for new version'),
+                leading: _isCheckingForUpdates
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                trailing: _isCheckingForUpdates
+                    ? null
+                    : const Icon(Icons.chevron_right),
+                onTap: _isCheckingForUpdates ? null : _checkForUpdatesManually,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                title: const Text('View All Releases'),
+                subtitle: const Text('Open GitHub releases page'),
+                leading: const Icon(Icons.open_in_new),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  HapticFeedback.lightImpact();
+                  final url = Uri.parse(_updateService.getReleasesPageUrl());
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+              // Info box
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 18, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Updates are downloaded directly from GitHub releases. '
+                          'You may need to enable "Install from unknown sources" in your device settings.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[800],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),

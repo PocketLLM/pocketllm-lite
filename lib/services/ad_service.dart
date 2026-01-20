@@ -339,8 +339,9 @@ class AdService {
 
     // If we already have a loaded ad, don't preload another one
     if (_promptEnhancementRewardedAd != null &&
-        _isPromptEnhancementRewardedLoaded)
+        _isPromptEnhancementRewardedLoaded) {
       return;
+    }
 
     _isPreloadingPromptEnhancementRewardedAd = true;
 
@@ -406,8 +407,9 @@ class AdService {
     if (_isPreloadingChatCreationRewardedAd) return;
 
     // If we already have a loaded ad, don't preload another one
-    if (_chatCreationRewardedAd != null && _isChatCreationRewardedLoaded)
+    if (_chatCreationRewardedAd != null && _isChatCreationRewardedLoaded) {
       return;
+    }
 
     _isPreloadingChatCreationRewardedAd = true;
 

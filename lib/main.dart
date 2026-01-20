@@ -4,10 +4,15 @@ import 'core/theme/app_theme.dart';
 import 'core/router.dart';
 import 'core/providers.dart';
 import 'core/theme/theme_provider.dart';
+import 'core/widgets/update_dialog.dart';
 import 'services/storage_service.dart';
 import 'services/ad_service.dart';
+import 'services/update_service.dart';
 
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+
+// Global navigator key for showing dialogs from anywhere
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +45,29 @@ void main() async {
       child: const PocketLLMApp(),
     ),
   );
+
+  // Check for updates after app is initialized (delayed to avoid blocking UI)
+  Future.delayed(const Duration(seconds: 3), () {
+    _checkForUpdates();
+  });
+}
+
+// Check for updates from GitHub releases
+Future<void> _checkForUpdates() async {
+  try {
+    final updateService = UpdateService();
+    final result = await updateService.checkForUpdates();
+
+    if (result.updateAvailable && result.release != null) {
+      final context = navigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        UpdateDialog.show(context, result.release!);
+      }
+    }
+  } catch (e) {
+    // Silently fail - don't interrupt user experience for update check failures
+    debugPrint('Update check failed: $e');
+  }
 }
 
 // Periodic ad preloading to ensure ads are always ready
@@ -73,6 +101,7 @@ class PocketLLMApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp.router(
+      key: navigatorKey,
       title: 'Pocket LLM Lite',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
