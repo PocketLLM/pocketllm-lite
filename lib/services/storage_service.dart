@@ -123,12 +123,21 @@ class StorageService {
       _cachedSessions!.removeWhere((s) => s.id == id);
     }
     await _chatBox.delete(id);
+
+    // Remove from pinned list if present
+    final pinned = getPinnedChatIds();
+    if (pinned.contains(id)) {
+      pinned.remove(id);
+      await _settingsBox.put(AppConstants.pinnedChatsKey, pinned);
+    }
+
     await logActivity('Chat Deleted', 'Deleted chat "$title"');
   }
 
   Future<void> clearAllChats() async {
     _cachedSessions = null;
     await _chatBox.clear();
+    await _settingsBox.delete(AppConstants.pinnedChatsKey);
     await logActivity('History Cleared', 'Deleted all chat history');
   }
 
@@ -221,6 +230,35 @@ class StorageService {
 
   dynamic getSetting(String key, {dynamic defaultValue}) {
     return _settingsBox.get(key, defaultValue: defaultValue);
+  }
+
+  // Pinned Chats
+  List<String> getPinnedChatIds() {
+    return List<String>.from(
+      _settingsBox.get(AppConstants.pinnedChatsKey, defaultValue: <String>[]),
+    );
+  }
+
+  bool isPinned(String chatId) {
+    final pinned = getPinnedChatIds();
+    return pinned.contains(chatId);
+  }
+
+  Future<void> togglePin(String chatId) async {
+    final pinned = getPinnedChatIds();
+    final isPinned = pinned.contains(chatId);
+
+    if (isPinned) {
+      pinned.remove(chatId);
+      await logActivity('Chat Unpinned', 'Unpinned chat with ID $chatId');
+    } else {
+      pinned.add(chatId);
+      await logActivity('Chat Pinned', 'Pinned chat with ID $chatId');
+    }
+
+    await _settingsBox.put(AppConstants.pinnedChatsKey, pinned);
+    // Notify listeners? The box update might notify if we listen to it.
+    // _settingsBox is not watched in searchSessions directly, but UI can use ValueListenableBuilder.
   }
 
   // Activity Log

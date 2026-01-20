@@ -383,78 +383,72 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: sessions.length,
-                  itemBuilder: (context, index) {
-                    final session = sessions[index];
-                    final isSelected = _selectedIds.contains(session.id);
+                // Split into Pinned and Recent if not searching
+                List<ChatSession> displayedSessions = sessions;
+                List<ChatSession> pinnedSessions = [];
+                List<ChatSession> recentSessions = [];
 
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
+                final isFiltering = _searchQuery.isNotEmpty ||
+                    _selectedModelFilter != null ||
+                    _selectedDateFilter != null;
+
+                if (!isFiltering) {
+                  for (var session in sessions) {
+                    if (storage.isPinned(session.id)) {
+                      pinnedSessions.add(session);
+                    } else {
+                      recentSessions.add(session);
+                    }
+                  }
+                  // Sort recent sessions by date just in case
+                  // (Assuming sessions are already sorted by date from storageService)
+                } else {
+                  // If filtering, just show the filtered list
+                  recentSessions = sessions;
+                }
+
+                return ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  children: [
+                    if (!isFiltering && pinnedSessions.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                        child: Text(
+                          'Pinned',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
-                      leading: _isSelectionMode
-                          ? Checkbox(
-                              value: isSelected,
-                              onChanged: (val) {
-                                HapticFeedback.selectionClick();
-                                setState(() {
-                                  if (val == true) {
-                                    _selectedIds.add(session.id);
-                                  } else {
-                                    _selectedIds.remove(session.id);
-                                  }
-                                });
-                              },
-                            )
-                          : CircleAvatar(
-                              backgroundColor:
-                                  theme.colorScheme.primaryContainer,
-                              child: Icon(
-                                Icons.chat_bubble_outline,
-                                size: 20,
-                                color: theme.colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                      title: Text(
-                        session.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ...pinnedSessions.map((session) => _buildChatListTile(
+                        session: session,
+                        storage: storage,
+                        theme: theme,
+                        isPinned: true,
+                      )),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                        child: Text(
+                          'Recent',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurfaceVariant,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
-                      subtitle: _buildSubtitle(session, _searchQuery, context),
-                      trailing: !_isSelectionMode
-                          ? IconButton(
-                              icon: const Icon(Icons.chevron_right),
-                              tooltip: 'Open chat',
-                              onPressed: () => _loadSession(session),
-                            )
-                          : null,
-                      onTap: () {
-                        if (_isSelectionMode) {
-                          HapticFeedback.selectionClick();
-                          setState(() {
-                            if (isSelected) {
-                              _selectedIds.remove(session.id);
-                            } else {
-                              _selectedIds.add(session.id);
-                            }
-                          });
-                        } else {
-                          HapticFeedback.lightImpact();
-                          _loadSession(session);
-                        }
-                      },
-                      onLongPress: _isSelectionMode
-                          ? null
-                          : () {
-                              HapticFeedback.mediumImpact();
-                              _showSessionOptions(session);
-                            },
-                    );
-                  },
+                    ],
+                    ...recentSessions.map((session) => _buildChatListTile(
+                      session: session,
+                      storage: storage,
+                      theme: theme,
+                      isPinned: !isFiltering && storage.isPinned(session.id), // If filtering, show pin status but no sections
+                    )),
+                  ],
                 );
               },
             ),
@@ -602,12 +596,30 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   }
 
   void _showSessionOptions(ChatSession session) {
+    final storage = ref.read(storageServiceProvider);
+    final isPinned = storage.isPinned(session.id);
+
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin),
+              title: Text(isPinned ? 'Unpin Chat' : 'Pin Chat'),
+              onTap: () async {
+                Navigator.pop(context);
+                await storage.togglePin(session.id);
+                // Force rebuild to show changes
+                setState(() {});
+                if (mounted) {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     SnackBar(content: Text(isPinned ? 'Chat unpinned' : 'Chat pinned')),
+                   );
+                }
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.edit),
               title: const Text('Rename Chat'),
@@ -630,6 +642,83 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildChatListTile({
+    required ChatSession session,
+    required dynamic storage,
+    required ThemeData theme,
+    required bool isPinned,
+  }) {
+    final isSelected = _selectedIds.contains(session.id);
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 4,
+      ),
+      leading: _isSelectionMode
+          ? Checkbox(
+              value: isSelected,
+              onChanged: (val) {
+                HapticFeedback.selectionClick();
+                setState(() {
+                  if (val == true) {
+                    _selectedIds.add(session.id);
+                  } else {
+                    _selectedIds.remove(session.id);
+                  }
+                });
+              },
+            )
+          : CircleAvatar(
+              backgroundColor: isPinned
+                  ? theme.colorScheme.primaryContainer
+                  : theme.colorScheme.surfaceContainerHighest,
+              child: Icon(
+                isPinned ? Icons.push_pin : Icons.chat_bubble_outline,
+                size: 20,
+                color: isPinned
+                    ? theme.colorScheme.onPrimaryContainer
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+      title: Text(
+        session.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: _buildSubtitle(session, _searchQuery, context),
+      trailing: !_isSelectionMode
+          ? IconButton(
+              icon: const Icon(Icons.chevron_right),
+              tooltip: 'Open chat',
+              onPressed: () => _loadSession(session),
+            )
+          : null,
+      onTap: () {
+        if (_isSelectionMode) {
+          HapticFeedback.selectionClick();
+          setState(() {
+            if (isSelected) {
+              _selectedIds.remove(session.id);
+            } else {
+              _selectedIds.add(session.id);
+            }
+          });
+        } else {
+          HapticFeedback.lightImpact();
+          _loadSession(session);
+        }
+      },
+      onLongPress: _isSelectionMode
+          ? null
+          : () {
+              HapticFeedback.mediumImpact();
+              _showSessionOptions(session);
+            },
     );
   }
 
