@@ -316,9 +316,13 @@ class StorageService {
   Map<String, dynamic> exportData({
     bool includeChats = true,
     bool includePrompts = true,
+    bool includeSettings = false,
     List<String>? chatIds,
   }) {
-    logActivity('Data Export', 'Exported data (Chats: $includeChats, Prompts: $includePrompts, Selected: ${chatIds?.length ?? 'All'})');
+    logActivity(
+      'Data Export',
+      'Exported data (Chats: $includeChats, Prompts: $includePrompts, Settings: $includeSettings, Selected: ${chatIds?.length ?? 'All'})',
+    );
 
     final Map<String, dynamic> data = {
       'version': 1,
@@ -335,10 +339,51 @@ class StorageService {
 
     if (includePrompts) {
       // Prompts are not filtered by chatIds
-      data['prompts'] = getSystemPrompts().map((p) => _systemPromptToJson(p)).toList();
+      data['prompts'] =
+          getSystemPrompts().map((p) => _systemPromptToJson(p)).toList();
+    }
+
+    if (includeSettings) {
+      data['settings'] = getExportableSettings();
     }
 
     return data;
+  }
+
+  @visibleForTesting
+  Map<String, dynamic> getExportableSettings() {
+    final Map<String, dynamic> settings = {};
+
+    // Whitelist of keys to export
+    final exportKeys = {
+      AppConstants.ollamaBaseUrlKey,
+      AppConstants.themeModeKey,
+      AppConstants.autoSaveChatsKey,
+      AppConstants.hapticFeedbackKey,
+      AppConstants.defaultModelKey,
+      AppConstants.userMsgColorKey,
+      AppConstants.aiMsgColorKey,
+      AppConstants.bubbleRadiusKey,
+      AppConstants.fontSizeKey,
+      AppConstants.chatPaddingKey,
+      AppConstants.showAvatarsKey,
+      AppConstants.bubbleElevationKey,
+      AppConstants.msgOpacityKey,
+      AppConstants.customBgColorKey,
+      AppConstants.promptEnhancerModelKey,
+      AppConstants.pinnedChatsKey,
+      AppConstants.archivedChatsKey,
+    };
+
+    for (final key in _settingsBox.keys) {
+      final String keyStr = key.toString();
+      if (exportKeys.contains(keyStr) ||
+          keyStr.startsWith(AppConstants.modelSettingsPrefixKey)) {
+        settings[keyStr] = _settingsBox.get(key);
+      }
+    }
+
+    return settings;
   }
 
   String exportToCsv({List<String>? chatIds}) {
@@ -476,13 +521,17 @@ class StorageService {
   Future<Map<String, int>> importData(Map<String, dynamic> data) async {
     int chatsImported = 0;
     int promptsImported = 0;
+    int settingsImported = 0;
 
     if (data['chats'] != null) {
       final List chats = data['chats'];
       for (final chatData in chats) {
         try {
           final session = _chatSessionFromJson(chatData);
-          await saveChatSession(session, log: false); // Don't log individual creates
+          await saveChatSession(
+            session,
+            log: false,
+          ); // Don't log individual creates
           chatsImported++;
         } catch (e) {
           debugPrint('Error importing chat: $e');
@@ -495,7 +544,9 @@ class StorageService {
       for (final promptData in prompts) {
         try {
           final prompt = _systemPromptFromJson(promptData);
-          await saveSystemPrompt(prompt); // System prompts are fewer, maybe ok to log? Or supress?
+          await saveSystemPrompt(
+            prompt,
+          ); // System prompts are fewer, maybe ok to log? Or supress?
           // I didn't add log arg to saveSystemPrompt, but it's fine.
           promptsImported++;
         } catch (e) {
@@ -504,9 +555,26 @@ class StorageService {
       }
     }
 
-    await logActivity('Data Import', 'Imported $chatsImported chats and $promptsImported prompts');
+    if (data['settings'] != null) {
+      final Map<String, dynamic> settings = Map<String, dynamic>.from(
+        data['settings'],
+      );
+      for (final entry in settings.entries) {
+        await saveSetting(entry.key, entry.value);
+        settingsImported++;
+      }
+    }
 
-    return {'chats': chatsImported, 'prompts': promptsImported};
+    await logActivity(
+      'Data Import',
+      'Imported $chatsImported chats, $promptsImported prompts, and $settingsImported settings',
+    );
+
+    return {
+      'chats': chatsImported,
+      'prompts': promptsImported,
+      'settings': settingsImported,
+    };
   }
 
   ChatSession _chatSessionFromJson(Map<String, dynamic> json) {

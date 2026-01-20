@@ -19,6 +19,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
   Map<String, dynamic>? _previewData;
   int _chatsCount = 0;
   int _promptsCount = 0;
+  int _settingsCount = 0;
 
   Future<void> _pickFile() async {
     try {
@@ -35,14 +36,17 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
         final data = jsonDecode(content) as Map<String, dynamic>;
 
         // Simple validation
-        if (data['chats'] == null && data['prompts'] == null) {
-           throw Exception('Invalid backup format');
+        if (data['chats'] == null &&
+            data['prompts'] == null &&
+            data['settings'] == null) {
+          throw Exception('Invalid backup format');
         }
 
         setState(() {
           _previewData = data;
           _chatsCount = (data['chats'] as List?)?.length ?? 0;
           _promptsCount = (data['prompts'] as List?)?.length ?? 0;
+          _settingsCount = (data['settings'] as Map?)?.length ?? 0;
           _isLoading = false;
         });
       }
@@ -73,7 +77,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Imported ${result['chats']} chats and ${result['prompts']} prompts.',
+              'Imported ${result['chats']} chats, ${result['prompts']} prompts, and ${result['settings']} settings.',
             ),
             backgroundColor: Colors.green,
           ),
@@ -119,8 +123,10 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
             _buildStatRow(Icons.chat_bubble_outline, 'Chats', _chatsCount),
             const SizedBox(height: 4),
             _buildStatRow(Icons.edit_note, 'System Prompts', _promptsCount),
+            const SizedBox(height: 4),
+            _buildStatRow(Icons.settings, 'Settings', _settingsCount),
             const SizedBox(height: 16),
-             Text(
+            Text(
               'Ready to import?',
               style: TextStyle(
                 fontSize: 14,

@@ -25,6 +25,7 @@ class ExportDialog extends ConsumerStatefulWidget {
 class _ExportDialogState extends ConsumerState<ExportDialog> {
   bool _includeChats = true;
   bool _includePrompts = true;
+  bool _includeSettings = true;
   ExportFormat _selectedFormat = ExportFormat.json;
   bool _isLoading = false;
 
@@ -34,6 +35,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
     if (widget.selectedChatIds != null) {
       _includeChats = true;
       _includePrompts = false;
+      _includeSettings = false;
     }
   }
 
@@ -53,6 +55,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         final data = storage.exportData(
           includeChats: _includeChats,
           includePrompts: _includePrompts,
+          includeSettings: _includeSettings,
           chatIds: widget.selectedChatIds?.toList(),
         );
         final jsonString = const JsonEncoder.withIndent('  ').convert(data);
@@ -181,7 +184,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                       },
                 contentPadding: EdgeInsets.zero,
               ),
-              if (widget.selectedChatIds == null)
+              if (widget.selectedChatIds == null) ...[
                 CheckboxListTile(
                   title: const Text('Export Prompts'),
                   subtitle: const Text('Includes custom system prompts'),
@@ -191,7 +194,17 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                   },
                   contentPadding: EdgeInsets.zero,
                 ),
-              if (!_includeChats && !_includePrompts)
+                CheckboxListTile(
+                  title: const Text('Export Settings'),
+                  subtitle: const Text('Includes theme and configuration'),
+                  value: _includeSettings,
+                  onChanged: (val) {
+                    if (val != null) setState(() => _includeSettings = val);
+                  },
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
+              if (!_includeChats && !_includePrompts && !_includeSettings)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
@@ -243,8 +256,11 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed:
-              (_isLoading || (isJson && !_includeChats && !_includePrompts))
+          onPressed: (_isLoading ||
+                  (isJson &&
+                      !_includeChats &&
+                      !_includePrompts &&
+                      !_includeSettings))
               ? null
               : _handleExport,
           child: _isLoading
