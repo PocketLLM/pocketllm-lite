@@ -432,6 +432,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             width: 60,
                             height: 60,
                             fit: BoxFit.cover,
+                            // Optimize memory: Decode only to the size we need (60 * 3 for HiDPI)
+                            cacheWidth: 180,
                           ),
                         ),
                         Positioned(
