@@ -323,10 +323,20 @@ class StorageService {
   }
 
   String _escapeCsv(String field) {
-    if (field.contains(',') || field.contains('"') || field.contains('\n')) {
-      return '"${field.replaceAll('"', '""')}"';
+    String escaped = field;
+    // Prevent CSV injection (Formula Injection) by prepending a single quote
+    // if the field starts with characters that could be interpreted as formulas.
+    if (escaped.startsWith('=') ||
+        escaped.startsWith('+') ||
+        escaped.startsWith('-') ||
+        escaped.startsWith('@')) {
+      escaped = "'$escaped";
     }
-    return field;
+
+    if (escaped.contains(',') || escaped.contains('"') || escaped.contains('\n')) {
+      return '"${escaped.replaceAll('"', '""')}"';
+    }
+    return escaped;
   }
 
   Map<String, dynamic> _chatSessionToJson(ChatSession session) {
