@@ -68,6 +68,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       final XFile? image = await _picker.pickImage(
         source: source,
         maxWidth: 1024,
+        maxHeight: 1024, // Security: Prevent DoS via memory exhaustion
       );
       if (image != null) {
         final bytes = await image.readAsBytes();
