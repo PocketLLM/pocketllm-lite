@@ -45,6 +45,7 @@ class PromptManagementScreen extends ConsumerWidget {
           actions: [
             IconButton(
               icon: const Icon(Icons.add),
+              tooltip: 'Add new prompt',
               onPressed: () {
                 HapticFeedback.lightImpact();
                 _showEditDialog(context, storage, null);
@@ -58,7 +59,46 @@ class PromptManagementScreen extends ConsumerWidget {
             final prompts = box.values.toList();
 
             if (prompts.isEmpty) {
-              return const Center(child: Text('No saved prompts. Add one!'));
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.tips_and_updates_outlined,
+                      size: 64,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No saved prompts yet',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Create custom system prompts to\nreuse across your chats.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        _showEditDialog(context, storage, null);
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Create Prompt'),
+                    ),
+                  ],
+                ),
+              );
             }
 
             return ListView.builder(
@@ -99,11 +139,6 @@ class PromptManagementScreen extends ConsumerWidget {
                       ),
                     ),
                     onTap: () => _showEditDialog(context, storage, prompt),
-                    // trailing: IconButton(
-                    //   icon: const Icon(Icons.delete_outline),
-                    //   onPressed: () => storage.deleteSystemPrompt(prompt.id),
-                    // ), // Removed trailing logic to match image, or maybe specific edit flow? The request says "list of cards".
-                    // Let's keep it clean as per image which shows cards. Maybe edit/delete inside dialog?
                   ),
                 );
               },

@@ -49,3 +49,7 @@
 ## 2026-01-20 - [Stateless Entrance Animations]
 **Learning:** You don't always need a `StatefulWidget` and `AnimationController` for simple "entrance" animations (like fading in content). `TweenAnimationBuilder` allows you to add polished micro-interactions (fade + slide) to static content with zero boilerplate and no manual disposal logic.
 **Action:** Use `TweenAnimationBuilder` for simple one-off entrance animations on empty states or dialogs to delight users without complex state management.
+
+## 2024-05-22 - [Empty States are Opportunities]
+**Learning:** Users perceive empty lists as "dead ends" if they only contain text. Adding an illustration and a direct action button transforms an empty state into an invitation to explore.
+**Action:** Always pair empty state text with a relevant icon/illustration and a primary call-to-action button to guide the user's next step.
