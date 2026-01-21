@@ -22,6 +22,7 @@ import '../chat/presentation/providers/prompt_enhancer_provider.dart';
 import 'presentation/widgets/export_dialog.dart';
 import 'presentation/widgets/import_dialog.dart';
 import 'presentation/widgets/model_settings_dialog.dart';
+import 'presentation/widgets/model_download_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -560,30 +561,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       children: [
         _buildSectionHeader(
           'Models',
-          trailing: IconButton(
-            icon: _isRefreshingModels
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh, size: 20),
-            onPressed: _isRefreshingModels
-                ? null
-                : () async {
-                    HapticFeedback.lightImpact();
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.add, size: 20),
+                tooltip: 'Download Model',
+                onPressed: () async {
+                  HapticFeedback.lightImpact();
+                  final success = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => const ModelDownloadDialog(),
+                  );
+                  if (success == true) {
                     await _refreshModels();
-                  },
-            style: IconButton.styleFrom(
-              backgroundColor: theme.colorScheme.primaryContainer,
-              padding: const EdgeInsets.all(8),
-            ),
+                  }
+                },
+                style: IconButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: _isRefreshingModels
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh, size: 20),
+                onPressed: _isRefreshingModels
+                    ? null
+                    : () async {
+                        HapticFeedback.lightImpact();
+                        await _refreshModels();
+                      },
+                style: IconButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
+            ],
           ),
         ),
         modelsAsync.when(
           data: (models) {
             if (models.isEmpty) {
-              return const Text('No models found. Pull one via Termux.');
+              return const Text('No models found. Download one using the + button.');
             }
             return Column(
               children: [

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
 import '../core/utils/url_validator.dart';
 import '../features/chat/domain/models/ollama_model.dart';
+import '../features/chat/domain/models/pull_progress.dart';
 
 class OllamaService {
   String _baseUrl;
@@ -138,10 +139,32 @@ class OllamaService {
     }
   }
 
-  Future<void> pullModel(String modelName) async {
+  Stream<PullProgress> pullModel(String modelName) async* {
     final url = Uri.parse('$_baseUrl/api/pull');
-    // Simple pull trigger, might want to stream progress differently
-    await _client.post(url, body: jsonEncode({"name": modelName}));
+    final request = http.Request('POST', url);
+    request.body = jsonEncode({"name": modelName});
+
+    try {
+      final streamedResponse = await _client.send(request);
+
+      if (streamedResponse.statusCode == 200) {
+        await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
+          final lines = chunk.split('\n').where((l) => l.trim().isNotEmpty);
+          for (final line in lines) {
+            try {
+              final json = jsonDecode(line);
+              yield PullProgress.fromJson(json);
+            } catch (e) {
+               // ignore parse errors
+            }
+          }
+        }
+      } else {
+        throw Exception('Failed to pull model: ${streamedResponse.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Network error during pull: $e');
+    }
   }
 
   Future<void> deleteModel(String modelName) async {
