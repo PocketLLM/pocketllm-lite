@@ -53,3 +53,7 @@
 ## 2024-05-22 - [Empty States are Opportunities]
 **Learning:** Users perceive empty lists as "dead ends" if they only contain text. Adding an illustration and a direct action button transforms an empty state into an invitation to explore.
 **Action:** Always pair empty state text with a relevant icon/illustration and a primary call-to-action button to guide the user's next step.
+
+## 2026-01-20 - [Polished Bottom Sheets]
+**Learning:** Native-style modal bottom sheets (used for simple selections like Image Source) feel unfinished and lack affordance without a visual drag handle and context title.
+**Action:** Always include a visual drag handle (small rounded container) and a clear title at the top of modal bottom sheets to indicate they are dismissible and to set context.
