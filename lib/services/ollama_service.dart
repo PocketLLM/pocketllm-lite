@@ -145,15 +145,16 @@ class OllamaService {
       final streamedResponse = await _client.send(request);
 
       if (streamedResponse.statusCode == 200) {
-        await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
-          final lines = chunk.split('\n').where((l) => l.trim().isNotEmpty);
-          for (final line in lines) {
-            try {
-              final json = jsonDecode(line);
-              yield PullProgress.fromJson(json);
-            } catch (e) {
-               // ignore parse errors
-            }
+        // Use LineSplitter to properly handle split chunks in NDJSON stream
+        await for (final line in streamedResponse.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())) {
+          if (line.trim().isEmpty) continue;
+          try {
+            final json = jsonDecode(line);
+            yield PullProgress.fromJson(json);
+          } catch (e) {
+            // ignore parse errors
           }
         }
       } else {
