@@ -12,6 +12,7 @@ import '../providers/chat_provider.dart';
 import '../providers/prompt_enhancer_provider.dart';
 import '../providers/connection_status_provider.dart';
 import '../providers/draft_message_provider.dart';
+import 'templates_sheet.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -168,6 +169,46 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   bool _isEnhancing = false;
+
+  void _showTemplates() {
+    final storage = ref.read(storageServiceProvider);
+    if (storage.getSetting(
+      AppConstants.hapticFeedbackKey,
+      defaultValue: false,
+    )) {
+      HapticFeedback.selectionClick();
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: TemplatesSheet(
+          onSelect: (content) {
+            Navigator.pop(context);
+            if (content.isNotEmpty) {
+              setState(() {
+                // If controller is empty, just replace. If not, append.
+                if (_controller.text.isEmpty) {
+                  _controller.text = content;
+                } else {
+                  _controller.text = '${_controller.text}\n$content';
+                }
+                // Move cursor to end
+                _controller.selection = TextSelection.fromPosition(
+                  TextPosition(offset: _controller.text.length),
+                );
+              });
+              _focusNode.requestFocus();
+            }
+          },
+        ),
+      ),
+    );
+  }
 
   Future<void> _enhancePrompt() async {
     if (_controller.text.trim().isEmpty) return;
@@ -561,6 +602,35 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               padding: const EdgeInsets.all(6),
                               child: Icon(
                                 Icons.add,
+                                size: 20,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: isGenerating ? 0.5 : 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Templates Button
+                    Semantics(
+                      label: 'Templates',
+                      button: true,
+                      enabled: !isGenerating,
+                      child: Tooltip(
+                        message: 'Quick Templates',
+                        child: Material(
+                          color: (isDark ? Colors.grey[800] : Colors.grey[300])
+                              ?.withValues(alpha: isGenerating ? 0.5 : 1.0),
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: isGenerating ? null : _showTemplates,
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.bolt,
                                 size: 20,
                                 color: theme.colorScheme.onSurface.withValues(
                                   alpha: isGenerating ? 0.5 : 1.0,
