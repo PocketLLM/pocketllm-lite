@@ -5,6 +5,7 @@ import '../features/onboarding/onboarding_screen.dart';
 import '../features/chat/presentation/chat_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/presentation/screens/prompt_management_screen.dart';
+import '../features/settings/presentation/screens/template_management_screen.dart';
 import '../features/settings/presentation/screens/docs_screen.dart';
 import '../features/settings/presentation/screens/customization_screen.dart';
 import '../features/settings/presentation/screens/activity_log_screen.dart';
@@ -29,6 +30,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'prompts',
             builder: (context, state) => const PromptManagementScreen(),
+          ),
+          GoRoute(
+            path: 'templates',
+            builder: (context, state) => const TemplateManagementScreen(),
           ),
           GoRoute(path: 'docs', builder: (context, state) => const Docs()),
           GoRoute(

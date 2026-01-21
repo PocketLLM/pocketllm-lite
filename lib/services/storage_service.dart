@@ -285,6 +285,44 @@ class StorageService {
     await _settingsBox.put(AppConstants.archivedChatsKey, archived);
   }
 
+  // Message Templates
+  List<Map<String, String>> getMessageTemplates() {
+    final templates = _settingsBox.get(
+      AppConstants.messageTemplatesKey,
+      defaultValue: <dynamic>[],
+    );
+    return (templates as List).map((e) => Map<String, String>.from(e)).toList();
+  }
+
+  Future<void> saveMessageTemplate(Map<String, String> template) async {
+    final templates = getMessageTemplates();
+    final index = templates.indexWhere((t) => t['id'] == template['id']);
+
+    if (index != -1) {
+      templates[index] = template;
+      await logActivity('Template Updated', 'Updated template "${template['title']}"');
+    } else {
+      templates.add(template);
+      await logActivity('Template Created', 'Created template "${template['title']}"');
+    }
+
+    await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
+  }
+
+  Future<void> deleteMessageTemplate(String id) async {
+    final templates = getMessageTemplates();
+    final template = templates.firstWhere(
+      (t) => t['id'] == id,
+      orElse: () => {},
+    );
+
+    if (template.isNotEmpty) {
+      templates.removeWhere((t) => t['id'] == id);
+      await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
+      await logActivity('Template Deleted', 'Deleted template "${template['title']}"');
+    }
+  }
+
   // Activity Log
   Future<void> logActivity(String action, String details) async {
     final log = {
