@@ -5,3 +5,7 @@
 ## 2024-10-27 - [NDJSON Streaming Anti-pattern]
 **Learning:** Manual string splitting (`chunk.split('\n')`) on network streams is unsafe and inefficient. It causes data loss when JSON objects are split across chunks and generates unnecessary string allocations.
 **Action:** Always use `LineSplitter` (or `Stream.transform(LineSplitter())`) when processing line-delimited streams (like NDJSON) in Dart to correctly buffer partial lines and optimize memory usage.
+
+## 2024-05-24 - [Heavy Object Hashing]
+**Learning:** Objects with large data fields (like lists of base64 images) incur massive O(N) costs when used as keys in Widgets (e.g. `ValueKey`) or Collections because `hashCode` is computed repeatedly.
+**Action:** Enforce immutability (e.g. `List.unmodifiable`) in the constructor and cache the `hashCode` to turn this into an O(1) operation after the first access.

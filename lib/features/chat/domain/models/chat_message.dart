@@ -17,12 +17,17 @@ class ChatMessage {
   @HiveField(3)
   final List<String>? images; // Base64 strings
 
+  // Cache hashCode to avoid expensive re-calculation, especially for messages with images.
+  // This is safe because the images list is made unmodifiable in the constructor.
+  // ignore: prefer_final_fields
+  int? _cachedHashCode;
+
   ChatMessage({
     required this.role,
     required this.content,
     required this.timestamp,
-    this.images,
-  });
+    List<String>? images,
+  }) : images = images != null ? List.unmodifiable(images) : null;
 
   ChatMessage copyWith({
     String? role,
@@ -51,12 +56,13 @@ class ChatMessage {
 
   @override
   int get hashCode {
-    return Object.hash(
+    _cachedHashCode ??= Object.hash(
       role,
       content,
       timestamp,
       // Use Object.hashAll for lists to generate a consistent hash code based on content
       images != null ? Object.hashAll(images!) : null,
     );
+    return _cachedHashCode!;
   }
 }
