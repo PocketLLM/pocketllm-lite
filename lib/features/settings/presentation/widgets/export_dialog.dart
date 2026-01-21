@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/providers.dart';
 
-enum ExportFormat { json, csv, markdown }
+enum ExportFormat { json, csv, markdown, pdf }
 
 class ExportDialog extends ConsumerStatefulWidget {
   final Set<String>? selectedChatIds;
@@ -70,7 +70,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         file = File('${directory.path}/pocketllm_chats_$timestamp.csv');
         await file.writeAsString(csvString);
         subject = 'pocketllm_chats_$timestamp.csv';
-      } else {
+      } else if (_selectedFormat == ExportFormat.markdown) {
         // Markdown Export (Readable)
         final mdString = storage.exportToMarkdown(
           chatIds: widget.selectedChatIds?.toList(),
@@ -78,6 +78,14 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         file = File('${directory.path}/pocketllm_chats_$timestamp.md');
         await file.writeAsString(mdString);
         subject = 'pocketllm_chats_$timestamp.md';
+      } else {
+        // PDF Export
+        final pdfBytes = await storage.exportToPdf(
+          chatIds: widget.selectedChatIds?.toList(),
+        );
+        file = File('${directory.path}/pocketllm_chats_$timestamp.pdf');
+        await file.writeAsBytes(pdfBytes);
+        subject = 'pocketllm_chats_$timestamp.pdf';
       }
 
       // Share file
@@ -160,6 +168,10 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                 DropdownMenuItem(
                   value: ExportFormat.markdown,
                   child: Text('Markdown (Readable)'),
+                ),
+                DropdownMenuItem(
+                  value: ExportFormat.pdf,
+                  child: Text('PDF (Document)'),
                 ),
               ],
               onChanged: (val) {
