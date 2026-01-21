@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/providers.dart';
 import '../../../../services/storage_service.dart';
+import '../widgets/activity_chart.dart';
 
 final usageStatisticsProvider = FutureProvider.autoDispose<UsageStatistics>((ref) async {
   final storage = ref.watch(storageServiceProvider);
@@ -34,6 +35,8 @@ class UsageStatisticsScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSummaryCards(context, stats),
+              const SizedBox(height: 24),
+              _buildTrendSection(context, stats),
               const SizedBox(height: 24),
               _buildActivitySection(context, stats),
               const SizedBox(height: 24),
@@ -88,6 +91,10 @@ class UsageStatisticsScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildTrendSection(BuildContext context, UsageStatistics stats) {
+    return ActivityChart(activity: stats.dailyActivity);
   }
 
   Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color color) {

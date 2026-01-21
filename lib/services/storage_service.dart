@@ -686,6 +686,25 @@ class StorageService {
       defaultValue: 0,
     ) as int;
 
+    // Calculate Daily Activity (Last 7 Days)
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dailyActivity = <DailyActivity>[];
+
+    for (int i = 6; i >= 0; i--) {
+      final date = today.subtract(Duration(days: i));
+      int chats = 0;
+      int messages = 0;
+
+      for (final session in sessions) {
+        if (_isSameDay(session.createdAt, date)) {
+          chats++;
+          messages += session.messages.length;
+        }
+      }
+      dailyActivity.add(DailyActivity(date, chats, messages));
+    }
+
     return UsageStatistics(
       totalChats: totalChats,
       totalMessages: totalMessages,
@@ -693,6 +712,7 @@ class StorageService {
       modelUsage: modelUsage,
       lastActiveDate: lastActive,
       chatsLast7Days: _calculateChatsLast7Days(sessions),
+      dailyActivity: dailyActivity,
     );
   }
 
@@ -700,6 +720,10 @@ class StorageService {
     final now = DateTime.now();
     final sevenDaysAgo = now.subtract(const Duration(days: 7));
     return sessions.where((s) => s.createdAt.isAfter(sevenDaysAgo)).length;
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 }
 
@@ -710,6 +734,7 @@ class UsageStatistics {
   final Map<String, int> modelUsage;
   final DateTime? lastActiveDate;
   final int chatsLast7Days;
+  final List<DailyActivity> dailyActivity;
 
   UsageStatistics({
     required this.totalChats,
@@ -718,6 +743,7 @@ class UsageStatistics {
     required this.modelUsage,
     this.lastActiveDate,
     required this.chatsLast7Days,
+    required this.dailyActivity,
   });
 
   String get mostUsedModel {
@@ -732,4 +758,12 @@ class UsageStatistics {
     });
     return topModel;
   }
+}
+
+class DailyActivity {
+  final DateTime date;
+  final int chatCount;
+  final int messageCount;
+
+  DailyActivity(this.date, this.chatCount, this.messageCount);
 }
