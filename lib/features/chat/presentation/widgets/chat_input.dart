@@ -500,28 +500,40 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ]
                     : null,
               ),
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                enabled: !isGenerating && !_isEnhancing,
-                textCapitalization: TextCapitalization.sentences,
-                keyboardType: TextInputType.multiline,
-                maxLines: 8,
-                minLines: 1,
-                style: theme.textTheme.bodyLarge,
-                decoration: InputDecoration(
-                  hintText: _isEnhancing
-                      ? 'Enhancing your prompt...'
-                      : 'Message Pocket LLM...',
-                  hintStyle: TextStyle(
-                    color: _isEnhancing
-                        ? Colors.blue
-                        : theme.hintColor.withValues(alpha: 0.7),
-                    fontStyle: _isEnhancing ? FontStyle.italic : null,
+              child: CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(
+                    LogicalKeyboardKey.enter,
+                    control: true,
+                  ): _send,
+                  const SingleActivator(
+                    LogicalKeyboardKey.enter,
+                    meta: true,
+                  ): _send,
+                },
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  enabled: !isGenerating && !_isEnhancing,
+                  textCapitalization: TextCapitalization.sentences,
+                  keyboardType: TextInputType.multiline,
+                  maxLines: 8,
+                  minLines: 1,
+                  style: theme.textTheme.bodyLarge,
+                  decoration: InputDecoration(
+                    hintText: _isEnhancing
+                        ? 'Enhancing your prompt...'
+                        : 'Message Pocket LLM...',
+                    hintStyle: TextStyle(
+                      color: _isEnhancing
+                          ? Colors.blue
+                          : theme.hintColor.withValues(alpha: 0.7),
+                      fontStyle: _isEnhancing ? FontStyle.italic : null,
+                    ),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
