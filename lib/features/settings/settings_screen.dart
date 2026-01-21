@@ -530,7 +530,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('Prompts'),
+        _buildSectionHeader('Prompts & Templates'),
         Container(
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest.withValues(
@@ -538,15 +538,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: ListTile(
-            title: const Text('Manage System Prompts'),
-            subtitle: const Text('Create and edit reusable system prompts'),
-            trailing: const Icon(Icons.chevron_right),
-            leading: const Icon(Icons.edit_note),
-            onTap: () {
-              HapticFeedback.lightImpact();
-              context.go('/settings/prompts');
-            },
+          child: Column(
+            children: [
+              ListTile(
+                title: const Text('Manage System Prompts'),
+                subtitle: const Text('Create and edit reusable AI personas'),
+                trailing: const Icon(Icons.chevron_right),
+                leading: const Icon(Icons.edit_note),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/prompts');
+                },
+              ),
+              const Divider(height: 1, indent: 56),
+              ListTile(
+                title: const Text('Message Templates'),
+                subtitle: const Text('Manage quick reply snippets'),
+                trailing: const Icon(Icons.chevron_right),
+                leading: const Icon(Icons.bolt),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/templates');
+                },
+              ),
+            ],
           ),
         ),
       ],
