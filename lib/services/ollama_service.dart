@@ -33,7 +33,7 @@ class OllamaService {
     try {
       final response = await _client
           .get(Uri.parse('$_baseUrl/api/tags'))
-          .timeout(const Duration(seconds: 10));
+          .timeout(AppConstants.apiConnectionTimeout);
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -44,7 +44,7 @@ class OllamaService {
     try {
       final response = await _client
           .get(Uri.parse('$_baseUrl/api/tags'))
-          .timeout(const Duration(seconds: 10));
+          .timeout(AppConstants.apiConnectionTimeout);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final models = (data['models'] as List)
@@ -103,7 +103,9 @@ class OllamaService {
       // because we want a streamed response. 
       // However, for testing with MockClient, we want to use the injected client.
       // Standard http.Client.send returns a StreamedResponse.
-      final streamedResponse = await _client.send(request);
+      final streamedResponse = await _client
+          .send(request)
+          .timeout(AppConstants.apiConnectionTimeout);
 
       if (streamedResponse.statusCode == 200) {
         // Use LineSplitter to correctly handle chunks that might be split
@@ -142,7 +144,9 @@ class OllamaService {
     request.body = jsonEncode({"name": modelName});
 
     try {
-      final streamedResponse = await _client.send(request);
+      final streamedResponse = await _client
+          .send(request)
+          .timeout(AppConstants.apiConnectionTimeout);
 
       if (streamedResponse.statusCode == 200) {
         // Use LineSplitter to properly handle split chunks in NDJSON stream
@@ -167,7 +171,9 @@ class OllamaService {
 
   Future<void> deleteModel(String modelName) async {
     final url = Uri.parse('$_baseUrl/api/delete');
-    await _client.delete(url, body: jsonEncode({"name": modelName}));
+    await _client
+        .delete(url, body: jsonEncode({"name": modelName}))
+        .timeout(AppConstants.apiConnectionTimeout);
   }
 
   /// Non-streaming prompt enhancement using /api/chat
@@ -200,7 +206,7 @@ class OllamaService {
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode(body),
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(AppConstants.apiGenerationTimeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

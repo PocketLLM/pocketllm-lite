@@ -88,4 +88,6 @@ class AppConstants {
 
   // Security Limits
   static const int maxInputLength = 50000;
+  static const Duration apiConnectionTimeout = Duration(seconds: 10);
+  static const Duration apiGenerationTimeout = Duration(seconds: 30);
 }
