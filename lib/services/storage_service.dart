@@ -9,6 +9,8 @@ import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
+import 'pdf_export_service.dart';
+import 'dart:typed_data';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
@@ -472,6 +474,16 @@ class StorageService {
     logActivity('Data Export', 'Exported activity logs as JSON');
     final logs = getActivityLogs();
     return const JsonEncoder.withIndent('  ').convert(logs);
+  }
+
+  Future<Uint8List> exportToPdf({List<String>? chatIds}) async {
+    logActivity('Data Export', 'Exported data as PDF');
+    var sessions = getChatSessions();
+    if (chatIds != null) {
+      sessions = sessions.where((s) => chatIds.contains(s.id)).toList();
+    }
+
+    return await PdfExportService().generateChatPdf(sessions: sessions);
   }
 
   String exportToMarkdown({List<String>? chatIds}) {
