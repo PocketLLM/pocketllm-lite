@@ -561,6 +561,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   maxLines: 8,
                   minLines: 1,
                   style: theme.textTheme.bodyLarge,
+                  maxLength: AppConstants.maxInputLength,
+                  buildCounter: (
+                    context, {
+                    required currentLength,
+                    required isFocused,
+                    required maxLength,
+                  }) => null,
                   decoration: InputDecoration(
                     hintText: _isEnhancing
                         ? 'Enhancing your prompt...'
