@@ -105,27 +105,24 @@ class OllamaService {
       final streamedResponse = await _client.send(request);
 
       if (streamedResponse.statusCode == 200) {
-        await for (final chunk in streamedResponse.stream.transform(
-          utf8.decoder,
-        )) {
-          // Ollama typically returns JSON objects, one per line (ndjson style)
-          // But a chunk might contain multiple lines or partial lines.
-          // For simplicity in this demo, we assume relatively clean chunks but should split.
-          final lines = chunk.split('\n').where((l) => l.trim().isNotEmpty);
-          for (final line in lines) {
-            try {
-              final json = jsonDecode(line);
-              final done = json['done'] as bool? ?? false;
-              if (!done) {
-                final content = json['message']?['content'] as String?;
-                if (content != null) {
-                  yield content;
-                }
+        // Use LineSplitter to correctly handle chunks that might be split
+        // across JSON object boundaries, ensuring no data is lost and reducing string allocations.
+        await for (final line in streamedResponse.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())) {
+          if (line.trim().isEmpty) continue;
+          try {
+            final json = jsonDecode(line);
+            final done = json['done'] as bool? ?? false;
+            if (!done) {
+              final content = json['message']?['content'] as String?;
+              if (content != null) {
+                yield content;
               }
-            } catch (e) {
-              // In case of parsing error, ignore or log
-              // print('Parse error: $e');
             }
+          } catch (e) {
+            // In case of parsing error, ignore or log
+            // print('Parse error: $e');
           }
         }
       } else {
