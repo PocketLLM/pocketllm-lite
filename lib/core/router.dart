@@ -9,6 +9,7 @@ import '../features/settings/presentation/screens/template_management_screen.dar
 import '../features/settings/presentation/screens/docs_screen.dart';
 import '../features/settings/presentation/screens/customization_screen.dart';
 import '../features/settings/presentation/screens/activity_log_screen.dart';
+import '../features/settings/presentation/screens/usage_statistics_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -43,6 +44,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'activity-log',
             builder: (context, state) => const ActivityLogScreen(),
+          ),
+          GoRoute(
+            path: 'statistics',
+            builder: (context, state) => const UsageStatisticsScreen(),
           ),
         ],
       ),

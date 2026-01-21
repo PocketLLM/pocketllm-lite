@@ -660,4 +660,76 @@ class StorageService {
       content: json['content'],
     );
   }
+
+  // Statistics
+  UsageStatistics getUsageStatistics() {
+    final sessions = getChatSessions();
+    final totalChats = sessions.length;
+    int totalMessages = 0;
+    final modelUsage = <String, int>{};
+    DateTime? lastActive;
+
+    for (final session in sessions) {
+      totalMessages += session.messages.length;
+
+      // Model Usage
+      modelUsage[session.model] = (modelUsage[session.model] ?? 0) + 1;
+
+      // Last Active
+      if (lastActive == null || session.createdAt.isAfter(lastActive)) {
+        lastActive = session.createdAt;
+      }
+    }
+
+    final totalTokensUsed = getSetting(
+      AppConstants.totalTokensUsedKey,
+      defaultValue: 0,
+    ) as int;
+
+    return UsageStatistics(
+      totalChats: totalChats,
+      totalMessages: totalMessages,
+      totalTokensUsed: totalTokensUsed,
+      modelUsage: modelUsage,
+      lastActiveDate: lastActive,
+      chatsLast7Days: _calculateChatsLast7Days(sessions),
+    );
+  }
+
+  int _calculateChatsLast7Days(List<ChatSession> sessions) {
+    final now = DateTime.now();
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+    return sessions.where((s) => s.createdAt.isAfter(sevenDaysAgo)).length;
+  }
+}
+
+class UsageStatistics {
+  final int totalChats;
+  final int totalMessages;
+  final int totalTokensUsed;
+  final Map<String, int> modelUsage;
+  final DateTime? lastActiveDate;
+  final int chatsLast7Days;
+
+  UsageStatistics({
+    required this.totalChats,
+    required this.totalMessages,
+    required this.totalTokensUsed,
+    required this.modelUsage,
+    this.lastActiveDate,
+    required this.chatsLast7Days,
+  });
+
+  String get mostUsedModel {
+    if (modelUsage.isEmpty) return 'None';
+    var maxUsage = 0;
+    var topModel = 'None';
+    modelUsage.forEach((model, count) {
+      if (count > maxUsage) {
+        maxUsage = count;
+        topModel = model;
+      }
+    });
+    return topModel;
+  }
 }
