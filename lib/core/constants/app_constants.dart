@@ -23,6 +23,7 @@ class AppConstants {
   static const String archivedChatsKey = 'archived_chats';
   static const String chatTagsKey = 'chat_tags';
   static const String messageTemplatesKey = 'message_templates';
+  static const String chatDraftsKey = 'chat_drafts';
 
   // Model Settings
   static const String modelSettingsPrefixKey = 'model_settings_';

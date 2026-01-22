@@ -407,6 +407,47 @@ class StorageService {
     }
   }
 
+  // Chat Drafts
+  Map<String, String> _getDraftsMap() {
+    final rawMap = _settingsBox.get(
+      AppConstants.chatDraftsKey,
+      defaultValue: <dynamic, dynamic>{},
+    );
+    return Map<String, String>.from(rawMap);
+  }
+
+  Future<void> saveDraft(String chatId, String draft) async {
+    // If draft is empty, delete it
+    if (draft.trim().isEmpty) {
+      await deleteDraft(chatId);
+      return;
+    }
+
+    final drafts = _getDraftsMap();
+    // Only save if changed to reduce writes
+    if (drafts[chatId] != draft) {
+      drafts[chatId] = draft;
+      await _settingsBox.put(AppConstants.chatDraftsKey, drafts);
+    }
+  }
+
+  String? getDraft(String chatId) {
+    final drafts = _getDraftsMap();
+    return drafts[chatId];
+  }
+
+  Future<void> deleteDraft(String chatId) async {
+    final drafts = _getDraftsMap();
+    if (drafts.containsKey(chatId)) {
+      drafts.remove(chatId);
+      await _settingsBox.put(AppConstants.chatDraftsKey, drafts);
+    }
+  }
+
+  Future<void> clearAllDrafts() async {
+    await _settingsBox.delete(AppConstants.chatDraftsKey);
+  }
+
   // Activity Log
   Future<void> logActivity(String action, String details) async {
     final log = {
