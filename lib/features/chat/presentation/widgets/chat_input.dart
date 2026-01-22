@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -26,12 +27,50 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final _focusNode = FocusNode();
   final _picker = ImagePicker();
   final List<Uint8List> _selectedImages = [];
+  Timer? _debounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDraft();
+    _controller.addListener(_onTextChanged);
+  }
 
   @override
   void dispose() {
+    // Save any pending draft before disposing
+    if (_debounceTimer?.isActive ?? false) {
+      _debounceTimer!.cancel();
+      final sessionId = ref.read(chatProvider).currentSessionId;
+      final draftKey = sessionId ?? 'new_chat';
+      final storage = ref.read(storageServiceProvider);
+      // We can't await here, but storage is synchronous (Hive memory) or fire-and-forget
+      storage.saveDraft(draftKey, _controller.text);
+    }
+    _controller.removeListener(_onTextChanged);
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _loadDraft() {
+    final sessionId = ref.read(chatProvider).currentSessionId;
+    final draftKey = sessionId ?? 'new_chat';
+    final storage = ref.read(storageServiceProvider);
+    final draft = storage.getDraft(draftKey);
+    if (draft != null && draft.isNotEmpty) {
+      _controller.text = draft;
+    }
+  }
+
+  void _onTextChanged() {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      final sessionId = ref.read(chatProvider).currentSessionId;
+      final draftKey = sessionId ?? 'new_chat';
+      final storage = ref.read(storageServiceProvider);
+      storage.saveDraft(draftKey, _controller.text);
+    });
   }
 
   Future<void> _pickImage() async {
@@ -176,6 +215,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final imagesToSend = _selectedImages
         .map((bytes) => base64Encode(bytes))
         .toList();
+
+    // Clear draft before sending
+    final storage = ref.read(storageServiceProvider);
+    final sessionId = ref.read(chatProvider).currentSessionId;
+    final draftKey = sessionId ?? 'new_chat';
+    await storage.deleteDraft(draftKey);
 
     ref
         .read(chatProvider.notifier)
@@ -448,6 +493,34 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         _focusNode.requestFocus();
         // Reset the provider to avoid re-triggering or stale state
         ref.read(draftMessageProvider.notifier).state = null;
+      }
+    });
+
+    // Listen for session changes to save/load drafts
+    ref.listen<ChatState>(chatProvider, (prev, next) {
+      if (prev?.currentSessionId != next.currentSessionId) {
+        final storage = ref.read(storageServiceProvider);
+
+        // Save previous draft
+        final prevKey = prev?.currentSessionId ?? 'new_chat';
+        // We use the controller's current text as the draft for the PREVIOUS session
+        // BUT we need to be careful: if the controller text has already been replaced,
+        // we might save the wrong thing.
+        // However, this listener runs *after* the provider updates but *before* the widget rebuilds?
+        // Actually, listeners run synchronously on change.
+        // The controller text at this exact moment is what the user typed in the PREVIOUS session.
+        storage.saveDraft(prevKey, _controller.text);
+
+        // Load new draft
+        final nextKey = next.currentSessionId ?? 'new_chat';
+        final newDraft = storage.getDraft(nextKey);
+
+        // Update controller without triggering listener loop (listener checks if content changed, which is fine)
+        // We temporarily remove listener to avoid saving the "new draft" to the "old key" during the switch?
+        // No, `_onTextChanged` uses `ref.read(chatProvider).currentSessionId`.
+        // By the time `_onTextChanged` runs (after 500ms), `chatProvider` will return `next.currentSessionId`.
+        // So it will save to the NEW key. This is correct.
+        _controller.text = newDraft ?? '';
       }
     });
 
