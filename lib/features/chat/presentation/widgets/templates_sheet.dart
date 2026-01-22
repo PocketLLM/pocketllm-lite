@@ -166,8 +166,17 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
       mainAxisSize: widget.isFullScreen ? MainAxisSize.max : MainAxisSize.min,
       children: [
         if (!widget.isFullScreen) ...[
+          const SizedBox(height: 4),
+          Container(
+            width: 32,
+            height: 4,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.outlineVariant,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

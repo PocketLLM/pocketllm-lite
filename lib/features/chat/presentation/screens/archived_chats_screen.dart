@@ -120,6 +120,7 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
 
   void _showArchivedSessionOptions(ChatSession session) {
     final storage = ref.read(storageServiceProvider);
+    final theme = Theme.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -127,6 +128,23 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 32,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Archive Options',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
             ListTile(
               leading: const Icon(Icons.unarchive),
               title: const Text('Unarchive Chat'),
