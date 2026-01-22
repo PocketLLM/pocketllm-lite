@@ -57,3 +57,7 @@
 ## 2026-01-20 - [Polished Bottom Sheets]
 **Learning:** Native-style modal bottom sheets (used for simple selections like Image Source) feel unfinished and lack affordance without a visual drag handle and context title.
 **Action:** Always include a visual drag handle (small rounded container) and a clear title at the top of modal bottom sheets to indicate they are dismissible and to set context.
+
+## 2025-05-24 - [Conditional Sheet Affordance]
+**Learning:** Reusable widgets often serve as both modal bottom sheets and full-screen views. Drag handles are critical affordances for modals but redundant clutter for full-screen dialogs.
+**Action:** Implement a toggle (e.g., `isFullScreen`) in reusable sheet widgets to conditionally render the drag handle, ensuring appropriate affordance for the presentation context.

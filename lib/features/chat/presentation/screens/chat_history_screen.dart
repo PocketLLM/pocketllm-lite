@@ -927,6 +927,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   void _showSessionOptions(ChatSession session) {
     final storage = ref.read(storageServiceProvider);
     final isPinned = storage.isPinned(session.id);
+    final theme = Theme.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -934,6 +935,23 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 32,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Chat Options',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
             ListTile(
               leading: Icon(
                 isPinned ? Icons.push_pin_outlined : Icons.push_pin,
