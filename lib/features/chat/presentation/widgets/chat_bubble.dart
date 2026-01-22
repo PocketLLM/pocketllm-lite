@@ -12,6 +12,7 @@ import '../../../../core/utils/url_validator.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
+import '../providers/draft_message_provider.dart';
 import 'three_dot_loading_indicator.dart';
 
 // Helper class for formatting timestamps
@@ -375,7 +376,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               ),
             );
           },
-          ref: ref,
           child: widget, // Pass actual widget or reconstructed bubble
         ),
         transitionsBuilder: (context, animation, _, child) {
@@ -386,14 +386,13 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   }
 }
 
-class _FocusedMenuOverlay extends StatelessWidget {
+class _FocusedMenuOverlay extends ConsumerWidget {
   final Widget
   child; // We will reconstruct visually or use cached image if needed, but easier to rebuild basic container
   final ChatMessage message;
   final Size bubbleSize;
   final Offset bubbleOffset;
   final bool isUser;
-  final WidgetRef ref;
   final VoidCallback onDelete;
 
   const _FocusedMenuOverlay({
@@ -402,12 +401,11 @@ class _FocusedMenuOverlay extends StatelessWidget {
     required this.bubbleSize,
     required this.bubbleOffset,
     required this.isUser,
-    required this.ref,
     required this.onDelete,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Reconstruct appearance to match exactly
     final theme = Theme.of(context);
     // Use ref to get current snapshot
@@ -578,7 +576,8 @@ class _FocusedMenuOverlay extends StatelessWidget {
                 if (isUser) ...[
                   const SizedBox(width: 12),
                   _buildIconBtn(context, Icons.edit, 'Edit', () {
-                    // Edit logic
+                    // Populate the input with the message content
+                    ref.read(draftMessageProvider.notifier).state = message.content;
                     Navigator.pop(context);
                   }),
                 ],
