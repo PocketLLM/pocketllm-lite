@@ -523,10 +523,14 @@ class StorageService {
     String escaped = field;
     // Prevent CSV injection (Formula Injection) by prepending a single quote
     // if the field starts with characters that could be interpreted as formulas.
-    if (escaped.startsWith('=') ||
-        escaped.startsWith('+') ||
-        escaped.startsWith('-') ||
-        escaped.startsWith('@')) {
+    // Also check for leading whitespace that might hide a formula, and explicit DDE injection chars (\t, \r).
+    final trimmed = escaped.trimLeft();
+    if (trimmed.startsWith('=') ||
+        trimmed.startsWith('+') ||
+        trimmed.startsWith('-') ||
+        trimmed.startsWith('@') ||
+        escaped.startsWith('\t') ||
+        escaped.startsWith('\r')) {
       escaped = "'$escaped";
     }
 
