@@ -645,55 +645,70 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   );
                 }
 
-                return ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  children: [
+                // Optimization: Use CustomScrollView with Slivers to lazily build list items.
+                // This prevents constructing all list tiles at once for large histories.
+                return CustomScrollView(
+                  slivers: [
+                    const SliverPadding(padding: EdgeInsets.only(top: 8)),
                     if (!isFiltering && pinnedSessions.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                        child: Text(
-                          'Pinned',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                            letterSpacing: 0.5,
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                          child: Text(
+                            'Pinned',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ),
-                      ...pinnedSessions.map(
-                        (session) => _buildChatListTile(
-                          session: session,
-                          storage: storage,
-                          theme: theme,
-                          isPinned: true,
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            return _buildChatListTile(
+                              session: pinnedSessions[index],
+                              storage: storage,
+                              theme: theme,
+                              isPinned: true,
+                            );
+                          },
+                          childCount: pinnedSessions.length,
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                        child: Text(
-                          'Recent',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurfaceVariant,
-                            letterSpacing: 0.5,
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                          child: Text(
+                            'Recent',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurfaceVariant,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ),
                     ],
-                    ...recentSessions.map(
-                      (session) => _buildChatListTile(
-                        session: session,
-                        storage: storage,
-                        theme: theme,
-                        isPinned:
-                            !isFiltering &&
-                            storage.isPinned(
-                              session.id,
-                            ), // If filtering, show pin status but no sections
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final session = recentSessions[index];
+                          return _buildChatListTile(
+                            session: session,
+                            storage: storage,
+                            theme: theme,
+                            isPinned:
+                                !isFiltering && storage.isPinned(session.id),
+                          );
+                        },
+                        childCount: recentSessions.length,
                       ),
                     ),
+                    const SliverPadding(padding: EdgeInsets.only(bottom: 8)),
                   ],
                 );
               },
