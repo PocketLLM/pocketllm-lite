@@ -21,6 +21,7 @@ class AppConstants {
   static const String fontSizeKey = 'font_size';
   static const String pinnedChatsKey = 'pinned_chats';
   static const String archivedChatsKey = 'archived_chats';
+  static const String chatTagsKey = 'chat_tags';
   static const String messageTemplatesKey = 'message_templates';
 
   // Model Settings
