@@ -37,6 +37,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  // Cache the RegExp to prevent recompilation on every list item build
+  RegExp? _cachedSearchRegex;
+
   String? _selectedModelFilter;
   DateTime? _selectedDateFilter;
   String? _selectedTagFilter;
@@ -48,10 +51,33 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadBannerAds();
     });
+
+    // Listen to search controller changes to update state
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    // Only update state if the query actually changed
+    final newQuery = _searchController.text;
+    if (newQuery != _searchQuery) {
+      setState(() {
+        _searchQuery = newQuery;
+        // Update cached RegExp
+        if (_searchQuery.isNotEmpty) {
+          _cachedSearchRegex = RegExp(
+            RegExp.escape(_searchQuery),
+            caseSensitive: false,
+          );
+        } else {
+          _cachedSearchRegex = null;
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _topBannerAd?.dispose();
     _bottomBannerAd?.dispose();
@@ -127,12 +153,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     );
   }
 
-  String? _getMatchingSnippet(ChatSession session, String query) {
-    if (query.isEmpty) return null;
-    // Use RegExp to find the match index without converting the entire content to lowercase
-    final queryRegex = RegExp(RegExp.escape(query), caseSensitive: false);
+  String? _getMatchingSnippet(ChatSession session, RegExp? queryRegex, String query) {
+    if (query.isEmpty || queryRegex == null) return null;
 
-    // Search in messages
+    // Search in messages using cached regex
     for (final message in session.messages) {
       final content = message.content;
       final match = queryRegex.firstMatch(content);
@@ -156,12 +180,18 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     TextStyle style,
     Color highlightColor,
   ) {
+    // Basic optimization: if query not in text, return plain text
+    // (Though snippet logic ensures it usually is)
     final lowerText = text.toLowerCase();
     final lowerQuery = query.toLowerCase();
 
     final children = <TextSpan>[];
     int start = 0;
     int index = lowerText.indexOf(lowerQuery, start);
+
+    if (index == -1) {
+      return Text(text, style: style, maxLines: 2, overflow: TextOverflow.ellipsis);
+    }
 
     while (index != -1) {
       if (index > start) {
@@ -194,6 +224,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   Widget _buildSubtitle(
     ChatSession session,
     String query,
+    RegExp? queryRegex,
     BuildContext context,
   ) {
     final theme = Theme.of(context);
@@ -202,11 +233,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       color: theme.colorScheme.onSurfaceVariant,
     );
 
-    if (query.isEmpty) {
+    if (query.isEmpty || queryRegex == null) {
       return Text(_formatDate(session.createdAt), style: defaultStyle);
     }
 
-    final snippet = _getMatchingSnippet(session, query);
+    final snippet = _getMatchingSnippet(session, queryRegex, query);
     if (snippet == null) {
       // Matched in title
       return Text(_formatDate(session.createdAt), style: defaultStyle);
@@ -247,7 +278,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   setState(() {
                     _isSearching = false;
                     _searchController.clear();
-                    _searchQuery = '';
+                    // Listener will handle query update
                   });
                 },
               ),
@@ -1050,7 +1081,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSubtitle(session, _searchQuery, context),
+          _buildSubtitle(session, _searchQuery, _cachedSearchRegex, context),
           Builder(
             builder: (context) {
               final tags = storage.getTagsForChat(session.id);
