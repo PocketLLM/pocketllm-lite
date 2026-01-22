@@ -158,6 +158,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final hasElevation = appearance.bubbleElevation;
     final showAvatars = appearance.showAvatars;
 
+    final storage = ref.watch(storageServiceProvider);
+
     // Show loading indicator for empty assistant messages (AI is generating)
     if (!isUser && message.content.isEmpty) {
       return Padding(
@@ -203,12 +205,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        mainAxisAlignment: isUser
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
+    return ValueListenableBuilder(
+      valueListenable: storage.settingsBoxListenable,
+      builder: (context, _, __) {
+        final isStarred = storage.isMessageStarred(message);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            mainAxisAlignment: isUser
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isUser && showAvatars) ...[
@@ -232,12 +239,12 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               hint: 'Double tap and hold for options',
               onLongPress: () {
                 HapticFeedback.mediumImpact();
-                _showFocusedMenu(context, isUser);
+                _showFocusedMenu(context, isUser, isStarred);
               },
               child: GestureDetector(
                 onLongPress: () {
                   HapticFeedback.mediumImpact();
-                  _showFocusedMenu(context, isUser);
+                  _showFocusedMenu(context, isUser, isStarred);
                 },
                 child: RepaintBoundary(
                   child: Container(
@@ -312,13 +319,26 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                         // Timestamp display
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            _formattedTimestamp,
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: fontSize * 0.7,
-                              fontStyle: FontStyle.italic,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isStarred) ...[
+                                const Icon(
+                                  Icons.star,
+                                  size: 12,
+                                  color: Colors.amber,
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+                              Text(
+                                _formattedTimestamp,
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: fontSize * 0.7,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -346,9 +366,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
         ],
       ),
     );
+      },
+    );
   }
 
-  void _showFocusedMenu(BuildContext context, bool isUser) {
+  void _showFocusedMenu(BuildContext context, bool isUser, bool isStarred) {
     // 1. Calculate Position
     final RenderBox renderBox =
         _bubbleKey.currentContext!.findRenderObject() as RenderBox;
@@ -366,6 +388,24 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           bubbleSize: size,
           bubbleOffset: offset,
           isUser: isUser,
+          isStarred: isStarred,
+          onToggleStar: () async {
+            final storage = ref.read(storageServiceProvider);
+            final chatId = ref.read(chatProvider).currentSessionId;
+            if (chatId != null) {
+              await storage.toggleStarMessage(chatId, widget.message);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        isStarred ? 'Message unstarred' : 'Message starred'),
+                    duration: const Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            }
+          },
           onDelete: () {
             ref.read(chatProvider.notifier).deleteMessage(widget.message);
             ScaffoldMessenger.of(context).showSnackBar(
@@ -388,11 +428,13 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
 
 class _FocusedMenuOverlay extends ConsumerWidget {
   final Widget
-  child; // We will reconstruct visually or use cached image if needed, but easier to rebuild basic container
+      child; // We will reconstruct visually or use cached image if needed, but easier to rebuild basic container
   final ChatMessage message;
   final Size bubbleSize;
   final Offset bubbleOffset;
   final bool isUser;
+  final bool isStarred;
+  final VoidCallback onToggleStar;
   final VoidCallback onDelete;
 
   const _FocusedMenuOverlay({
@@ -401,6 +443,8 @@ class _FocusedMenuOverlay extends ConsumerWidget {
     required this.bubbleSize,
     required this.bubbleOffset,
     required this.isUser,
+    required this.isStarred,
+    required this.onToggleStar,
     required this.onDelete,
   });
 
@@ -555,6 +599,17 @@ class _FocusedMenuOverlay extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                _buildIconBtn(
+                  context,
+                  isStarred ? Icons.star : Icons.star_border,
+                  isStarred ? 'Unstar' : 'Star',
+                  () {
+                    onToggleStar();
+                    Navigator.pop(context);
+                  },
+                  color: Colors.amber,
+                ),
+                const SizedBox(width: 12),
                 _buildIconBtn(context, Icons.copy, 'Copy', () {
                   Clipboard.setData(ClipboardData(text: message.content));
                   // Capture messenger before popping to ensure feedback shows on parent screen

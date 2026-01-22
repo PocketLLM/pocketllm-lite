@@ -10,6 +10,7 @@ import '../features/settings/presentation/screens/docs_screen.dart';
 import '../features/settings/presentation/screens/customization_screen.dart';
 import '../features/settings/presentation/screens/activity_log_screen.dart';
 import '../features/settings/presentation/screens/usage_statistics_screen.dart';
+import '../features/chat/presentation/screens/starred_messages_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -48,6 +49,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'statistics',
             builder: (context, state) => const UsageStatisticsScreen(),
+          ),
+          GoRoute(
+            path: 'starred-messages',
+            builder: (context, state) => const StarredMessagesScreen(),
           ),
         ],
       ),
