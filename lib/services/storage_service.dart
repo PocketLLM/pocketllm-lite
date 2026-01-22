@@ -593,13 +593,20 @@ class StorageService {
       for (final msg in session.messages) {
         final role = msg.role == 'user' ? 'User' : 'Assistant';
         buffer.writeln('### $role');
-        buffer.writeln('${msg.content}\n');
+        buffer.writeln(_escapeMarkdownContent(msg.content));
       }
 
       buffer.writeln('---\n');
     }
 
     return buffer.toString();
+  }
+
+  String _escapeMarkdownContent(String content) {
+    if (content.isEmpty) return '>\n';
+    const prefix = '> ';
+    // Split by newline and prepend blockquote prefix to each line
+    return content.split('\n').map((line) => '$prefix$line').join('\n') + '\n';
   }
 
   String _escapeCsv(String field) {
