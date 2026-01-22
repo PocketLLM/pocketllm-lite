@@ -1088,10 +1088,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
         ],
       ),
       trailing: !_isSelectionMode
-          ? IconButton(
-              icon: const Icon(Icons.chevron_right),
-              tooltip: 'Open chat',
-              onPressed: () => _loadSession(session),
+          ? const Tooltip(
+              message: 'Open chat',
+              child: Icon(Icons.chevron_right),
             )
           : null,
       onTap: () {

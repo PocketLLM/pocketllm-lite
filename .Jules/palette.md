@@ -57,3 +57,7 @@
 ## 2026-01-20 - [Polished Bottom Sheets]
 **Learning:** Native-style modal bottom sheets (used for simple selections like Image Source) feel unfinished and lack affordance without a visual drag handle and context title.
 **Action:** Always include a visual drag handle (small rounded container) and a clear title at the top of modal bottom sheets to indicate they are dismissible and to set context.
+
+## 2026-01-20 - [Redundant Interactive Targets]
+**Learning:** `ListTile` widgets that navigate to a detail screen often include a trailing chevron. Using an `IconButton` for this chevron creates a second, redundant focusable target and ripple effect for the same action. Using a simple `Icon` (wrapped in `Tooltip` if needed) allows the `ListTile` to handle the interaction as a single unified target.
+**Action:** Replace redundant `IconButton`s in `ListTile.trailing` with decorative `Icon`s when the action is identical to `ListTile.onTap`.
