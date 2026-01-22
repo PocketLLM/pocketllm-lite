@@ -13,6 +13,8 @@ import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/draft_message_provider.dart';
+import '../../../../services/storage_service.dart';
+import '../../domain/models/starred_message.dart';
 import 'three_dot_loading_indicator.dart';
 
 // Helper class for formatting timestamps
@@ -240,89 +242,133 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                   _showFocusedMenu(context, isUser);
                 },
                 child: RepaintBoundary(
-                  child: Container(
-                    key: _bubbleKey,
-                    padding: EdgeInsets.all(padding),
-                    decoration: BoxDecoration(
-                      color: bubbleColor,
-                      borderRadius: BorderRadius.circular(radius).copyWith(
-                        bottomRight: isUser ? const Radius.circular(0) : null,
-                        bottomLeft: !isUser ? const Radius.circular(0) : null,
-                      ),
-                      boxShadow: hasElevation
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 2,
-                                offset: const Offset(0, 1),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        key: _bubbleKey,
+                        padding: EdgeInsets.all(padding),
+                        decoration: BoxDecoration(
+                          color: bubbleColor,
+                          borderRadius: BorderRadius.circular(radius).copyWith(
+                            bottomRight: isUser ? const Radius.circular(0) : null,
+                            bottomLeft: !isUser ? const Radius.circular(0) : null,
+                          ),
+                          boxShadow: hasElevation
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 2,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_decodedImages != null &&
+                                _decodedImages!.isNotEmpty)
+                              ..._decodedImages!.map(
+                                (bytes) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.memory(
+                                      bytes,
+                                      height: 150,
+                                      fit: BoxFit.cover,
+                                      // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
+                                      cacheHeight: 450,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ]
-                          : null,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_decodedImages != null &&
-                            _decodedImages!.isNotEmpty)
-                          ..._decodedImages!.map(
-                            (bytes) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.memory(
-                                  bytes,
-                                  height: 150,
-                                  fit: BoxFit.cover,
-                                  // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
-                                  cacheHeight: 450,
+                            if (isUser)
+                              Text(
+                                message.content,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontSize: fontSize,
+                                ),
+                              )
+                            else
+                              MarkdownBody(
+                                data: message.content,
+                                // ignore: deprecated_member_use
+                                imageBuilder: MarkdownHandlers.imageBuilder,
+                                onTapLink: (text, href, title) async {
+                                  if (href != null) {
+                                    final uri = Uri.tryParse(href);
+                                    // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
+                                    if (uri != null &&
+                                        UrlValidator.isSecureUrl(uri) &&
+                                        await canLaunchUrl(uri)) {
+                                      await launchUrl(
+                                        uri,
+                                        mode: LaunchMode.externalApplication,
+                                      );
+                                    }
+                                  }
+                                },
+                                styleSheet: _getStyleSheet(theme, fontSize),
+                              ),
+                            // Timestamp display
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                _formattedTimestamp,
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: fontSize * 0.7,
+                                  fontStyle: FontStyle.italic,
                                 ),
                               ),
                             ),
-                          ),
-                        if (isUser)
-                          Text(
-                            message.content,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: Colors.white,
-                              fontSize: fontSize,
-                            ),
-                          )
-                        else
-                          MarkdownBody(
-                            data: message.content,
-                            // ignore: deprecated_member_use
-                            imageBuilder: MarkdownHandlers.imageBuilder,
-                            onTapLink: (text, href, title) async {
-                              if (href != null) {
-                                final uri = Uri.tryParse(href);
-                                // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
-                                if (uri != null &&
-                                    UrlValidator.isSecureUrl(uri) &&
-                                    await canLaunchUrl(uri)) {
-                                  await launchUrl(
-                                    uri,
-                                    mode: LaunchMode.externalApplication,
-                                  );
-                                }
-                              }
-                            },
-                            styleSheet: _getStyleSheet(theme, fontSize),
-                          ),
-                        // Timestamp display
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            _formattedTimestamp,
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: fontSize * 0.7,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      // Star Indicator
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final chatId =
+                              ref.watch(chatProvider).currentSessionId;
+                          if (chatId == null) return const SizedBox.shrink();
+
+                          // We use storage directly to check synchronously if possible or trigger rebuild
+                          // But to be reactive, we might need a StreamProvider for starred messages
+                          // For now, let's just use ValueListenableBuilder wrapper if needed,
+                          // but since ChatBubble is deep in a list, we avoid expensive listeners per bubble.
+                          // Instead, we can rely on setState when returning from menu.
+                          // For now, let's check it once on build.
+                          // Ideally, we listen to the settings box changes.
+                          final storage = ref.watch(storageServiceProvider);
+                          final isStarred =
+                              storage.isMessageStarred(chatId, message);
+
+                          if (!isStarred) return const SizedBox.shrink();
+
+                          return Positioned(
+                            top: -6,
+                            right: isUser ? null : -6,
+                            left: isUser ? -6 : null,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.orange,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.star,
+                                size: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -386,9 +432,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   }
 }
 
-class _FocusedMenuOverlay extends ConsumerWidget {
-  final Widget
-  child; // We will reconstruct visually or use cached image if needed, but easier to rebuild basic container
+class _FocusedMenuOverlay extends ConsumerStatefulWidget {
+  final Widget child;
   final ChatMessage message;
   final Size bubbleSize;
   final Offset bubbleOffset;
@@ -405,13 +450,48 @@ class _FocusedMenuOverlay extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_FocusedMenuOverlay> createState() =>
+      _FocusedMenuOverlayState();
+}
+
+class _FocusedMenuOverlayState extends ConsumerState<_FocusedMenuOverlay> {
+  late bool _isStarred;
+  String? _chatId;
+
+  @override
+  void initState() {
+    super.initState();
+    final storage = ref.read(storageServiceProvider);
+    _chatId = ref.read(chatProvider).currentSessionId;
+    if (_chatId != null) {
+      _isStarred = storage.isMessageStarred(_chatId!, widget.message);
+    } else {
+      _isStarred = false;
+    }
+  }
+
+  void _toggleStar() async {
+    if (_chatId == null) return;
+
+    final storage = ref.read(storageServiceProvider);
+    await storage.toggleMessageStar(_chatId!, widget.message);
+
+    if (mounted) {
+      setState(() {
+        _isStarred = !_isStarred;
+      });
+      // Navigator.pop(context); // Optional: Close menu after starring? No, let user continue.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Reconstruct appearance to match exactly
     final theme = Theme.of(context);
     // Use ref to get current snapshot
     final appearance = ref.read(appearanceProvider);
 
-    final bubbleColor = isUser
+    final bubbleColor = widget.isUser
         ? Color(
             appearance.userMsgColor,
           ).withValues(alpha: appearance.msgOpacity)
@@ -423,7 +503,7 @@ class _FocusedMenuOverlay extends ConsumerWidget {
     // Determine where to put actions: Above or Below?
     // If bubble is too low, put above.
     final screenHeight = MediaQuery.of(context).size.height;
-    final showAbove = bubbleOffset.dy > screenHeight * 0.6;
+    final showAbove = widget.bubbleOffset.dy > screenHeight * 0.6;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -451,9 +531,9 @@ class _FocusedMenuOverlay extends ConsumerWidget {
 
           // 3. Highlighted Bubble
           Positioned(
-            top: bubbleOffset.dy,
-            left: bubbleOffset.dx,
-            width: bubbleSize.width,
+            top: widget.bubbleOffset.dy,
+            left: widget.bubbleOffset.dx,
+            width: widget.bubbleSize.width,
             child: Material(
               color: Colors.transparent,
               elevation: 8,
@@ -463,8 +543,8 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: bubbleColor,
                   borderRadius: BorderRadius.circular(radius).copyWith(
-                    bottomRight: isUser ? const Radius.circular(0) : null,
-                    bottomLeft: !isUser ? const Radius.circular(0) : null,
+                    bottomRight: widget.isUser ? const Radius.circular(0) : null,
+                    bottomLeft: !widget.isUser ? const Radius.circular(0) : null,
                   ),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.3),
@@ -476,8 +556,8 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Same content rendering ... simplified for overlay (no images for brevity if desired, or duplicate)
-                    if (message.images != null)
-                      ...message.images!.map(
+                    if (widget.message.images != null)
+                      ...widget.message.images!.map(
                         (str) => const SizedBox(
                           height: 100,
                           child: Center(
@@ -486,9 +566,9 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                         ),
                       ),
 
-                    if (isUser)
+                    if (widget.isUser)
                       Text(
-                        message.content,
+                        widget.message.content,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: Colors.white,
                           fontSize: fontSize,
@@ -496,7 +576,7 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                       )
                     else
                       MarkdownBody(
-                        data: message.content,
+                        data: widget.message.content,
                         // ignore: deprecated_member_use
                         imageBuilder: MarkdownHandlers.imageBuilder,
                         onTapLink: (text, href, title) async {
@@ -528,7 +608,7 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
-                        TimestampFormatter.format(message.timestamp),
+                        TimestampFormatter.format(widget.message.timestamp),
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: fontSize * 0.7,
@@ -545,18 +625,28 @@ class _FocusedMenuOverlay extends ConsumerWidget {
           // 4. Action Icons
           Positioned(
             top: showAbove
-                ? bubbleOffset.dy - 70
-                : bubbleOffset.dy + bubbleSize.height + 10,
-            left: isUser ? null : bubbleOffset.dx,
-            right: isUser
+                ? widget.bubbleOffset.dy - 70
+                : widget.bubbleOffset.dy + widget.bubbleSize.height + 10,
+            left: widget.isUser ? null : widget.bubbleOffset.dx,
+            right: widget.isUser
                 ? MediaQuery.of(context).size.width -
-                      (bubbleOffset.dx + bubbleSize.width)
+                      (widget.bubbleOffset.dx + widget.bubbleSize.width)
                 : null,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (_chatId != null) ...[
+                  _buildIconBtn(
+                    context,
+                    _isStarred ? Icons.star : Icons.star_border,
+                    _isStarred ? 'Unstar' : 'Star',
+                    _toggleStar,
+                    color: _isStarred ? Colors.orangeAccent : null,
+                  ),
+                  const SizedBox(width: 12),
+                ],
                 _buildIconBtn(context, Icons.copy, 'Copy', () {
-                  Clipboard.setData(ClipboardData(text: message.content));
+                  Clipboard.setData(ClipboardData(text: widget.message.content));
                   // Capture messenger before popping to ensure feedback shows on parent screen
                   final messenger = ScaffoldMessenger.of(context);
                   Navigator.pop(context);
@@ -570,14 +660,14 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                 }),
                 const SizedBox(width: 12),
                 _buildIconBtn(context, Icons.share, 'Share', () {
-                  SharePlus.instance.share(ShareParams(text: message.content));
+                  SharePlus.instance.share(ShareParams(text: widget.message.content));
                   Navigator.pop(context);
                 }),
-                if (isUser) ...[
+                if (widget.isUser) ...[
                   const SizedBox(width: 12),
                   _buildIconBtn(context, Icons.edit, 'Edit', () {
                     // Populate the input with the message content
-                    ref.read(draftMessageProvider.notifier).state = message.content;
+                    ref.read(draftMessageProvider.notifier).state = widget.message.content;
                     Navigator.pop(context);
                   }),
                 ],
@@ -663,7 +753,7 @@ class _FocusedMenuOverlay extends ConsumerWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              onDelete();
+              widget.onDelete();
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),

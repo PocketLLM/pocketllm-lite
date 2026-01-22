@@ -1361,6 +1361,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
               ListTile(
+                title: const Text('Starred Messages'),
+                subtitle: const Text('View your saved messages'),
+                leading: const Icon(Icons.star_outline),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/starred');
+                },
+              ),
+              ListTile(
                 title: const Text('Activity Log'),
                 subtitle: const Text('View app usage history'),
                 leading: const Icon(Icons.history),
