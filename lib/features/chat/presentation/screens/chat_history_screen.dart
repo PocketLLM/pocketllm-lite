@@ -11,6 +11,7 @@ import '../../../../services/usage_limits_provider.dart';
 import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
 import '../../../settings/presentation/widgets/export_dialog.dart';
+import '../dialogs/tag_editor_dialog.dart';
 import 'archived_chats_screen.dart';
 
 class ChatHistoryScreen extends ConsumerStatefulWidget {
@@ -38,6 +39,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   String _searchQuery = '';
   String? _selectedModelFilter;
   DateTime? _selectedDateFilter;
+  String? _selectedTagFilter;
 
   @override
   void initState() {
@@ -293,9 +295,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                       Icons.filter_list,
                       color:
                           (_selectedModelFilter != null ||
-                              _selectedDateFilter != null)
-                          ? theme.colorScheme.primary
-                          : null,
+                                  _selectedDateFilter != null ||
+                                  _selectedTagFilter != null)
+                              ? theme.colorScheme.primary
+                              : null,
                     ),
                     tooltip: 'Filter chats',
                     onPressed: () => _showFilterDialog(storage),
@@ -444,7 +447,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               ),
             ),
 
-          if (_selectedModelFilter != null || _selectedDateFilter != null)
+          if (_selectedModelFilter != null ||
+              _selectedDateFilter != null ||
+              _selectedTagFilter != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: SingleChildScrollView(
@@ -456,8 +461,17 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         padding: const EdgeInsets.only(right: 8),
                         child: Chip(
                           label: Text('Model: $_selectedModelFilter'),
-                          onDeleted: () =>
-                              setState(() => _selectedModelFilter = null),
+                          onDeleted:
+                              () => setState(() => _selectedModelFilter = null),
+                        ),
+                      ),
+                    if (_selectedTagFilter != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Chip(
+                          label: Text('Tag: $_selectedTagFilter'),
+                          onDeleted:
+                              () => setState(() => _selectedTagFilter = null),
                         ),
                       ),
                     if (_selectedDateFilter != null)
@@ -465,8 +479,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         label: Text(
                           'After: ${_formatDate(_selectedDateFilter!).split(' ')[0]}',
                         ),
-                        onDeleted: () =>
-                            setState(() => _selectedDateFilter = null),
+                        onDeleted:
+                            () => setState(() => _selectedDateFilter = null),
                       ),
                   ],
                 ),
@@ -481,12 +495,14 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   query: _searchQuery,
                   model: _selectedModelFilter,
                   fromDate: _selectedDateFilter,
+                  tag: _selectedTagFilter,
                 );
 
                 if (sessions.isEmpty) {
                   if (_searchQuery.isNotEmpty ||
                       _selectedModelFilter != null ||
-                      _selectedDateFilter != null) {
+                      _selectedDateFilter != null ||
+                      _selectedTagFilter != null) {
                     return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -532,7 +548,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 final isFiltering =
                     _searchQuery.isNotEmpty ||
                     _selectedModelFilter != null ||
-                    _selectedDateFilter != null;
+                    _selectedDateFilter != null ||
+                    _selectedTagFilter != null;
 
                 if (!isFiltering) {
                   for (var session in sessions) {
@@ -755,7 +772,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
         // Temp state for dialog
         String? tempModel = _selectedModelFilter;
         DateTime? tempDate = _selectedDateFilter;
+        String? tempTag = _selectedTagFilter;
         final models = storage.getAvailableModels();
+        final tags = storage.getAllTags();
 
         return StatefulBuilder(
           builder: (context, setState) {
@@ -842,6 +861,38 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                       setState(() => tempModel = val);
                     },
                   ),
+                  if (tags.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Tag',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      initialValue: tempTag,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                      hint: const Text('All Tags'),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('All Tags'),
+                        ),
+                        ...tags.map(
+                          (t) =>
+                              DropdownMenuItem<String>(value: t, child: Text(t)),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        setState(() => tempTag = val);
+                      },
+                    ),
+                  ],
                 ],
               ),
               actions: [
@@ -854,6 +905,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                     this.setState(() {
                       _selectedModelFilter = tempModel;
                       _selectedDateFilter = tempDate;
+                      _selectedTagFilter = tempTag;
                     });
                     Navigator.pop(context);
                   },
@@ -911,6 +963,21 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(const SnackBar(content: Text('Chat archived')));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.label_outline),
+              title: const Text('Manage Tags'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                showDialog(
+                  context: context,
+                  builder:
+                      (context) =>
+                          TagEditorDialog(chatId: session.id, storage: storage),
+                ).then((_) {
+                  if (mounted) setState(() {});
+                });
               },
             ),
             ListTile(
@@ -980,7 +1047,46 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      subtitle: _buildSubtitle(session, _searchQuery, context),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSubtitle(session, _searchQuery, context),
+          Builder(
+            builder: (context) {
+              final tags = storage.getTagsForChat(session.id);
+              if (tags.isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Wrap(
+                  spacing: 4,
+                  children: tags
+                      .map(
+                        (tag) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.secondaryContainer
+                                .withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            tag,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.onSecondaryContainer,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       trailing: !_isSelectionMode
           ? IconButton(
               icon: const Icon(Icons.chevron_right),

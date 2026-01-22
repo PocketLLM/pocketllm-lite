@@ -20,6 +20,8 @@ class StorageService {
 
   // Cache for sorted chat sessions
   List<ChatSession>? _cachedSessions;
+  // Cache for chat tags
+  Map<String, List<String>>? _cachedTags;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -131,13 +133,22 @@ class StorageService {
       await _settingsBox.put(AppConstants.pinnedChatsKey, pinned);
     }
 
+    // Remove tags if present
+    final tagsMap = _getChatTagsMap();
+    if (tagsMap.containsKey(id)) {
+      tagsMap.remove(id);
+      await _settingsBox.put(AppConstants.chatTagsKey, tagsMap);
+    }
+
     await logActivity('Chat Deleted', 'Deleted chat (ID: $id)');
   }
 
   Future<void> clearAllChats() async {
     _cachedSessions = null;
+    _cachedTags = null;
     await _chatBox.clear();
     await _settingsBox.delete(AppConstants.pinnedChatsKey);
+    await _settingsBox.delete(AppConstants.chatTagsKey);
     await logActivity('History Cleared', 'Deleted all chat history');
   }
 
@@ -161,8 +172,18 @@ class StorageService {
     String query = '',
     String? model,
     DateTime? fromDate,
+    String? tag,
   }) {
     List<ChatSession> results = getChatSessions();
+
+    // 0. Filter by Tag
+    if (tag != null && tag.isNotEmpty) {
+      final tagsMap = _getChatTagsMap();
+      results = results.where((s) {
+        final sessionTags = tagsMap[s.id];
+        return sessionTags != null && sessionTags.contains(tag);
+      }).toList();
+    }
 
     // 1. Filter by Query (Title & Content)
     if (query.isNotEmpty) {
@@ -285,6 +306,67 @@ class StorageService {
     }
 
     await _settingsBox.put(AppConstants.archivedChatsKey, archived);
+  }
+
+  // Chat Tags
+  Map<String, List<String>> _getChatTagsMap() {
+    if (_cachedTags != null) return _cachedTags!;
+
+    final rawMap = _settingsBox.get(AppConstants.chatTagsKey, defaultValue: {});
+    // Convert dynamic map to Map<String, List<String>>
+    if (rawMap is Map) {
+      _cachedTags = rawMap.map((key, value) {
+        return MapEntry(
+          key.toString(),
+          (value as List).map((e) => e.toString()).toList(),
+        );
+      });
+    } else {
+      _cachedTags = {};
+    }
+    return _cachedTags!;
+  }
+
+  List<String> getTagsForChat(String chatId) {
+    final map = _getChatTagsMap();
+    return map[chatId] ?? [];
+  }
+
+  Set<String> getAllTags() {
+    final map = _getChatTagsMap();
+    final allTags = <String>{};
+    for (final tags in map.values) {
+      allTags.addAll(tags);
+    }
+    return allTags;
+  }
+
+  Future<void> addTagToChat(String chatId, String tag) async {
+    final map = _getChatTagsMap();
+    final tags = map[chatId] ?? [];
+    if (!tags.contains(tag)) {
+      tags.add(tag);
+      map[chatId] = tags;
+      await _settingsBox.put(AppConstants.chatTagsKey, map);
+      await logActivity('Tag Added', 'Added tag "$tag" to chat $chatId');
+    }
+  }
+
+  Future<void> removeTagFromChat(String chatId, String tag) async {
+    final map = _getChatTagsMap();
+    if (map.containsKey(chatId)) {
+      final tags = map[chatId]!;
+      if (tags.contains(tag)) {
+        tags.remove(tag);
+        if (tags.isEmpty) {
+          map.remove(chatId);
+        } else {
+          map[chatId] = tags;
+        }
+        await _settingsBox.put(AppConstants.chatTagsKey, map);
+        await logActivity('Tag Removed', 'Removed tag "$tag" from chat $chatId');
+      }
+    }
   }
 
   // Message Templates
@@ -413,6 +495,7 @@ class StorageService {
       AppConstants.promptEnhancerModelKey,
       AppConstants.pinnedChatsKey,
       AppConstants.archivedChatsKey,
+      AppConstants.chatTagsKey,
     };
 
     for (final key in _settingsBox.keys) {
