@@ -13,6 +13,7 @@ import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/draft_message_provider.dart';
+import '../providers/starred_messages_provider.dart';
 import 'three_dot_loading_indicator.dart';
 
 // Helper class for formatting timestamps
@@ -410,6 +411,9 @@ class _FocusedMenuOverlay extends ConsumerWidget {
     final theme = Theme.of(context);
     // Use ref to get current snapshot
     final appearance = ref.read(appearanceProvider);
+    final starredProvider = ref.watch(starredMessagesProvider);
+    final isStarred = ref.watch(starredMessagesProvider.notifier).isStarred(message);
+    final chatSession = ref.read(chatProvider);
 
     final bubbleColor = isUser
         ? Color(
@@ -568,6 +572,35 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                     ),
                   );
                 }),
+                const SizedBox(width: 12),
+                _buildIconBtn(
+                  context,
+                  isStarred ? Icons.star : Icons.star_border,
+                  isStarred ? 'Unstar' : 'Star',
+                  () {
+                    // Assuming we can get current session ID from chatProvider
+                    if (chatSession != null) {
+                      ref.read(starredMessagesProvider.notifier).toggleStar(
+                        sessionId: chatSession.id,
+                        message: message,
+                        sessionTitle: chatSession.title,
+                      );
+
+                      final messenger = ScaffoldMessenger.of(context);
+                      Navigator.pop(context);
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(isStarred ? 'Message unstarred' : 'Message starred'),
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    } else {
+                       Navigator.pop(context);
+                    }
+                  },
+                  color: isStarred ? Colors.amberAccent : Colors.white,
+                ),
                 const SizedBox(width: 12),
                 _buildIconBtn(context, Icons.share, 'Share', () {
                   SharePlus.instance.share(ShareParams(text: message.content));

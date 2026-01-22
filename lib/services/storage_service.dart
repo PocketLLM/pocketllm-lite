@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../core/constants/app_constants.dart';
 import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
+import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
@@ -405,6 +406,52 @@ class StorageService {
       await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
       await logActivity('Template Deleted', 'Deleted template "${template['title']}"');
     }
+  }
+
+  // Starred Messages
+  List<StarredMessage> getStarredMessages() {
+    final rawList = _settingsBox.get(
+      AppConstants.starredMessagesKey,
+      defaultValue: <dynamic>[],
+    );
+    return (rawList as List)
+        .map((e) => StarredMessage.fromJson(Map<String, dynamic>.from(e)))
+        .toList()
+      ..sort((a, b) => b.starredAt.compareTo(a.starredAt));
+  }
+
+  Future<void> toggleStarMessage({
+    required String sessionId,
+    required ChatMessage message,
+    String? sessionTitle,
+  }) async {
+    final starred = getStarredMessages();
+    final index = starred.indexWhere((s) => s.message == message);
+
+    if (index != -1) {
+      // Unstar
+      starred.removeAt(index);
+      await logActivity('Message Unstarred', 'Unstarred message in session $sessionId');
+    } else {
+      // Star
+      starred.add(StarredMessage(
+        id: const Uuid().v4(),
+        sessionId: sessionId,
+        message: message,
+        starredAt: DateTime.now(),
+        sessionTitle: sessionTitle,
+      ));
+      await logActivity('Message Starred', 'Starred message in session $sessionId');
+    }
+
+    final jsonList = starred.map((e) => e.toJson()).toList();
+    await _settingsBox.put(AppConstants.starredMessagesKey, jsonList);
+  }
+
+  bool isMessageStarred(ChatMessage message) {
+    // This might be expensive if list is huge, but fine for local app usage
+    final starred = getStarredMessages();
+    return starred.any((s) => s.message == message);
   }
 
   // Activity Log

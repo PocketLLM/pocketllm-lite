@@ -14,3 +14,8 @@
 **Challenge:** Implementing visual analytics (bar charts) for usage stats without adding heavy external dependencies like `fl_chart` to keep the app lightweight.
 **Solution:** I implemented a custom `BarChartPainter` using Flutter's `CustomPaint` API. It handles dynamic scaling, zero-value placeholders, and theme-aware styling (using `Color.withValues`).
 **Reusable Pattern:** The `BarChartPainter` pattern separates the data model (`DailyActivity`) from the rendering logic, providing a lightweight template for other simple time-series visualizations.
+
+## 2026-06-15 - Persistent Entity References without IDs
+**Challenge:** Implementing "Starred Messages" requires persisting a reference to a specific `ChatMessage` within a `ChatSession`. However, `ChatMessage` objects in this codebase lack a unique ID, relying instead on their content and position within the session list. Modifying the `ChatMessage` Hive model to add an ID would require a complex database migration.
+**Solution:** I created a `StarredMessage` wrapper model that stores a snapshot of the message content along with the `sessionId`. For equality checks and toggling state, I relied on `ChatMessage`'s value-based equality (`operator ==`), which compares role, content, and timestamp.
+**Reusable Pattern:** When extending functionality for immutable or legacy data models without unique IDs, storing a value-based snapshot (or a hash) in a separate "metadata" store (like `settingsBox`) avoids invasive migrations while enabling new features like bookmarking.

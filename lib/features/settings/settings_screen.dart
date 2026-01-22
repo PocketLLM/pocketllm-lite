@@ -1381,6 +1381,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
               ListTile(
+                title: const Text('Starred Messages'),
+                subtitle: const Text('View saved important messages'),
+                leading: const Icon(Icons.star),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/starred');
+                },
+              ),
+              ListTile(
                 title: Text(
                   'Clear All History',
                   style: TextStyle(color: theme.colorScheme.error),
