@@ -138,6 +138,14 @@ class PromptManagementScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    trailing: Semantics(
+                      excludeSemantics: true,
+                      child: Icon(
+                        Icons.edit_outlined,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                     onTap: () => _showEditDialog(context, storage, prompt),
                   ),
                 );
