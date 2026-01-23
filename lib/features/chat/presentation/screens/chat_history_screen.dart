@@ -273,6 +273,31 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     );
   }
 
+  Future<void> _handleNewChat() async {
+    HapticFeedback.mediumImpact();
+
+    // Check chat limit
+    final limitsNotifier = ref.read(usageLimitsProvider.notifier);
+    if (!limitsNotifier.canCreateChat()) {
+      await _showChatLimitDialog();
+      return;
+    }
+
+    await limitsNotifier.incrementChatCount();
+    ref.read(chatProvider.notifier).newChat();
+    if (context.mounted) Navigator.pop(context);
+  }
+
+  Future<void> _handleViewArchived() async {
+    HapticFeedback.lightImpact();
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ArchivedChatsScreen(),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final storage = ref.watch(storageServiceProvider);
@@ -358,16 +383,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   IconButton(
                     icon: const Icon(Icons.archive_outlined),
                     tooltip: 'Archived Chats',
-                    onPressed: () async {
-                      HapticFeedback.lightImpact();
-                      // Wait for return to refresh list (in case items unarchived)
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const ArchivedChatsScreen(),
-                        ),
-                      );
-                      if (mounted) setState(() {});
-                    },
+                    onPressed: _handleViewArchived,
                   ),
                   IconButton(
                     icon: const Icon(Icons.checklist),
@@ -555,40 +571,21 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                       _selectedModelFilter != null ||
                       _selectedDateFilter != null ||
                       _selectedTagFilter != null) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.search_off,
-                            size: 60,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'No results found',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
+                    return const _EmptyHistoryState(
+                      icon: Icons.search_off,
+                      title: 'No results found',
+                      subtitle: 'Try adjusting your search or filters',
                     );
                   }
 
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.history_toggle_off,
-                          size: 60,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No chat history',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
+                  return _EmptyHistoryState(
+                    icon: Icons.chat_bubble_outline,
+                    title: 'No chat history',
+                    subtitle: 'Start a new conversation to begin',
+                    action: FilledButton.icon(
+                      onPressed: _handleNewChat,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Start New Chat'),
                     ),
                   );
                 }
@@ -633,35 +630,14 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 if (!isFiltering &&
                     pinnedSessions.isEmpty &&
                     recentSessions.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.history_toggle_off,
-                          size: 60,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No active chats',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton.icon(
-                          onPressed: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const ArchivedChatsScreen(),
-                              ),
-                            );
-                            if (mounted) setState(() {});
-                          },
-                          icon: const Icon(Icons.archive_outlined),
-                          label: const Text('View Archived'),
-                        ),
-                      ],
+                  return _EmptyHistoryState(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'No active chats',
+                    subtitle: 'All your chats are archived',
+                    action: TextButton.icon(
+                      onPressed: _handleViewArchived,
+                      icon: const Icon(Icons.archive_outlined),
+                      label: const Text('View Archived'),
                     ),
                   );
                 }
@@ -808,20 +784,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       floatingActionButton: _isSelectionMode
           ? null
           : FloatingActionButton.extended(
-              onPressed: () async {
-                HapticFeedback.mediumImpact();
-
-                // Check chat limit
-                final limitsNotifier = ref.read(usageLimitsProvider.notifier);
-                if (!limitsNotifier.canCreateChat()) {
-                  await _showChatLimitDialog();
-                  return;
-                }
-
-                await limitsNotifier.incrementChatCount();
-                ref.read(chatProvider.notifier).newChat();
-                if (context.mounted) Navigator.pop(context);
-              },
+              onPressed: _handleNewChat,
               label: const Text('New Chat'),
               icon: const Icon(Icons.add),
             ),
@@ -1520,5 +1483,74 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
         },
       );
     }
+  }
+}
+
+class _EmptyHistoryState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget? action;
+
+  const _EmptyHistoryState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.action,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
+                      : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 48,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                title,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (action != null) ...[
+                const SizedBox(height: 32),
+                action!,
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
