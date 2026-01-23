@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/services.dart';
+import '../../../../services/file_service.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
@@ -71,6 +73,69 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       final storage = ref.read(storageServiceProvider);
       storage.saveDraft(draftKey, _controller.text);
     });
+  }
+
+  Future<void> _pickAndInsertFile() async {
+    final storage = ref.read(storageServiceProvider);
+    if (storage.getSetting(
+      AppConstants.hapticFeedbackKey,
+      defaultValue: false,
+    )) {
+      HapticFeedback.selectionClick();
+    }
+
+    try {
+      final fileService = ref.read(fileServiceProvider);
+      final result = await fileService.pickAndReadFile();
+
+      if (result != null) {
+        // Construct markdown
+        final textToInsert =
+            '\n**File: ${result.name}**\n```${result.extension}\n${result.content}\n```\n';
+
+        final currentText = _controller.text;
+        final selection = _controller.selection;
+
+        String newText;
+        int newCursorPos;
+
+        if (selection.isValid && selection.start >= 0) {
+          final start = selection.start;
+          final end = selection.end;
+          newText = currentText.replaceRange(start, end, textToInsert);
+          newCursorPos = start + textToInsert.length;
+        } else {
+          // Append
+          newText = currentText + textToInsert;
+          newCursorPos = newText.length;
+        }
+
+        setState(() {
+          _controller.text = newText;
+          _controller.selection = TextSelection.fromPosition(
+            TextPosition(offset: newCursorPos),
+          );
+        });
+
+        _focusNode.requestFocus();
+      }
+    } catch (e) {
+      if (mounted) {
+        String errorMessage = 'Error reading file';
+        if (e is FileSystemException) {
+          errorMessage = e.message;
+        } else {
+          errorMessage = e.toString().split('\n').first;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _pickImage() async {
@@ -703,6 +768,35 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               padding: const EdgeInsets.all(6),
                               child: Icon(
                                 Icons.add,
+                                size: 20,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: isGenerating ? 0.5 : 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Insert File Button
+                    Semantics(
+                      label: 'Insert File',
+                      button: true,
+                      enabled: !isGenerating,
+                      child: Tooltip(
+                        message: 'Insert File Content',
+                        child: Material(
+                          color: (isDark ? Colors.grey[800] : Colors.grey[300])
+                              ?.withValues(alpha: isGenerating ? 0.5 : 1.0),
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: isGenerating ? null : _pickAndInsertFile,
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.description,
                                 size: 20,
                                 color: theme.colorScheme.onSurface.withValues(
                                   alpha: isGenerating ? 0.5 : 1.0,
