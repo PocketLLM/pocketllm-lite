@@ -23,6 +23,8 @@ class StorageService {
   List<ChatSession>? _cachedSessions;
   // Cache for chat tags
   Map<String, List<String>>? _cachedTags;
+  // Cache for starred messages to avoid expensive deserialization
+  Set<ChatMessage>? _cachedStarredMessages;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -38,6 +40,9 @@ class StorageService {
     );
     _settingsBox = await Hive.openBox(AppConstants.settingsBoxName);
     _activityLogBox = await Hive.openBox(AppConstants.activityLogBoxName);
+
+    // Initialize starred messages cache
+    _refreshStarredMessagesCache();
 
     // Seed system prompts if empty
     if (_systemPromptBox.isEmpty) {
@@ -246,6 +251,8 @@ class StorageService {
     // logging Ollama URL change might be good.
     if (key == AppConstants.ollamaBaseUrlKey) {
        await logActivity('Settings Changed', 'Updated Ollama Base URL');
+    } else if (key == AppConstants.starredMessagesKey) {
+       _refreshStarredMessagesCache();
     }
   }
 
@@ -462,9 +469,27 @@ class StorageService {
         .toList();
   }
 
+  void _refreshStarredMessagesCache() {
+    final rawList = _settingsBox.get(
+      AppConstants.starredMessagesKey,
+      defaultValue: <dynamic>[],
+    );
+    // Use defensive copy and error handling
+    try {
+      final starredList = (rawList as List)
+          .map((e) => StarredMessage.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      _cachedStarredMessages = starredList.map((s) => s.message).toSet();
+    } catch (e) {
+      debugPrint('Error refreshing starred messages cache: $e');
+      _cachedStarredMessages = {};
+    }
+  }
+
   Future<void> saveStarredMessages(List<StarredMessage> messages) async {
     final rawList = messages.map((m) => m.toJson()).toList();
     await _settingsBox.put(AppConstants.starredMessagesKey, rawList);
+    _cachedStarredMessages = messages.map((m) => m.message).toSet();
   }
 
   Future<void> toggleStarMessage(String chatId, ChatMessage message) async {
@@ -491,8 +516,10 @@ class StorageService {
   }
 
   bool isMessageStarred(ChatMessage message) {
-    final starred = getStarredMessages();
-    return starred.any((s) => s.message == message);
+    if (_cachedStarredMessages == null) {
+      _refreshStarredMessagesCache();
+    }
+    return _cachedStarredMessages!.contains(message);
   }
 
   Future<void> unstarMessage(String starredMessageId) async {

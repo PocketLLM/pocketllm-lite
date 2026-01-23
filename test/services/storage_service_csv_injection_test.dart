@@ -48,7 +48,7 @@ void main() {
       expect(csv, contains(",'=1+1,"));
 
       // Check System Prompt (last field)
-      expect(csv, contains(",'@SUM(1,1)"));
+      expect(csv, contains(',"\'@SUM(1,1)"'));
     });
 
     test('exportToCsv escapes malicious characters with quoting', () {
