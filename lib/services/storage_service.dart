@@ -687,7 +687,7 @@ class StorageService {
 
       if (session.systemPrompt != null && session.systemPrompt!.isNotEmpty) {
         buffer.writeln('### System Prompt');
-        buffer.writeln('> ${session.systemPrompt}\n');
+        buffer.writeln(_escapeMarkdownContent(session.systemPrompt!));
       }
 
       for (final msg in session.messages) {
