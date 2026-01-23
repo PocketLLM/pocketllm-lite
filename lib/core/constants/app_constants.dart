@@ -36,6 +36,7 @@ class AppConstants {
       'bubble_elevation'; // Use boolean or double?
   static const String msgOpacityKey = 'msg_opacity';
   static const String customBgColorKey = 'custom_bg_color'; // Optional
+  static const String customThemePresetsKey = 'custom_theme_presets';
 
   // Prompt Enhancer
   static const String promptEnhancerModelKey = 'prompt_enhancer_model';

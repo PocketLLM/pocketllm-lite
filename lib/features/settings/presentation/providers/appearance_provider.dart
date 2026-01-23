@@ -13,6 +13,7 @@ class AppearanceState {
   final bool bubbleElevation;
   final double msgOpacity;
   final int? customBgColor;
+  final List<ThemePreset> customPresets;
 
   AppearanceState({
     required this.userMsgColor,
@@ -24,6 +25,7 @@ class AppearanceState {
     this.bubbleElevation = false,
     this.msgOpacity = 1.0,
     this.customBgColor,
+    this.customPresets = const [],
   });
 
   AppearanceState copyWith({
@@ -36,6 +38,7 @@ class AppearanceState {
     bool? bubbleElevation,
     double? msgOpacity,
     int? customBgColor,
+    List<ThemePreset>? customPresets,
   }) {
     return AppearanceState(
       userMsgColor: userMsgColor ?? this.userMsgColor,
@@ -47,6 +50,7 @@ class AppearanceState {
       bubbleElevation: bubbleElevation ?? this.bubbleElevation,
       msgOpacity: msgOpacity ?? this.msgOpacity,
       customBgColor: customBgColor ?? this.customBgColor,
+      customPresets: customPresets ?? this.customPresets,
     );
   }
 }
@@ -55,6 +59,16 @@ class AppearanceNotifier extends Notifier<AppearanceState> {
   @override
   AppearanceState build() {
     final storage = ref.read(storageServiceProvider);
+
+    final customPresetsData = storage.getSetting(
+      AppConstants.customThemePresetsKey,
+      defaultValue: <dynamic>[],
+    ) as List;
+
+    final customPresets = customPresetsData
+        .map((e) => ThemePreset.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+
     return AppearanceState(
       userMsgColor: storage.getSetting(
         AppConstants.userMsgColorKey,
@@ -92,6 +106,7 @@ class AppearanceNotifier extends Notifier<AppearanceState> {
         AppConstants.customBgColorKey,
         defaultValue: null,
       ),
+      customPresets: customPresets,
     );
   }
 
@@ -196,9 +211,68 @@ class AppearanceNotifier extends Notifier<AppearanceState> {
       await storage.saveSetting(AppConstants.fontSizeKey, fontSize);
     }
   }
+
+  Future<void> saveCustomPreset(ThemePreset preset) async {
+    final updatedPresets = [...state.customPresets, preset];
+    state = state.copyWith(customPresets: updatedPresets);
+
+    final storage = ref.read(storageServiceProvider);
+    await storage.saveSetting(
+      AppConstants.customThemePresetsKey,
+      updatedPresets.map((e) => e.toJson()).toList(),
+    );
+  }
+
+  Future<void> deleteCustomPreset(String name) async {
+    final updatedPresets =
+        state.customPresets.where((p) => p.name != name).toList();
+    state = state.copyWith(customPresets: updatedPresets);
+
+    final storage = ref.read(storageServiceProvider);
+    await storage.saveSetting(
+      AppConstants.customThemePresetsKey,
+      updatedPresets.map((e) => e.toJson()).toList(),
+    );
+  }
 }
 
 final appearanceProvider =
     NotifierProvider<AppearanceNotifier, AppearanceState>(
       AppearanceNotifier.new,
     );
+
+class ThemePreset {
+  final String name;
+  final int userColor;
+  final int aiColor;
+  final Color backgroundColor;
+  final String note;
+
+  const ThemePreset({
+    required this.name,
+    required this.userColor,
+    required this.aiColor,
+    required this.backgroundColor,
+    required this.note,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'userColor': userColor,
+      'aiColor': aiColor,
+      'backgroundColor': backgroundColor.toARGB32(),
+      'note': note,
+    };
+  }
+
+  factory ThemePreset.fromJson(Map<String, dynamic> json) {
+    return ThemePreset(
+      name: json['name'] as String,
+      userColor: json['userColor'] as int,
+      aiColor: json['aiColor'] as int,
+      backgroundColor: Color(json['backgroundColor'] as int),
+      note: json['note'] as String,
+    );
+  }
+}

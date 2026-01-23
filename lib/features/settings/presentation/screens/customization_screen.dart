@@ -7,22 +7,6 @@ import '../../../chat/domain/models/chat_message.dart';
 import '../../../chat/presentation/widgets/chat_bubble.dart';
 import '../providers/appearance_provider.dart';
 
-class ThemePreset {
-  final String name;
-  final int userColor;
-  final int aiColor;
-  final Color backgroundColor;
-  final String note;
-
-  const ThemePreset({
-    required this.name,
-    required this.userColor,
-    required this.aiColor,
-    required this.backgroundColor,
-    required this.note,
-  });
-}
-
 class _ColorOption {
   final Color color;
   final String name;
@@ -169,8 +153,30 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
               const SizedBox(height: 16),
 
               // 2. Presets
-              _buildSectionTitle('Theme Presets'),
+              _buildSectionTitle(
+                'Theme Presets',
+                trailing: IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Save current theme as preset',
+                  onPressed: () => _showSavePresetDialog(context, appearance),
+                ),
+              ),
               _buildPresetsList(appearance, notifier),
+              if (appearance.customPresets.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'My Presets',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                  ),
+                ),
+                _buildCustomPresetsList(appearance, notifier),
+              ],
 
               const SizedBox(height: 24),
 
@@ -323,17 +329,23 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, {Widget? trailing}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.primary,
-          letterSpacing: 0.5,
-        ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.primary,
+              letterSpacing: 0.5,
+            ),
+          ),
+          if (trailing != null) trailing,
+        ],
       ),
     );
   }
@@ -347,105 +359,225 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          ...presets.map((preset) {
+          ..._CustomizationScreenState.presets.map((preset) {
             final isSelected =
                 appearance.userMsgColor == preset.userColor &&
                 appearance.aiMsgColor == preset.aiColor;
+            return _buildPresetItem(preset, isSelected, notifier);
+          }),
+        ],
+      ),
+    );
+  }
 
-            return Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Semantics(
-                selected: isSelected,
-                button: true,
-                label: '${preset.name} theme',
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      if (isSelected)
-                        BoxShadow(
-                          color: Theme.of(
-                            context,
-                          ).primaryColor.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        notifier.applyPreset(
-                          userColor: preset.userColor,
-                          aiColor: preset.aiColor,
-                          radius: appearance.bubbleRadius,
-                          fontSize: appearance.fontSize,
-                        );
-                      },
-                      child: Container(
-                        width: 140,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: isSelected
-                              ? Border.all(
-                                  color: Theme.of(context).primaryColor,
-                                  width: 2,
-                                )
-                              : Border.all(color: Colors.transparent),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: Color(preset.userColor),
-                                  radius: 6,
-                                ),
-                                const SizedBox(width: 4),
-                                CircleAvatar(
-                                  backgroundColor: Color(preset.aiColor),
-                                  radius: 6,
-                                ),
-                                const Spacer(),
-                                if (isSelected)
-                                  const Icon(
-                                    Icons.check_circle,
-                                    size: 16,
-                                    color: Colors.blue,
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              preset.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              preset.note,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[600],
-                              ),
-                              maxLines: 1,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+  Widget _buildCustomPresetsList(
+    AppearanceState appearance,
+    AppearanceNotifier notifier,
+  ) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          ...appearance.customPresets.map((preset) {
+            final isSelected =
+                appearance.userMsgColor == preset.userColor &&
+                appearance.aiMsgColor == preset.aiColor;
+            return _buildPresetItem(
+              preset,
+              isSelected,
+              notifier,
+              isCustom: true,
             );
           }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPresetItem(
+    ThemePreset preset,
+    bool isSelected,
+    AppearanceNotifier notifier, {
+    bool isCustom = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: Semantics(
+        selected: isSelected,
+        button: true,
+        label: '${preset.name} theme',
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              if (isSelected)
+                BoxShadow(
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+            ],
+          ),
+          child: Material(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(12),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                notifier.applyPreset(
+                  userColor: preset.userColor,
+                  aiColor: preset.aiColor,
+                  radius: ref.read(appearanceProvider).bubbleRadius,
+                  fontSize: ref.read(appearanceProvider).fontSize,
+                );
+              },
+              onLongPress: isCustom
+                  ? () => _confirmDeletePreset(context, preset)
+                  : null,
+              child: Container(
+                width: 140,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: isSelected
+                      ? Border.all(
+                          color: Theme.of(context).primaryColor,
+                          width: 2,
+                        )
+                      : Border.all(color: Colors.transparent),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Color(preset.userColor),
+                          radius: 6,
+                        ),
+                        const SizedBox(width: 4),
+                        CircleAvatar(
+                          backgroundColor: Color(preset.aiColor),
+                          radius: 6,
+                        ),
+                        const Spacer(),
+                        if (isSelected)
+                          const Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: Colors.blue,
+                          ),
+                        if (isCustom && !isSelected)
+                          Icon(
+                            Icons.delete_outline,
+                            size: 16,
+                            color: Colors.grey.withValues(alpha: 0.5),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      preset.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      preset.note,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSavePresetDialog(
+    BuildContext context,
+    AppearanceState appearance,
+  ) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save Preset'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Preset Name',
+            hintText: 'e.g., My Dark Theme',
+          ),
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                final preset = ThemePreset(
+                  name: name,
+                  userColor: appearance.userMsgColor,
+                  aiColor: appearance.aiMsgColor,
+                  backgroundColor: appearance.customBgColor != null
+                      ? Color(appearance.customBgColor!)
+                      : Colors.transparent,
+                  note: 'Custom',
+                );
+                ref
+                    .read(appearanceProvider.notifier)
+                    .saveCustomPreset(preset);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Saved preset "$name"')),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeletePreset(BuildContext context, ThemePreset preset) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Preset?'),
+        content: Text('Delete "${preset.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              ref
+                  .read(appearanceProvider.notifier)
+                  .deleteCustomPreset(preset.name);
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
