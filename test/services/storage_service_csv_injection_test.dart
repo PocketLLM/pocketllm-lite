@@ -48,7 +48,8 @@ void main() {
       expect(csv, contains(",'=1+1,"));
 
       // Check System Prompt (last field)
-      expect(csv, contains(",'@SUM(1,1)"));
+      // Since it contains a comma, it will be quoted: "'@SUM(1,1)"
+      expect(csv, contains(',"\'@SUM(1,1)"'));
     });
 
     test('exportToCsv escapes malicious characters with quoting', () {
