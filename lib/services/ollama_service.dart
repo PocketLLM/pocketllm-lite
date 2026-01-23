@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
@@ -112,7 +113,9 @@ class OllamaService {
         // across JSON object boundaries, ensuring no data is lost and reducing string allocations.
         await for (final line in streamedResponse.stream
             .transform(utf8.decoder)
-            .transform(const LineSplitter())) {
+            .transform(const LineSplitter())
+            // Security: Prevent infinite hanging if server stalls (DoS mitigation)
+            .timeout(AppConstants.streamTimeout)) {
           if (line.trim().isEmpty) continue;
           try {
             final json = jsonDecode(line);
@@ -152,7 +155,9 @@ class OllamaService {
         // Use LineSplitter to properly handle split chunks in NDJSON stream
         await for (final line in streamedResponse.stream
             .transform(utf8.decoder)
-            .transform(const LineSplitter())) {
+            .transform(const LineSplitter())
+            // Security: Prevent infinite hanging if server stalls (DoS mitigation)
+            .timeout(AppConstants.streamTimeout)) {
           if (line.trim().isEmpty) continue;
           try {
             final json = jsonDecode(line);

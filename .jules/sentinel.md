@@ -17,3 +17,8 @@
 **Vulnerability:** `http.Client.send` for streaming responses lacks a default timeout, causing indefinite hanging if the server accepts the connection but sends no headers.
 **Learning:** Convenience methods like `get()` often have easier timeout patterns, but low-level `send()` (required for streaming) needs explicit `timeout()` wrapping on the Future.
 **Prevention:** Always wrap the initial `send()` call of a stream in a `timeout()` to ensure connection establishment fails fast.
+
+## 2025-05-23 - Missing Stream Activity Timeouts
+**Vulnerability:** While connection timeouts were present, the HTTP response streams for chat generation and model pulling lacked activity timeouts. If the server stalled mid-stream, the app would hang indefinitely (DoS).
+**Learning:** `http.Client.send().timeout()` only covers the initial connection and header receipt. The response stream itself needs an explicit `.timeout()` operator to detect stalls during body transfer.
+**Prevention:** Apply `.timeout()` to all `Stream` pipelines handling external data, especially from LLMs which can be slow or prone to hanging.

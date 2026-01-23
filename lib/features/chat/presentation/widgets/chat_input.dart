@@ -217,7 +217,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         .toList();
 
     // Clear draft before sending
-    final storage = ref.read(storageServiceProvider);
+    // storage is already defined above
     final sessionId = ref.read(chatProvider).currentSessionId;
     final draftKey = sessionId ?? 'new_chat';
     await storage.deleteDraft(draftKey);

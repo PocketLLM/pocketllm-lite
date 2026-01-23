@@ -92,4 +92,5 @@ class AppConstants {
   static const int maxInputLength = 50000;
   static const Duration apiConnectionTimeout = Duration(seconds: 10);
   static const Duration apiGenerationTimeout = Duration(seconds: 30);
+  static const Duration streamTimeout = Duration(seconds: 60);
 }
