@@ -10,6 +10,8 @@ import '../../../../core/utils/image_decoder.dart';
 import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/utils/url_validator.dart';
 import '../../domain/models/chat_message.dart';
+import '../../../../services/storage_service.dart';
+import '../../../../core/providers.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/draft_message_provider.dart';
@@ -425,6 +427,9 @@ class _FocusedMenuOverlay extends ConsumerWidget {
     final screenHeight = MediaQuery.of(context).size.height;
     final showAbove = bubbleOffset.dy > screenHeight * 0.6;
 
+    final storage = ref.watch(storageServiceProvider);
+    final isStarred = storage.isMessageStarred(message);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -555,6 +560,48 @@ class _FocusedMenuOverlay extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                _buildIconBtn(
+                  context,
+                  isStarred ? Icons.star : Icons.star_outline,
+                  isStarred ? 'Unstar' : 'Star',
+                  () async {
+                    // Get current session info
+                    final currentSession = ref
+                        .read(chatProvider)
+                        .currentSession;
+                    if (currentSession != null) {
+                      if (isStarred) {
+                        await storage.removeStarredMessage(message);
+                      } else {
+                        await storage.saveStarredMessage(
+                          message: message,
+                          chatId: currentSession.id,
+                          chatTitle: currentSession.title,
+                        );
+                      }
+                      // Keep menu open to show state change? No, better feedback to close and show toast
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              isStarred
+                                  ? 'Message unstarred'
+                                  : 'Message starred',
+                            ),
+                            duration: const Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    } else {
+                      // Should not happen in chat screen
+                      Navigator.pop(context);
+                    }
+                  },
+                  color: isStarred ? Colors.amber : Colors.white,
+                ),
+                const SizedBox(width: 12),
                 _buildIconBtn(context, Icons.copy, 'Copy', () {
                   Clipboard.setData(ClipboardData(text: message.content));
                   // Capture messenger before popping to ensure feedback shows on parent screen

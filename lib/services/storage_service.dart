@@ -163,6 +163,8 @@ class StorageService {
   ValueListenable<Box> get activityLogBoxListenable =>
       _activityLogBox.listenable();
 
+  ValueListenable<Box> get settingsBoxListenable => _settingsBox.listenable();
+
   List<SystemPrompt> getSystemPrompts() {
     return _systemPromptBox.values.toList();
   }
@@ -448,6 +450,62 @@ class StorageService {
     await _settingsBox.delete(AppConstants.chatDraftsKey);
   }
 
+  // Starred Messages
+  List<Map<String, dynamic>> getStarredMessages() {
+    final rawList = _settingsBox.get(
+      AppConstants.starredMessagesKey,
+      defaultValue: <dynamic>[],
+    );
+    // Ensure we return a List<Map<String, dynamic>>
+    return (rawList as List)
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  Future<void> saveStarredMessage({
+    required ChatMessage message,
+    required String chatId,
+    required String chatTitle,
+  }) async {
+    final starred = getStarredMessages();
+
+    // Check if already starred to avoid duplicates
+    if (isMessageStarred(message)) return;
+
+    final starredItem = {
+      'message': _chatMessageToJson(message),
+      'chatId': chatId,
+      'chatTitle': chatTitle,
+      'starredAt': DateTime.now().toIso8601String(),
+    };
+
+    starred.insert(0, starredItem); // Add to top
+    await _settingsBox.put(AppConstants.starredMessagesKey, starred);
+    await logActivity('Message Starred', 'Starred a message from chat "$chatTitle"');
+  }
+
+  Future<void> removeStarredMessage(ChatMessage message) async {
+    final starred = getStarredMessages();
+    final index = starred.indexWhere((item) {
+      final msg = _chatMessageFromJson(item['message']);
+      return msg == message;
+    });
+
+    if (index != -1) {
+      starred.removeAt(index);
+      await _settingsBox.put(AppConstants.starredMessagesKey, starred);
+      await logActivity('Message Unstarred', 'Removed a starred message');
+    }
+  }
+
+  bool isMessageStarred(ChatMessage message) {
+    final starred = getStarredMessages();
+    return starred.any((item) {
+      final msg = _chatMessageFromJson(item['message']);
+      return msg == message;
+    });
+  }
+
   // Activity Log
   Future<void> logActivity(String action, String details) async {
     final log = {
@@ -537,6 +595,7 @@ class StorageService {
       AppConstants.pinnedChatsKey,
       AppConstants.archivedChatsKey,
       AppConstants.chatTagsKey,
+      AppConstants.starredMessagesKey,
     };
 
     for (final key in _settingsBox.keys) {
