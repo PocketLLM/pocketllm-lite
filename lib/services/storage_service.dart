@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../core/constants/app_constants.dart';
 import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
+import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
@@ -159,6 +160,8 @@ class StorageService {
   // System Prompts
   ValueListenable<Box<SystemPrompt>> get promptBoxListenable =>
       _systemPromptBox.listenable();
+
+  ValueListenable<Box> get settingsBoxListenable => _settingsBox.listenable();
 
   ValueListenable<Box> get activityLogBoxListenable =>
       _activityLogBox.listenable();
@@ -448,6 +451,61 @@ class StorageService {
     await _settingsBox.delete(AppConstants.chatDraftsKey);
   }
 
+  // Starred Messages
+  List<StarredMessage> getStarredMessages() {
+    final rawList = _settingsBox.get(
+      AppConstants.starredMessagesKey,
+      defaultValue: <dynamic>[],
+    );
+    return (rawList as List)
+        .map((e) => StarredMessage.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<void> saveStarredMessages(List<StarredMessage> messages) async {
+    final rawList = messages.map((m) => m.toJson()).toList();
+    await _settingsBox.put(AppConstants.starredMessagesKey, rawList);
+  }
+
+  Future<void> toggleStarMessage(String chatId, ChatMessage message) async {
+    final starred = getStarredMessages();
+    final index = starred.indexWhere((s) => s.message == message);
+
+    if (index != -1) {
+      // Unstar
+      starred.removeAt(index);
+      await saveStarredMessages(starred);
+      await logActivity('Message Unstarred', 'Unstarred message in chat $chatId');
+    } else {
+      // Star
+      final newStar = StarredMessage(
+        id: const Uuid().v4(),
+        chatId: chatId,
+        message: message,
+        starredAt: DateTime.now(),
+      );
+      starred.add(newStar);
+      await saveStarredMessages(starred);
+      await logActivity('Message Starred', 'Starred message in chat $chatId');
+    }
+  }
+
+  bool isMessageStarred(ChatMessage message) {
+    final starred = getStarredMessages();
+    return starred.any((s) => s.message == message);
+  }
+
+  Future<void> unstarMessage(String starredMessageId) async {
+    final starred = getStarredMessages();
+    final initialLength = starred.length;
+    starred.removeWhere((s) => s.id == starredMessageId);
+
+    if (starred.length != initialLength) {
+      await saveStarredMessages(starred);
+      await logActivity('Message Unstarred', 'Unstarred message (ID: $starredMessageId)');
+    }
+  }
+
   // Activity Log
   Future<void> logActivity(String action, String details) async {
     final log = {
@@ -537,6 +595,7 @@ class StorageService {
       AppConstants.pinnedChatsKey,
       AppConstants.archivedChatsKey,
       AppConstants.chatTagsKey,
+      AppConstants.starredMessagesKey,
     };
 
     for (final key in _settingsBox.keys) {
