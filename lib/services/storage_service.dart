@@ -256,7 +256,7 @@ class StorageService {
   // Pinned Chats
   List<String> getPinnedChatIds() {
     return List<String>.from(
-      _settingsBox.get(AppConstants.pinnedChatsKey, defaultValue: <String>[]),
+      getSetting(AppConstants.pinnedChatsKey, defaultValue: <String>[]),
     );
   }
 
@@ -277,13 +277,13 @@ class StorageService {
       await logActivity('Chat Pinned', 'Pinned chat with ID $chatId');
     }
 
-    await _settingsBox.put(AppConstants.pinnedChatsKey, pinned);
+    await saveSetting(AppConstants.pinnedChatsKey, pinned);
   }
 
   // Archived Chats
   List<String> getArchivedChatIds() {
     return List<String>.from(
-      _settingsBox.get(AppConstants.archivedChatsKey, defaultValue: <String>[]),
+      getSetting(AppConstants.archivedChatsKey, defaultValue: <String>[]),
     );
   }
 
@@ -308,14 +308,58 @@ class StorageService {
       await logActivity('Chat Archived', 'Archived chat with ID $chatId');
     }
 
-    await _settingsBox.put(AppConstants.archivedChatsKey, archived);
+    await saveSetting(AppConstants.archivedChatsKey, archived);
+  }
+
+  Future<void> bulkArchiveChats(List<String> chatIds) async {
+    final archived = getArchivedChatIds();
+    final pinned = getPinnedChatIds();
+    bool changed = false;
+    bool pinnedChanged = false;
+
+    for (final id in chatIds) {
+      if (!archived.contains(id)) {
+        archived.add(id);
+        changed = true;
+      }
+      // Unpin if archived
+      if (pinned.contains(id)) {
+        pinned.remove(id);
+        pinnedChanged = true;
+      }
+    }
+
+    if (changed) {
+      await saveSetting(AppConstants.archivedChatsKey, archived);
+      await logActivity('Bulk Archive', 'Archived ${chatIds.length} chats');
+    }
+    if (pinnedChanged) {
+      await saveSetting(AppConstants.pinnedChatsKey, pinned);
+    }
+  }
+
+  Future<void> bulkUnarchiveChats(List<String> chatIds) async {
+    final archived = getArchivedChatIds();
+    bool changed = false;
+
+    for (final id in chatIds) {
+      if (archived.contains(id)) {
+        archived.remove(id);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      await saveSetting(AppConstants.archivedChatsKey, archived);
+      await logActivity('Bulk Unarchive', 'Unarchived ${chatIds.length} chats');
+    }
   }
 
   // Chat Tags
   Map<String, List<String>> _getChatTagsMap() {
     if (_cachedTags != null) return _cachedTags!;
 
-    final rawMap = _settingsBox.get(AppConstants.chatTagsKey, defaultValue: {});
+    final rawMap = getSetting(AppConstants.chatTagsKey, defaultValue: {});
     // Convert dynamic map to Map<String, List<String>>
     if (rawMap is Map) {
       _cachedTags = rawMap.map((key, value) {
@@ -350,7 +394,7 @@ class StorageService {
     if (!tags.contains(tag)) {
       tags.add(tag);
       map[chatId] = tags;
-      await _settingsBox.put(AppConstants.chatTagsKey, map);
+      await saveSetting(AppConstants.chatTagsKey, map);
       await logActivity('Tag Added', 'Added tag "$tag" to chat $chatId');
     }
   }
@@ -366,9 +410,37 @@ class StorageService {
         } else {
           map[chatId] = tags;
         }
-        await _settingsBox.put(AppConstants.chatTagsKey, map);
+        await saveSetting(AppConstants.chatTagsKey, map);
         await logActivity('Tag Removed', 'Removed tag "$tag" from chat $chatId');
       }
+    }
+  }
+
+  Future<void> bulkAddTagsToChats(List<String> chatIds, List<String> tags) async {
+    final map = _getChatTagsMap();
+    bool changed = false;
+
+    for (final chatId in chatIds) {
+      final chatTags = map[chatId] ?? [];
+      bool chatChanged = false;
+      for (final tag in tags) {
+        if (!chatTags.contains(tag)) {
+          chatTags.add(tag);
+          chatChanged = true;
+          changed = true;
+        }
+      }
+      if (chatChanged) {
+        map[chatId] = chatTags;
+      }
+    }
+
+    if (changed) {
+      await saveSetting(AppConstants.chatTagsKey, map);
+      await logActivity(
+        'Bulk Tag',
+        'Added ${tags.length} tags to ${chatIds.length} chats',
+      );
     }
   }
 

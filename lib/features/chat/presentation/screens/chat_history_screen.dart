@@ -12,6 +12,7 @@ import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
 import '../../../settings/presentation/widgets/export_dialog.dart';
 import '../dialogs/tag_editor_dialog.dart';
+import '../dialogs/bulk_tag_dialog.dart';
 import 'archived_chats_screen.dart';
 
 class ChatHistoryScreen extends ConsumerStatefulWidget {
@@ -325,6 +326,16 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                     icon: const Icon(Icons.download),
                     tooltip: 'Export selected chats',
                     onPressed: _selectedIds.isEmpty ? null : _exportSelected,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.archive_outlined),
+                    tooltip: 'Archive selected chats',
+                    onPressed: _selectedIds.isEmpty ? null : _archiveSelected,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.label_outline),
+                    tooltip: 'Tag selected chats',
+                    onPressed: _selectedIds.isEmpty ? null : _tagSelected,
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
@@ -1424,6 +1435,55 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       context: context,
       builder: (context) => ExportDialog(selectedChatIds: _selectedIds),
     );
+  }
+
+  Future<void> _archiveSelected() async {
+    if (_selectedIds.isEmpty) return;
+
+    final storage = ref.read(storageServiceProvider);
+    await storage.bulkArchiveChats(_selectedIds.toList());
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${_selectedIds.length} chats archived'),
+        ),
+      );
+      setState(() {
+        _selectedIds.clear();
+        _isSelectionMode = false;
+      });
+      HapticFeedback.mediumImpact();
+    }
+  }
+
+  Future<void> _tagSelected() async {
+    if (_selectedIds.isEmpty) return;
+
+    final storage = ref.read(storageServiceProvider);
+    final List<String>? tagsToAdd = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => BulkTagDialog(storage: storage),
+    );
+
+    if (tagsToAdd != null && tagsToAdd.isNotEmpty) {
+      await storage.bulkAddTagsToChats(_selectedIds.toList(), tagsToAdd);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Added ${tagsToAdd.length} tags to ${_selectedIds.length} chats',
+            ),
+          ),
+        );
+        setState(() {
+          _selectedIds.clear();
+          _isSelectionMode = false;
+        });
+        HapticFeedback.mediumImpact();
+      }
+    }
   }
 
   Future<void> _deleteSelected() async {
