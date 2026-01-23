@@ -61,3 +61,7 @@
 ## 2025-05-24 - [Conditional Sheet Affordance]
 **Learning:** Reusable widgets often serve as both modal bottom sheets and full-screen views. Drag handles are critical affordances for modals but redundant clutter for full-screen dialogs.
 **Action:** Implement a toggle (e.g., `isFullScreen`) in reusable sheet widgets to conditionally render the drag handle, ensuring appropriate affordance for the presentation context.
+
+## 2026-01-21 - [Chat List Context]
+**Learning:** In chat history lists, displaying only the date forces users to recall conversations by time alone, which is difficult. Showing a snippet of the last message provides immediate context (semantic memory) and significantly speeds up list scanning.
+**Action:** Always include a text preview (truncated to 1 line) and use the *last message timestamp* (not creation date) in chat list items to maximize information density and relevance.
