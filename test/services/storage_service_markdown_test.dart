@@ -38,6 +38,17 @@ void main() {
       expect(markdown, contains('> Line 1'));
       expect(markdown, contains('> Line 2'));
     });
+
+    test('Escapes malicious Markdown structure in system prompt', () {
+      final service = TestStorageService();
+      final markdown = service.exportToMarkdown(chatIds: ['3']);
+
+      expect(markdown, contains('### System Prompt'));
+      expect(markdown, contains('> Line 1'));
+      // The injected header in system prompt should be quoted
+      expect(markdown, contains('> ### Hacked Header'));
+      expect(markdown, isNot(contains('\n### Hacked Header')));
+    });
   });
 }
 
@@ -71,10 +82,18 @@ class TestStorageService extends StorageService {
           ),
         ],
       ),
+      ChatSession(
+        id: '3',
+        title: 'System Prompt Injection Test',
+        model: 'llama3',
+        createdAt: DateTime(2025, 1, 1),
+        systemPrompt: 'Line 1\n### Hacked Header',
+        messages: [],
+      ),
     ];
   }
 
   // Override other methods to avoid Hive calls if necessary
   @override
-  void logActivity(String action, String details) {}
+  Future<void> logActivity(String action, String details) async {}
 }
