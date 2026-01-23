@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_session.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_message.dart';
+import 'package:pocketllm_lite/features/chat/domain/models/system_prompt.dart';
 import 'package:pocketllm_lite/services/storage_service.dart';
 
 // Subclass to override data accessors for testing
@@ -18,6 +19,12 @@ class TestStorageService extends StorageService {
   Future<void> logActivity(String action, String details) async {
     // No-op for testing
   }
+
+  @override
+  List<SystemPrompt> getSystemPrompts() => [];
+
+  @override
+  Map<String, dynamic> getExportableSettings() => {};
 }
 // Actually, I don't need to override `_chatSessionToJson` if I just rely on the base class implementation.
 // The base class implementation just converts the object to a map. It should be fine.
