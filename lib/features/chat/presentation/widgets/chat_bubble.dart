@@ -206,7 +206,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     }
 
     return ValueListenableBuilder(
-      valueListenable: storage.settingsBoxListenable,
+      valueListenable: storage.starredMessagesListenable,
       builder: (context, _, __) {
         final isStarred = storage.isMessageStarred(message);
 

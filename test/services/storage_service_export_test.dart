@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_session.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_message.dart';
+import 'package:pocketllm_lite/features/chat/domain/models/system_prompt.dart';
 import 'package:pocketllm_lite/services/storage_service.dart';
 
 // Subclass to override data accessors for testing
@@ -12,6 +13,11 @@ class TestStorageService extends StorageService {
   @override
   List<ChatSession> getChatSessions() {
     return _mockSessions;
+  }
+
+  @override
+  List<SystemPrompt> getSystemPrompts() {
+    return [];
   }
 
   @override

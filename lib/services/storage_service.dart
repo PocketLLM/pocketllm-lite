@@ -23,6 +23,8 @@ class StorageService {
   List<ChatSession>? _cachedSessions;
   // Cache for chat tags
   Map<String, List<String>>? _cachedTags;
+  // Cache for starred messages (O(1) lookup)
+  Set<ChatMessage>? _cachedStarredMessages;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -162,6 +164,9 @@ class StorageService {
       _systemPromptBox.listenable();
 
   ValueListenable<Box> get settingsBoxListenable => _settingsBox.listenable();
+
+  ValueListenable<Box> get starredMessagesListenable =>
+      _settingsBox.listenable(keys: [AppConstants.starredMessagesKey]);
 
   ValueListenable<Box> get activityLogBoxListenable =>
       _activityLogBox.listenable();
@@ -457,14 +462,18 @@ class StorageService {
       AppConstants.starredMessagesKey,
       defaultValue: <dynamic>[],
     );
-    return (rawList as List)
+    final messages = (rawList as List)
         .map((e) => StarredMessage.fromJson(Map<String, dynamic>.from(e)))
         .toList();
+
+    _cachedStarredMessages = messages.map((m) => m.message).toSet();
+    return messages;
   }
 
   Future<void> saveStarredMessages(List<StarredMessage> messages) async {
     final rawList = messages.map((m) => m.toJson()).toList();
     await _settingsBox.put(AppConstants.starredMessagesKey, rawList);
+    _cachedStarredMessages = messages.map((m) => m.message).toSet();
   }
 
   Future<void> toggleStarMessage(String chatId, ChatMessage message) async {
@@ -491,8 +500,10 @@ class StorageService {
   }
 
   bool isMessageStarred(ChatMessage message) {
-    final starred = getStarredMessages();
-    return starred.any((s) => s.message == message);
+    if (_cachedStarredMessages == null) {
+      getStarredMessages();
+    }
+    return _cachedStarredMessages!.contains(message);
   }
 
   Future<void> unstarMessage(String starredMessageId) async {
@@ -805,6 +816,9 @@ class StorageService {
       );
       for (final entry in settings.entries) {
         await saveSetting(entry.key, entry.value);
+        if (entry.key == AppConstants.starredMessagesKey) {
+          _cachedStarredMessages = null;
+        }
         settingsImported++;
       }
     }
