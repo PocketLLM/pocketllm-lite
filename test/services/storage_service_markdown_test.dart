@@ -76,5 +76,5 @@ class TestStorageService extends StorageService {
 
   // Override other methods to avoid Hive calls if necessary
   @override
-  void logActivity(String action, String details) {}
+  Future<void> logActivity(String action, String details) async {}
 }

@@ -23,6 +23,9 @@ class StorageService {
   List<ChatSession>? _cachedSessions;
   // Cache for chat tags
   Map<String, List<String>>? _cachedTags;
+  // Cache for starred messages
+  List<StarredMessage>? _cachedStarredMessages;
+  Set<ChatMessage>? _cachedStarredMessageSet;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -453,18 +456,30 @@ class StorageService {
 
   // Starred Messages
   List<StarredMessage> getStarredMessages() {
-    final rawList = _settingsBox.get(
+    if (_cachedStarredMessages != null) {
+      return List.from(_cachedStarredMessages!);
+    }
+
+    final rawList = getSetting(
       AppConstants.starredMessagesKey,
       defaultValue: <dynamic>[],
     );
-    return (rawList as List)
+    _cachedStarredMessages = (rawList as List)
         .map((e) => StarredMessage.fromJson(Map<String, dynamic>.from(e)))
         .toList();
+
+    _cachedStarredMessageSet =
+        _cachedStarredMessages!.map((s) => s.message).toSet();
+
+    return List.from(_cachedStarredMessages!);
   }
 
   Future<void> saveStarredMessages(List<StarredMessage> messages) async {
+    _cachedStarredMessages = List.from(messages);
+    _cachedStarredMessageSet = messages.map((m) => m.message).toSet();
+
     final rawList = messages.map((m) => m.toJson()).toList();
-    await _settingsBox.put(AppConstants.starredMessagesKey, rawList);
+    await saveSetting(AppConstants.starredMessagesKey, rawList);
   }
 
   Future<void> toggleStarMessage(String chatId, ChatMessage message) async {
@@ -491,8 +506,10 @@ class StorageService {
   }
 
   bool isMessageStarred(ChatMessage message) {
-    final starred = getStarredMessages();
-    return starred.any((s) => s.message == message);
+    if (_cachedStarredMessageSet == null) {
+      getStarredMessages();
+    }
+    return _cachedStarredMessageSet!.contains(message);
   }
 
   Future<void> unstarMessage(String starredMessageId) async {
