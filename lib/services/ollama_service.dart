@@ -8,10 +8,15 @@ import '../features/chat/domain/models/pull_progress.dart';
 class OllamaService {
   String _baseUrl;
   final http.Client _client;
+  final Duration _streamTimeout;
 
-  OllamaService({String? baseUrl, http.Client? client})
-    : _baseUrl = baseUrl ?? AppConstants.defaultOllamaBaseUrl,
-      _client = client ?? http.Client() {
+  OllamaService({
+    String? baseUrl,
+    http.Client? client,
+    Duration? streamTimeout,
+  }) : _baseUrl = baseUrl ?? AppConstants.defaultOllamaBaseUrl,
+       _client = client ?? http.Client(),
+       _streamTimeout = streamTimeout ?? AppConstants.apiGenerationTimeout {
     // Security: Validate URL scheme to prevent non-HTTP protocols
     if (!UrlValidator.isHttpUrlString(_baseUrl)) {
       throw ArgumentError(
@@ -111,6 +116,7 @@ class OllamaService {
         // Use LineSplitter to correctly handle chunks that might be split
         // across JSON object boundaries, ensuring no data is lost and reducing string allocations.
         await for (final line in streamedResponse.stream
+            .timeout(_streamTimeout)
             .transform(utf8.decoder)
             .transform(const LineSplitter())) {
           if (line.trim().isEmpty) continue;
@@ -151,6 +157,7 @@ class OllamaService {
       if (streamedResponse.statusCode == 200) {
         // Use LineSplitter to properly handle split chunks in NDJSON stream
         await for (final line in streamedResponse.stream
+            .timeout(_streamTimeout)
             .transform(utf8.decoder)
             .transform(const LineSplitter())) {
           if (line.trim().isEmpty) continue;

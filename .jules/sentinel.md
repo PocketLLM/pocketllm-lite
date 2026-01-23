@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-24 - Missing Stream Body Timeouts
+**Vulnerability:** HTTP streams (like Ollama responses) can hang indefinitely *during* body transfer if the server stalls, even if the connection was established successfully. The initial connection timeout does not apply to the stream itself.
+**Learning:** Dart's `http` client timeouts only apply to the initial response headers. Consuming the response body stream requires an explicit `.timeout()` operator on the stream pipeline.
+**Prevention:** Always apply `.timeout()` to the `stream` property of a `StreamedResponse` when consuming data from external APIs.
