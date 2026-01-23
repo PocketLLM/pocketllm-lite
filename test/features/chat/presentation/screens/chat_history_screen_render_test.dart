@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,7 +59,7 @@ class MockBox extends Mock implements Box<ChatSession> {
 }
 
 class MockUsageLimitsNotifier extends UsageLimitsNotifier {
-  MockUsageLimitsNotifier() : super(StorageService());
+  MockUsageLimitsNotifier();
 
   @override
   bool canCreateChat() => true;
@@ -71,7 +72,7 @@ void main() {
       ProviderScope(
         overrides: [
           storageServiceProvider.overrideWithValue(MockStorageService()),
-          usageLimitsProvider.overrideWith((ref) => MockUsageLimitsNotifier()),
+          usageLimitsProvider.overrideWith(() => MockUsageLimitsNotifier()),
         ],
         child: MaterialApp(
           home: ChatHistoryScreen(),
@@ -84,5 +85,8 @@ void main() {
 
     // We expect to find multiple ListTiles rendered
     expect(find.byType(ListTile), findsAtLeastNWidgets(1));
+
+    // Allow time for the banner ad timer to complete (500ms delay in initState)
+    await tester.pump(const Duration(seconds: 1));
   });
 }

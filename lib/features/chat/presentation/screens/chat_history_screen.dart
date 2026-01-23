@@ -234,7 +234,28 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     );
 
     if (query.isEmpty || queryRegex == null) {
-      return Text(_formatDate(session.createdAt), style: defaultStyle);
+      // Show date and last message preview
+      DateTime dateToShow = session.createdAt;
+      String preview = '';
+
+      if (session.messages.isNotEmpty) {
+        final lastMsg = session.messages.last;
+        dateToShow = lastMsg.timestamp;
+        preview = lastMsg.content.replaceAll('\n', ' ').trim();
+        if (preview.length > 60) {
+          preview = '${preview.substring(0, 60)}...';
+        }
+      }
+
+      final dateStr = _formatDate(dateToShow);
+      final text = preview.isNotEmpty ? '$dateStr  •  $preview' : dateStr;
+
+      return Text(
+        text,
+        style: defaultStyle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
     }
 
     final snippet = _getMatchingSnippet(session, queryRegex, query);
