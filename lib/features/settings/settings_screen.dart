@@ -21,6 +21,7 @@ import '../chat/presentation/providers/models_provider.dart';
 import '../chat/presentation/providers/prompt_enhancer_provider.dart';
 import 'presentation/widgets/export_dialog.dart';
 import 'presentation/widgets/import_dialog.dart';
+import 'presentation/widgets/model_details_dialog.dart';
 import 'presentation/widgets/model_settings_dialog.dart';
 import 'presentation/widgets/model_download_dialog.dart';
 
@@ -703,6 +704,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   setState(() {});
                                 },
                                 activeColor: Colors.blue,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.info_outline,
+                                  size: 20,
+                                  color: Colors.blueGrey,
+                                ),
+                                tooltip: 'Model Specs',
+                                onPressed: () {
+                                  HapticFeedback.lightImpact();
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => ModelDetailsDialog(
+                                      modelName: model.name,
+                                    ),
+                                  );
+                                },
                                 visualDensity: VisualDensity.compact,
                               ),
                               IconButton(

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
 import '../core/utils/url_validator.dart';
 import '../features/chat/domain/models/ollama_model.dart';
+import '../features/chat/domain/models/ollama_model_details.dart';
 import '../features/chat/domain/models/pull_progress.dart';
 
 class OllamaService {
@@ -174,6 +175,30 @@ class OllamaService {
     await _client
         .delete(url, body: jsonEncode({"name": modelName}))
         .timeout(AppConstants.apiConnectionTimeout);
+  }
+
+  Future<OllamaModelDetails> getModelDetails(String modelName) async {
+    final url = Uri.parse('$_baseUrl/api/show');
+    try {
+      final response = await _client
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({"name": modelName}),
+          )
+          .timeout(AppConstants.apiConnectionTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return OllamaModelDetails.fromJson(data);
+      } else {
+        throw Exception(
+          'Failed to load model details: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Network error fetching model details: $e');
+    }
   }
 
   /// Non-streaming prompt enhancement using /api/chat
