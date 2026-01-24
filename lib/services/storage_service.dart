@@ -9,6 +9,7 @@ import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
+import '../features/settings/domain/models/media_item.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
@@ -515,6 +516,103 @@ class StorageService {
       await saveStarredMessages(starred);
       await logActivity('Message Unstarred', 'Unstarred message (ID: $starredMessageId)');
     }
+  }
+
+  // Media Gallery
+  List<MediaItem> getAllMedia() {
+    final sessions = getChatSessions();
+    final List<MediaItem> mediaItems = [];
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (int i = 0; i < message.images!.length; i++) {
+            mediaItems.add(
+              MediaItem(
+                chatId: session.id,
+                chatTitle: session.title,
+                messageTimestamp: message.timestamp,
+                imageIndex: i,
+                base64Content: message.images![i],
+              ),
+            );
+          }
+        }
+      }
+    }
+    // Sort by timestamp desc
+    mediaItems.sort((a, b) => b.messageTimestamp.compareTo(a.messageTimestamp));
+    return mediaItems;
+  }
+
+  Future<void> deleteMedia(List<MediaItem> items) async {
+    // Group by chatId to minimize writes
+    final Map<String, List<MediaItem>> itemsByChat = {};
+    for (final item in items) {
+      if (!itemsByChat.containsKey(item.chatId)) {
+        itemsByChat[item.chatId] = [];
+      }
+      itemsByChat[item.chatId]!.add(item);
+    }
+
+    for (final chatId in itemsByChat.keys) {
+      final session = getChatSession(chatId);
+      if (session == null) continue;
+
+      bool sessionModified = false;
+      final List<ChatMessage> updatedMessages = [];
+
+      // Reconstruct messages
+      for (final message in session.messages) {
+        // Filter items for this message (match by timestamp)
+        final itemsForMessage = itemsByChat[chatId]!.where((item) =>
+            item.messageTimestamp.isAtSameMomentAs(message.timestamp)).toList();
+
+        if (itemsForMessage.isEmpty) {
+          updatedMessages.add(message);
+          continue;
+        }
+
+        sessionModified = true;
+
+        if (message.images == null) {
+          updatedMessages.add(message);
+          continue;
+        }
+
+        final List<String> currentImages = List.from(message.images!);
+        // Get indices to remove and sort descending
+        final indicesToRemove = itemsForMessage.map((e) => e.imageIndex).toSet().toList();
+        indicesToRemove.sort((a, b) => b.compareTo(a));
+
+        for (final idx in indicesToRemove) {
+          if (idx >= 0 && idx < currentImages.length) {
+            currentImages.removeAt(idx);
+          }
+        }
+
+        // Check if message is now empty (no images, no text)
+        if (currentImages.isEmpty && message.content.trim().isEmpty) {
+          // Remove message
+          continue;
+        }
+
+        // Update message
+        updatedMessages.add(ChatMessage(
+          role: message.role,
+          content: message.content,
+          timestamp: message.timestamp,
+          images: currentImages.isEmpty ? null : currentImages,
+        ));
+      }
+
+      if (sessionModified) {
+        final updatedSession = session.copyWith(messages: updatedMessages);
+        await saveChatSession(updatedSession, log: false);
+      }
+    }
+
+    await logActivity('Media Deleted', 'Deleted ${items.length} media items');
   }
 
   // Activity Log
