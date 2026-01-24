@@ -112,7 +112,8 @@ class OllamaService {
         // across JSON object boundaries, ensuring no data is lost and reducing string allocations.
         await for (final line in streamedResponse.stream
             .transform(utf8.decoder)
-            .transform(const LineSplitter())) {
+            .transform(const LineSplitter())
+            .timeout(AppConstants.apiConnectionTimeout)) {
           if (line.trim().isEmpty) continue;
           try {
             final json = jsonDecode(line);
@@ -152,7 +153,8 @@ class OllamaService {
         // Use LineSplitter to properly handle split chunks in NDJSON stream
         await for (final line in streamedResponse.stream
             .transform(utf8.decoder)
-            .transform(const LineSplitter())) {
+            .transform(const LineSplitter())
+            .timeout(AppConstants.apiConnectionTimeout)) {
           if (line.trim().isEmpty) continue;
           try {
             final json = jsonDecode(line);
