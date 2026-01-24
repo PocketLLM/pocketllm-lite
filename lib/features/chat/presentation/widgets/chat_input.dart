@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
@@ -9,6 +10,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
 import '../../../../services/ad_service.dart';
 import '../../../../services/usage_limits_provider.dart';
+import '../../../../services/file_service.dart';
 import '../providers/chat_provider.dart';
 import '../providers/prompt_enhancer_provider.dart';
 import '../providers/connection_status_provider.dart';
@@ -27,6 +29,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final _focusNode = FocusNode();
   final _picker = ImagePicker();
   final List<Uint8List> _selectedImages = [];
+  final List<PlatformFile> _selectedFiles = [];
   Timer? _debounceTimer;
 
   @override
@@ -73,8 +76,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     });
   }
 
-  Future<void> _pickImage() async {
-    // Show bottom sheet to choose camera or gallery
+  Future<void> _pickAttachment() async {
     final storage = ref.read(storageServiceProvider);
     if (storage.getSetting(
       AppConstants.hapticFeedbackKey,
@@ -83,7 +85,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       HapticFeedback.selectionClick();
     }
 
-    final source = await showModalBottomSheet<ImageSource>(
+    final source = await showModalBottomSheet<String>(
       context: context,
       builder: (context) {
         final theme = Theme.of(context);
@@ -103,7 +105,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Attach Image',
+                'Attach Media',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -112,12 +114,18 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               ListTile(
                 leading: const Icon(Icons.camera_alt),
                 title: const Text('Camera'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
+                onTap: () => Navigator.pop(context, 'camera'),
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Gallery'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
+                onTap: () => Navigator.pop(context, 'gallery'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.description),
+                title: const Text('File (Text/Code)'),
+                subtitle: const Text('Add context from files'),
+                onTap: () => Navigator.pop(context, 'file'),
               ),
               const SizedBox(height: 16),
             ],
@@ -126,9 +134,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       },
     );
 
-    if (source != null) {
+    if (source == 'camera' || source == 'gallery') {
+      final imageSource = source == 'camera' ? ImageSource.camera : ImageSource.gallery;
       final XFile? image = await _picker.pickImage(
-        source: source,
+        source: imageSource,
         maxWidth: 1024,
         maxHeight: 1024, // Security: Prevent DoS via memory exhaustion
       );
@@ -138,12 +147,27 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           _selectedImages.add(bytes);
         });
       }
+    } else if (source == 'file') {
+      final files = await ref.read(fileServiceProvider).pickTextFiles();
+      if (files.isNotEmpty) {
+        setState(() {
+          _selectedFiles.addAll(files);
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Attached ${files.length} file(s)'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
     }
   }
 
   void _send() async {
     final text = _controller.text;
-    if (text.trim().isEmpty && _selectedImages.isEmpty) return;
+    if (text.trim().isEmpty && _selectedImages.isEmpty && _selectedFiles.isEmpty) return;
 
     if (text.length > AppConstants.maxInputLength) {
       if (mounted) {
@@ -159,14 +183,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       return;
     }
 
-    // Check connection status before sending using the auto-refreshing provider
+    // Check connection status before sending
     final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
-    await connectionChecker.refresh(); // Force a refresh before checking
+    await connectionChecker.refresh();
     final connectionState = await ref.read(autoConnectionStatusProvider.future);
     final isConnected = connectionState;
 
     if (!isConnected) {
-      // Show dialog prompting user to connect Ollama with improved button design
       if (mounted) {
         await showDialog(
           context: context,
@@ -184,7 +207,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(dialogContext);
-                  // Navigate to settings using State context
                   if (mounted) context.push('/settings');
                 },
                 child: const Text('Settings'),
@@ -192,7 +214,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(dialogContext);
-                  // Navigate to docs using State context
                   if (mounted) context.push('/settings/docs');
                 },
                 child: const Text('Docs'),
@@ -212,6 +233,29 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       HapticFeedback.lightImpact();
     }
 
+    // Process files
+    final fileService = ref.read(fileServiceProvider);
+    final buffer = StringBuffer();
+
+    // Start with existing text
+    buffer.write(text);
+
+    if (_selectedFiles.isNotEmpty) {
+      // Append file content
+      if (text.isNotEmpty) buffer.writeln();
+      buffer.writeln();
+
+      for (final file in _selectedFiles) {
+         final content = await fileService.readFileContent(file);
+         buffer.writeln('---');
+         buffer.writeln('File: ${file.name}');
+         buffer.writeln(content);
+         buffer.writeln('---');
+         buffer.writeln();
+      }
+    }
+
+    final fullText = buffer.toString();
     final imagesToSend = _selectedImages
         .map((bytes) => base64Encode(bytes))
         .toList();
@@ -224,13 +268,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     ref
         .read(chatProvider.notifier)
         .sendMessage(
-          _controller.text,
+          fullText,
           images: imagesToSend.isNotEmpty ? imagesToSend : null,
         );
 
     _controller.clear();
     setState(() {
       _selectedImages.clear();
+      _selectedFiles.clear();
     });
   }
 
@@ -257,13 +302,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             Navigator.pop(context);
             if (content.isNotEmpty) {
               setState(() {
-                // If controller is empty, just replace. If not, append.
                 if (_controller.text.isEmpty) {
                   _controller.text = content;
                 } else {
                   _controller.text = '${_controller.text}\n$content';
                 }
-                // Move cursor to end
                 _controller.selection = TextSelection.fromPosition(
                   TextPosition(offset: _controller.text.length),
                 );
@@ -279,9 +322,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Future<void> _enhancePrompt() async {
     if (_controller.text.trim().isEmpty) return;
 
-    // Check connection status before enhancing using the auto-refreshing provider
     final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
-    await connectionChecker.refresh(); // Force a refresh before checking
+    await connectionChecker.refresh();
     final connectionState = await ref.read(autoConnectionStatusProvider.future);
     final isConnected = connectionState;
 
@@ -320,10 +362,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       return;
     }
 
-    // Check usage limits
     final limitsNotifier = ref.read(usageLimitsProvider.notifier);
     if (!limitsNotifier.canUseEnhancer()) {
-      // Show ad dialog
       await _showEnhancerLimitDialog();
       return;
     }
@@ -344,7 +384,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           .enhancePrompt(_controller.text);
 
       if (mounted) {
-        // Consume one enhancer use
         await limitsNotifier.useEnhancer();
 
         if (!mounted) return;
@@ -354,7 +393,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           _isEnhancing = false;
         });
 
-        // Haptic success feedback
         if (storage.getSetting(
           AppConstants.hapticFeedbackKey,
           defaultValue: true,
@@ -422,7 +460,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           ),
           ElevatedButton.icon(
             onPressed: () async {
-              // Check internet first
               if (!await adService.hasInternetConnection()) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -441,8 +478,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             icon: const Icon(Icons.play_circle),
             label: const Text('Watch Ad'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue, // Blue background
-              foregroundColor: Colors.white, // White text
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
             ),
           ),
         ],
@@ -450,7 +487,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     );
 
     if (result == true && mounted) {
-      // Show and handle rewarded ad
       await adService.showPromptEnhancementRewardedAd(
         onUserEarnedReward: (reward) async {
           await ref
@@ -482,7 +518,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen for draft messages (e.g. from suggestion chips)
     ref.listen<String?>(draftMessageProvider, (previous, next) {
       if (next != null && next.isNotEmpty) {
         _controller.text = next;
@@ -490,35 +525,20 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           TextPosition(offset: next.length),
         );
         _focusNode.requestFocus();
-        // Reset the provider to avoid re-triggering or stale state
         ref.read(draftMessageProvider.notifier).state = null;
       }
     });
 
-    // Listen for session changes to save/load drafts
     ref.listen<ChatState>(chatProvider, (prev, next) {
       if (prev?.currentSessionId != next.currentSessionId) {
         final storage = ref.read(storageServiceProvider);
 
-        // Save previous draft
         final prevKey = prev?.currentSessionId ?? 'new_chat';
-        // We use the controller's current text as the draft for the PREVIOUS session
-        // BUT we need to be careful: if the controller text has already been replaced,
-        // we might save the wrong thing.
-        // However, this listener runs *after* the provider updates but *before* the widget rebuilds?
-        // Actually, listeners run synchronously on change.
-        // The controller text at this exact moment is what the user typed in the PREVIOUS session.
         storage.saveDraft(prevKey, _controller.text);
 
-        // Load new draft
         final nextKey = next.currentSessionId ?? 'new_chat';
         final newDraft = storage.getDraft(nextKey);
 
-        // Update controller without triggering listener loop (listener checks if content changed, which is fine)
-        // We temporarily remove listener to avoid saving the "new draft" to the "old key" during the switch?
-        // No, `_onTextChanged` uses `ref.read(chatProvider).currentSessionId`.
-        // By the time `_onTextChanged` runs (after 500ms), `chatProvider` will return `next.currentSessionId`.
-        // So it will save to the NEW key. This is correct.
         _controller.text = newDraft ?? '';
       }
     });
@@ -530,7 +550,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface, // Background of the bar area
+        color: theme.colorScheme.surface,
       ),
       child: AnimatedBuilder(
         animation: _focusNode,
@@ -543,7 +563,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 color: _focusNode.hasFocus
                     ? theme.colorScheme.primary
                     : (isDark ? Colors.grey[800]! : Colors.transparent),
-                width: 1.0, // Constant width to prevent layout shift
+                width: 1.0,
               ),
             ),
             padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
@@ -554,6 +574,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Selected Images
             if (_selectedImages.isNotEmpty)
               Container(
                 height: 70,
@@ -572,7 +593,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             width: 60,
                             height: 60,
                             fit: BoxFit.cover,
-                            // Optimize memory: Decode only to the size we need (60 * 3 for HiDPI)
                             cacheWidth: 180,
                           ),
                         ),
@@ -609,6 +629,32 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   ),
                 ),
               ),
+
+            // Selected Files
+            if (_selectedFiles.isNotEmpty)
+              Container(
+                height: 40,
+                padding: const EdgeInsets.only(bottom: 4, top: 4),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedFiles.length,
+                  itemBuilder: (c, i) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: InputChip(
+                      avatar: const Icon(Icons.description, size: 16),
+                      label: Text(
+                        _selectedFiles[i].name,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      onDeleted: () => setState(() => _selectedFiles.removeAt(i)),
+                      deleteIcon: const Icon(Icons.close, size: 14),
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ),
+
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               decoration: BoxDecoration(
@@ -687,18 +733,18 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Semantics(
-                      label: 'Add Image',
+                      label: 'Attach Media',
                       button: true,
                       enabled: !isGenerating,
                       child: Tooltip(
-                        message: 'Add Image',
+                        message: 'Attach Media',
                         child: Material(
                           color: (isDark ? Colors.grey[800] : Colors.grey[300])
                               ?.withValues(alpha: isGenerating ? 0.5 : 1.0),
                           shape: const CircleBorder(),
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
-                            onTap: isGenerating ? null : _pickImage,
+                            onTap: isGenerating ? null : _pickAttachment,
                             child: Padding(
                               padding: const EdgeInsets.all(6),
                               child: Icon(
@@ -714,7 +760,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Templates Button
                     Semantics(
                       label: 'Templates',
                       button: true,
@@ -743,7 +788,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Enhance Prompt Button - only show if enhancer model selected
                     Consumer(
                       builder: (context, ref, child) {
                         final enhancerState = ref.watch(promptEnhancerProvider);
@@ -803,13 +847,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     ),
                   ],
                 ),
-                // Optimize: Only rebuild the Send button when text changes, not the whole widget
                 ValueListenableBuilder<TextEditingValue>(
                   valueListenable: _controller,
                   builder: (context, value, child) {
                     final canSend =
                         (value.text.trim().isNotEmpty ||
-                            _selectedImages.isNotEmpty) &&
+                            _selectedImages.isNotEmpty || _selectedFiles.isNotEmpty) &&
                         !isGenerating;
 
                     return AnimatedContainer(
