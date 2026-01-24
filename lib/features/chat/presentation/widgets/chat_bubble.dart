@@ -13,6 +13,8 @@ import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/draft_message_provider.dart';
+import '../providers/starred_messages_provider.dart';
+import '../../../../core/providers.dart';
 import 'three_dot_loading_indicator.dart';
 
 // Helper class for formatting timestamps
@@ -158,8 +160,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final hasElevation = appearance.bubbleElevation;
     final showAvatars = appearance.showAvatars;
 
-    final storage = ref.watch(storageServiceProvider);
-
     // Show loading indicator for empty assistant messages (AI is generating)
     if (!isUser && message.content.isEmpty) {
       return Padding(
@@ -205,17 +205,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       );
     }
 
-    return ValueListenableBuilder(
-      valueListenable: storage.starredMessagesListenable,
-      builder: (context, _, __) {
-        final isStarred = storage.isMessageStarred(message);
+    final isStarred = ref.watch(
+      starredMessagesProvider.select((state) => state.contains(message)),
+    );
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        mainAxisAlignment:
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isUser && showAvatars) ...[
@@ -365,8 +363,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           ],
         ],
       ),
-    );
-      },
     );
   }
 
