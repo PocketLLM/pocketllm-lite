@@ -93,4 +93,11 @@ class AppConstants {
   static const int maxInputLength = 50000;
   static const Duration apiConnectionTimeout = Duration(seconds: 10);
   static const Duration apiGenerationTimeout = Duration(seconds: 30);
+
+  // File Upload Limits
+  static const int maxFileSize = 5 * 1024 * 1024; // 5 MB
+  static const List<String> supportedTextExtensions = [
+    'txt', 'md', 'json', 'csv', 'yaml', 'yml', 'xml', 'log',
+    'dart', 'js', 'ts', 'py', 'java', 'c', 'cpp', 'h', 'cs', 'go', 'rb', 'php', 'html', 'css'
+  ];
 }
