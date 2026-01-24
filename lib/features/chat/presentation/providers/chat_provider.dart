@@ -247,7 +247,29 @@ class ChatNotifier extends Notifier<ChatState> {
   void deleteMessage(ChatMessage message) {
     final updatedMessages = state.messages.where((m) => m != message).toList();
     state = state.copyWith(messages: updatedMessages);
-    _saveSession();
+    _checkEmptyAndSave();
+  }
+
+  void deleteMessages(List<ChatMessage> messages) {
+    final toDelete = messages.toSet();
+    final updatedMessages = state.messages
+        .where((m) => !toDelete.contains(m))
+        .toList();
+    state = state.copyWith(messages: updatedMessages);
+    _checkEmptyAndSave();
+  }
+
+  Future<void> _checkEmptyAndSave() async {
+    if (state.messages.isEmpty) {
+      if (state.currentSessionId != null) {
+        await ref
+            .read(storageServiceProvider)
+            .deleteChatSession(state.currentSessionId!);
+        state = state.copyWith(currentSessionId: null);
+      }
+      return;
+    }
+    await _saveSession();
   }
 
   Future<void> _saveSession() async {

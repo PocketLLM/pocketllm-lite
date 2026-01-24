@@ -12,6 +12,7 @@ import '../../../../core/utils/url_validator.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
+import '../providers/chat_selection_provider.dart';
 import '../providers/draft_message_provider.dart';
 import 'three_dot_loading_indicator.dart';
 
@@ -159,6 +160,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final showAvatars = appearance.showAvatars;
 
     final storage = ref.watch(storageServiceProvider);
+    final selectionState = ref.watch(chatSelectionProvider);
+    final isSelectionMode = selectionState.isSelectionMode;
+    final isSelected = selectionState.selectedMessages.contains(message);
 
     // Show loading indicator for empty assistant messages (AI is generating)
     if (!isUser && message.content.isEmpty) {
@@ -210,162 +214,195 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       builder: (context, _, __) {
         final isStarred = storage.isMessageStarred(message);
 
-        return Padding(
+        Widget bubbleContent = Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isUser && showAvatars) ...[
-            Semantics(
-              excludeSemantics: true,
-              child: CircleAvatar(
-                radius: 14,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.auto_awesome,
-                  size: 16,
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Semantics(
-              container: true,
-              hint: 'Double tap and hold for options',
-              onLongPress: () {
-                HapticFeedback.mediumImpact();
-                _showFocusedMenu(context, isUser, isStarred);
-              },
-              child: GestureDetector(
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  _showFocusedMenu(context, isUser, isStarred);
-                },
-                child: RepaintBoundary(
-                  child: Container(
-                    key: _bubbleKey,
-                    padding: EdgeInsets.all(padding),
-                    decoration: BoxDecoration(
-                      color: bubbleColor,
-                      borderRadius: BorderRadius.circular(radius).copyWith(
-                        bottomRight: isUser ? const Radius.circular(0) : null,
-                        bottomLeft: !isUser ? const Radius.circular(0) : null,
-                      ),
-                      boxShadow: hasElevation
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 2,
-                                offset: const Offset(0, 1),
-                              ),
-                            ]
-                          : null,
+            mainAxisAlignment:
+                isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!isUser && showAvatars) ...[
+                Semantics(
+                  excludeSemantics: true,
+                  child: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: theme.colorScheme.onPrimaryContainer,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_decodedImages != null &&
-                            _decodedImages!.isNotEmpty)
-                          ..._decodedImages!.map(
-                            (bytes) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.memory(
-                                  bytes,
-                                  height: 150,
-                                  fit: BoxFit.cover,
-                                  // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
-                                  cacheHeight: 450,
-                                ),
-                              ),
-                            ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Semantics(
+                  container: true,
+                  hint: 'Double tap and hold for options',
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    _showFocusedMenu(context, isUser, isStarred);
+                  },
+                  child: GestureDetector(
+                    onLongPress: isSelectionMode
+                        ? null
+                        : () {
+                            HapticFeedback.mediumImpact();
+                            _showFocusedMenu(context, isUser, isStarred);
+                          },
+                    child: RepaintBoundary(
+                      child: Container(
+                        key: _bubbleKey,
+                        padding: EdgeInsets.all(padding),
+                        decoration: BoxDecoration(
+                          color: bubbleColor,
+                          borderRadius: BorderRadius.circular(radius).copyWith(
+                            bottomRight: isUser ? const Radius.circular(0) : null,
+                            bottomLeft: !isUser ? const Radius.circular(0) : null,
                           ),
-                        if (isUser)
-                          Text(
-                            message.content,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: Colors.white,
-                              fontSize: fontSize,
-                            ),
-                          )
-                        else
-                          MarkdownBody(
-                            data: message.content,
-                            // ignore: deprecated_member_use
-                            imageBuilder: MarkdownHandlers.imageBuilder,
-                            onTapLink: (text, href, title) async {
-                              if (href != null) {
-                                final uri = Uri.tryParse(href);
-                                // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
-                                if (uri != null &&
-                                    UrlValidator.isSecureUrl(uri) &&
-                                    await canLaunchUrl(uri)) {
-                                  await launchUrl(
-                                    uri,
-                                    mode: LaunchMode.externalApplication,
-                                  );
-                                }
-                              }
-                            },
-                            styleSheet: _getStyleSheet(theme, fontSize),
-                          ),
-                        // Timestamp display
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (isStarred) ...[
-                                const Icon(
-                                  Icons.star,
-                                  size: 12,
-                                  color: Colors.amber,
-                                ),
-                                const SizedBox(width: 4),
-                              ],
-                              Text(
-                                _formattedTimestamp,
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: fontSize * 0.7,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                          ),
+                          boxShadow: hasElevation
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 2,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
                         ),
-                      ],
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_decodedImages != null &&
+                                _decodedImages!.isNotEmpty)
+                              ..._decodedImages!.map(
+                                (bytes) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.memory(
+                                      bytes,
+                                      height: 150,
+                                      fit: BoxFit.cover,
+                                      // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
+                                      cacheHeight: 450,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (isUser)
+                              Text(
+                                message.content,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontSize: fontSize,
+                                ),
+                              )
+                            else
+                              MarkdownBody(
+                                data: message.content,
+                                // ignore: deprecated_member_use
+                                imageBuilder: MarkdownHandlers.imageBuilder,
+                                onTapLink: (text, href, title) async {
+                                  if (href != null) {
+                                    final uri = Uri.tryParse(href);
+                                    // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
+                                    if (uri != null &&
+                                        UrlValidator.isSecureUrl(uri) &&
+                                        await canLaunchUrl(uri)) {
+                                      await launchUrl(
+                                        uri,
+                                        mode: LaunchMode.externalApplication,
+                                      );
+                                    }
+                                  }
+                                },
+                                styleSheet: _getStyleSheet(theme, fontSize),
+                              ),
+                            // Timestamp display
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isStarred) ...[
+                                    const Icon(
+                                      Icons.star,
+                                      size: 12,
+                                      color: Colors.amber,
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    _formattedTimestamp,
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: fontSize * 0.7,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-          if (isUser && showAvatars) ...[
-            const SizedBox(width: 8),
-            Semantics(
-              excludeSemantics: true,
-              child: CircleAvatar(
-                radius: 14,
-                backgroundColor: theme.colorScheme.secondaryContainer,
-                child: Icon(
-                  Icons.person,
-                  size: 16,
-                  color: theme.colorScheme.onSecondaryContainer,
+              if (isUser && showAvatars) ...[
+                const SizedBox(width: 8),
+                Semantics(
+                  excludeSemantics: true,
+                  child: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: theme.colorScheme.secondaryContainer,
+                    child: Icon(
+                      Icons.person,
+                      size: 16,
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
                 ),
+              ],
+            ],
+          ),
+        );
+
+        if (isSelectionMode) {
+          return InkWell(
+            onTap: () {
+              ref.read(chatSelectionProvider.notifier).toggleMessage(message);
+            },
+            child: Container(
+              color: isSelected
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.2)
+                  : null,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: isSelected,
+                    onChanged: (val) {
+                      ref
+                          .read(chatSelectionProvider.notifier)
+                          .toggleMessage(message);
+                    },
+                  ),
+                  Expanded(
+                    // Ignore pointer events on the bubble content in selection mode
+                    child: IgnorePointer(child: bubbleContent),
+                  ),
+                ],
               ),
             ),
-          ],
-        ],
-      ),
-    );
+          );
+        }
+
+        return bubbleContent;
       },
     );
   }
@@ -596,51 +633,64 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                 ? MediaQuery.of(context).size.width -
                       (bubbleOffset.dx + bubbleSize.width)
                 : null,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildIconBtn(
-                  context,
-                  isStarred ? Icons.star : Icons.star_border,
-                  isStarred ? 'Unstar' : 'Star',
-                  () {
-                    onToggleStar();
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildIconBtn(context, Icons.checklist, 'Select', () {
                     Navigator.pop(context);
-                  },
-                  color: Colors.amber,
-                ),
-                const SizedBox(width: 12),
-                _buildIconBtn(context, Icons.copy, 'Copy', () {
-                  Clipboard.setData(ClipboardData(text: message.content));
-                  // Capture messenger before popping to ensure feedback shows on parent screen
-                  final messenger = ScaffoldMessenger.of(context);
-                  Navigator.pop(context);
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Message copied to clipboard'),
-                      duration: Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }),
-                const SizedBox(width: 12),
-                _buildIconBtn(context, Icons.share, 'Share', () {
-                  SharePlus.instance.share(ShareParams(text: message.content));
-                  Navigator.pop(context);
-                }),
-                if (isUser) ...[
+                    ref
+                        .read(chatSelectionProvider.notifier)
+                        .enterSelectionMode(message);
+                  }),
                   const SizedBox(width: 12),
-                  _buildIconBtn(context, Icons.edit, 'Edit', () {
-                    // Populate the input with the message content
-                    ref.read(draftMessageProvider.notifier).state = message.content;
+                  _buildIconBtn(
+                    context,
+                    isStarred ? Icons.star : Icons.star_border,
+                    isStarred ? 'Unstar' : 'Star',
+                    () {
+                      onToggleStar();
+                      Navigator.pop(context);
+                    },
+                    color: Colors.amber,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildIconBtn(context, Icons.copy, 'Copy', () {
+                    Clipboard.setData(ClipboardData(text: message.content));
+                    // Capture messenger before popping to ensure feedback shows on parent screen
+                    final messenger = ScaffoldMessenger.of(context);
+                    Navigator.pop(context);
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Message copied to clipboard'),
+                        duration: Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }),
+                  const SizedBox(width: 12),
+                  _buildIconBtn(context, Icons.share, 'Share', () {
+                    SharePlus.instance.share(
+                      ShareParams(text: message.content),
+                    );
                     Navigator.pop(context);
                   }),
+                  if (isUser) ...[
+                    const SizedBox(width: 12),
+                    _buildIconBtn(context, Icons.edit, 'Edit', () {
+                      // Populate the input with the message content
+                      ref.read(draftMessageProvider.notifier).state =
+                          message.content;
+                      Navigator.pop(context);
+                    }),
+                  ],
+                  const SizedBox(width: 12),
+                  _buildIconBtn(context, Icons.delete_outline, 'Delete', () {
+                    _confirmDelete(context);
+                  }, color: Colors.redAccent),
                 ],
-                const SizedBox(width: 12),
-                _buildIconBtn(context, Icons.delete_outline, 'Delete', () {
-                  _confirmDelete(context);
-                }, color: Colors.redAccent),
-              ],
+              ),
             ),
           ),
         ],

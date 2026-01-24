@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers.dart';
 import '../../../services/usage_limits_provider.dart';
 import '../../../services/ad_service.dart';
 import 'providers/chat_provider.dart';
+import 'providers/chat_selection_provider.dart';
 import 'providers/models_provider.dart';
 import 'providers/connection_status_provider.dart';
 
@@ -35,6 +37,82 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final selectedModel = ref.watch(chatProvider.select((s) => s.selectedModel));
     final modelsAsync = ref.watch(modelsProvider);
     final connectionStatusAsync = ref.watch(autoConnectionStatusProvider);
+    final selectionState = ref.watch(chatSelectionProvider);
+
+    if (selectionState.isSelectionMode) {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          ref.read(chatSelectionProvider.notifier).exitSelectionMode();
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+            tooltip: 'Exit selection',
+            onPressed: () {
+              ref.read(chatSelectionProvider.notifier).exitSelectionMode();
+            },
+          ),
+          title: Text('${selectionState.selectedMessages.length} Selected'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.copy),
+              tooltip: 'Copy selected',
+              onPressed: selectionState.selectedMessages.isEmpty
+                  ? null
+                  : () {
+                      final text = ref
+                          .read(chatSelectionProvider.notifier)
+                          .getSelectedText();
+                      Clipboard.setData(ClipboardData(text: text));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Copied to clipboard'),
+                          behavior: SnackBarBehavior.floating,
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                      ref
+                          .read(chatSelectionProvider.notifier)
+                          .exitSelectionMode();
+                    },
+            ),
+            IconButton(
+              icon: const Icon(Icons.share),
+              tooltip: 'Share selected',
+              onPressed: selectionState.selectedMessages.isEmpty
+                  ? null
+                  : () {
+                      final text = ref
+                          .read(chatSelectionProvider.notifier)
+                          .getSelectedText();
+                      SharePlus.instance.share(ShareParams(text: text));
+                      ref
+                          .read(chatSelectionProvider.notifier)
+                          .exitSelectionMode();
+                    },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              tooltip: 'Delete selected',
+              onPressed: selectionState.selectedMessages.isEmpty
+                  ? null
+                  : () => _confirmBulkDelete(),
+            ),
+          ],
+        ),
+          body: Column(
+            children: [
+              const Expanded(child: ChatBody()),
+              // Hide input in selection mode? Usually yes.
+              const SizedBox.shrink(),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -249,34 +327,53 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ref.read(chatProvider.notifier).newChat();
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Settings',
-            onPressed: () {
-              if (ref.read(storageServiceProvider).getSetting(
-                    AppConstants.hapticFeedbackKey,
-                    defaultValue: true,
-                  )) {
-                HapticFeedback.selectionClick();
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Options',
+            onSelected: (value) {
+              if (value == 'select') {
+                ref.read(chatSelectionProvider.notifier).enterSelectionMode(null);
+              } else if (value == 'settings') {
+                context.push('/settings');
+              } else if (value == 'tune') {
+                 showDialog(
+                  context: context,
+                  builder: (context) => const ChatSettingsDialog(),
+                );
               }
-              context.push('/settings');
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.tune),
-            tooltip: 'Chat Settings',
-            onPressed: () {
-              if (ref.read(storageServiceProvider).getSetting(
-                    AppConstants.hapticFeedbackKey,
-                    defaultValue: true,
-                  )) {
-                HapticFeedback.selectionClick();
-              }
-              showDialog(
-                context: context,
-                builder: (context) => const ChatSettingsDialog(),
-              );
-            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'select',
+                child: Row(
+                  children: [
+                    Icon(Icons.checklist, size: 20),
+                    SizedBox(width: 12),
+                    Text('Select Messages'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'tune',
+                child: Row(
+                  children: [
+                    Icon(Icons.tune, size: 20),
+                    SizedBox(width: 12),
+                    Text('Chat Settings'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings, size: 20),
+                    SizedBox(width: 12),
+                    Text('Global Settings'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -284,6 +381,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           const Expanded(child: ChatBody()),
           const ChatInput(),
+        ],
+      ),
+    );
+  }
+
+  void _confirmBulkDelete() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Selected Messages?'),
+        content: const Text(
+            'These messages will be permanently removed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+               final selection = ref.read(chatSelectionProvider);
+               ref.read(chatProvider.notifier).deleteMessages(
+                 selection.selectedMessages.toList(),
+               );
+               ref.read(chatSelectionProvider.notifier).exitSelectionMode();
+               Navigator.pop(context);
+
+               ScaffoldMessenger.of(context).showSnackBar(
+                 const SnackBar(
+                   content: Text('Messages deleted'),
+                   behavior: SnackBarBehavior.floating,
+                 ),
+               );
+            },
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
