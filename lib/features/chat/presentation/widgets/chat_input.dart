@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
@@ -27,6 +28,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final _focusNode = FocusNode();
   final _picker = ImagePicker();
   final List<Uint8List> _selectedImages = [];
+  final List<PlatformFile> _selectedFiles = [];
   Timer? _debounceTimer;
 
   @override
@@ -141,9 +143,42 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
   }
 
+  Future<void> _pickFile() async {
+    final storage = ref.read(storageServiceProvider);
+    if (storage.getSetting(
+      AppConstants.hapticFeedbackKey,
+      defaultValue: false,
+    )) {
+      HapticFeedback.selectionClick();
+    }
+
+    try {
+      final fileService = ref.read(fileServiceProvider);
+      // We restrict to common text-based formats for now
+      final files = await fileService.pickFiles(
+        allowedExtensions: [
+          'txt', 'md', 'json', 'yaml', 'yml', 'dart', 'py', 'js', 'ts',
+          'html', 'css', 'csv', 'c', 'cpp', 'h', 'java', 'kt', 'swift', 'rb', 'go', 'rs'
+        ],
+      );
+
+      if (files.isNotEmpty) {
+        setState(() {
+          _selectedFiles.addAll(files);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking file: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   void _send() async {
     final text = _controller.text;
-    if (text.trim().isEmpty && _selectedImages.isEmpty) return;
+    if (text.trim().isEmpty && _selectedImages.isEmpty && _selectedFiles.isEmpty) return;
 
     if (text.length > AppConstants.maxInputLength) {
       if (mounted) {
@@ -212,6 +247,31 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       HapticFeedback.lightImpact();
     }
 
+    // Process files if any
+    final messageBuffer = StringBuffer();
+    if (text.isNotEmpty) {
+      messageBuffer.write(text);
+    }
+
+    if (_selectedFiles.isNotEmpty) {
+       final fileService = ref.read(fileServiceProvider);
+       if (messageBuffer.isNotEmpty) messageBuffer.writeln('\n');
+       messageBuffer.writeln('--- Attached Files ---');
+
+       for (final file in _selectedFiles) {
+         try {
+           final content = await fileService.readFileContent(file);
+           messageBuffer.writeln('\nFile: ${file.name}');
+           messageBuffer.writeln('```');
+           messageBuffer.writeln(content);
+           messageBuffer.writeln('```');
+         } catch (e) {
+           messageBuffer.writeln('\nError reading file ${file.name}: $e');
+         }
+       }
+       messageBuffer.writeln('\n---');
+    }
+
     final imagesToSend = _selectedImages
         .map((bytes) => base64Encode(bytes))
         .toList();
@@ -224,13 +284,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     ref
         .read(chatProvider.notifier)
         .sendMessage(
-          _controller.text,
+          messageBuffer.toString(),
           images: imagesToSend.isNotEmpty ? imagesToSend : null,
         );
 
     _controller.clear();
     setState(() {
       _selectedImages.clear();
+      _selectedFiles.clear();
     });
   }
 
@@ -502,23 +563,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
         // Save previous draft
         final prevKey = prev?.currentSessionId ?? 'new_chat';
-        // We use the controller's current text as the draft for the PREVIOUS session
-        // BUT we need to be careful: if the controller text has already been replaced,
-        // we might save the wrong thing.
-        // However, this listener runs *after* the provider updates but *before* the widget rebuilds?
-        // Actually, listeners run synchronously on change.
-        // The controller text at this exact moment is what the user typed in the PREVIOUS session.
         storage.saveDraft(prevKey, _controller.text);
 
         // Load new draft
         final nextKey = next.currentSessionId ?? 'new_chat';
         final newDraft = storage.getDraft(nextKey);
 
-        // Update controller without triggering listener loop (listener checks if content changed, which is fine)
-        // We temporarily remove listener to avoid saving the "new draft" to the "old key" during the switch?
-        // No, `_onTextChanged` uses `ref.read(chatProvider).currentSessionId`.
-        // By the time `_onTextChanged` runs (after 500ms), `chatProvider` will return `next.currentSessionId`.
-        // So it will save to the NEW key. This is correct.
         _controller.text = newDraft ?? '';
       }
     });
@@ -554,59 +604,83 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_selectedImages.isNotEmpty)
+            if (_selectedImages.isNotEmpty || _selectedFiles.isNotEmpty)
               Container(
                 height: 70,
                 padding: const EdgeInsets.only(bottom: 8, top: 8),
-                child: ListView.builder(
+                child: ListView(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _selectedImages.length,
-                  itemBuilder: (c, i) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            _selectedImages[i],
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                            // Optimize memory: Decode only to the size we need (60 * 3 for HiDPI)
-                            cacheWidth: 180,
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: IconButton(
-                            alignment: Alignment.topRight,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ),
-                            tooltip: 'Remove image',
-                            onPressed: () =>
-                                setState(() => _selectedImages.removeAt(i)),
-                            icon: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: const BoxDecoration(
-                                color: Colors.black54,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 14,
+                  children: [
+                    ..._selectedImages.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final bytes = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                bytes,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                cacheWidth: 180,
                               ),
                             ),
-                          ),
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: IconButton(
+                                alignment: Alignment.topRight,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 40,
+                                ),
+                                tooltip: 'Remove image',
+                                onPressed: () =>
+                                    setState(() => _selectedImages.removeAt(i)),
+                                icon: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      );
+                    }),
+                    ..._selectedFiles.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final file = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: InputChip(
+                          label: Text(
+                            file.name,
+                            style: const TextStyle(fontSize: 10),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onDeleted: () => setState(() => _selectedFiles.removeAt(i)),
+                          deleteIcon: const Icon(Icons.close, size: 14),
+                          avatar: const Icon(Icons.insert_drive_file, size: 14),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          padding: EdgeInsets.zero,
+                        ),
+                      );
+                    }),
+                  ],
                 ),
               ),
             AnimatedContainer(
@@ -702,7 +776,36 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             child: Padding(
                               padding: const EdgeInsets.all(6),
                               child: Icon(
-                                Icons.add,
+                                Icons.add_photo_alternate,
+                                size: 20,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: isGenerating ? 0.5 : 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // File Attachment
+                    Semantics(
+                      label: 'Attach File',
+                      button: true,
+                      enabled: !isGenerating,
+                      child: Tooltip(
+                        message: 'Attach File',
+                        child: Material(
+                          color: (isDark ? Colors.grey[800] : Colors.grey[300])
+                              ?.withValues(alpha: isGenerating ? 0.5 : 1.0),
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: isGenerating ? null : _pickFile,
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.attach_file,
                                 size: 20,
                                 color: theme.colorScheme.onSurface.withValues(
                                   alpha: isGenerating ? 0.5 : 1.0,
@@ -743,7 +846,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Enhance Prompt Button - only show if enhancer model selected
+                    // Enhance Prompt Button
                     Consumer(
                       builder: (context, ref, child) {
                         final enhancerState = ref.watch(promptEnhancerProvider);
@@ -809,7 +912,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   builder: (context, value, child) {
                     final canSend =
                         (value.text.trim().isNotEmpty ||
-                            _selectedImages.isNotEmpty) &&
+                            _selectedImages.isNotEmpty ||
+                            _selectedFiles.isNotEmpty) &&
                         !isGenerating;
 
                     return AnimatedContainer(
