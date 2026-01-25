@@ -814,7 +814,19 @@ class StorageService {
       final Map<String, dynamic> settings = Map<String, dynamic>.from(
         data['settings'],
       );
+
+      // Security: Define keys that should NEVER be imported to prevent configuration hijacking
+      // or other security risks (e.g., redirecting API calls to malicious servers).
+      final sensitiveKeys = {
+        AppConstants.ollamaBaseUrlKey,
+      };
+
       for (final entry in settings.entries) {
+        // Skip sensitive keys
+        if (sensitiveKeys.contains(entry.key)) {
+          continue;
+        }
+
         await saveSetting(entry.key, entry.value);
         if (entry.key == AppConstants.starredMessagesKey) {
           _cachedStarredMessages = null;
