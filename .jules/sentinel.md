@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Unrestricted Settings Import
+**Vulnerability:** `StorageService.importData` iterated over all keys in the input JSON and saved them, allowing attackers to overwrite internal state (like usage limits) by crafting a malicious import file.
+**Learning:** Generic import functions that accept arbitrary key-value pairs are risky when the target storage mixes user configuration with sensitive internal state.
+**Prevention:** Implement a strict whitelist of allowed keys for import functions, filtering out any keys that should not be user-modifiable.
