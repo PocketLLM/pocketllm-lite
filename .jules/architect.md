@@ -14,3 +14,8 @@
 **Challenge:** Implementing visual analytics (bar charts) for usage stats without adding heavy external dependencies like `fl_chart` to keep the app lightweight.
 **Solution:** I implemented a custom `BarChartPainter` using Flutter's `CustomPaint` API. It handles dynamic scaling, zero-value placeholders, and theme-aware styling (using `Color.withValues`).
 **Reusable Pattern:** The `BarChartPainter` pattern separates the data model (`DailyActivity`) from the rendering logic, providing a lightweight template for other simple time-series visualizations.
+
+## 2026-01-25 - Global Media Gallery on NoSQL
+**Challenge:** Users needed a central way to view all generated images, but the app uses a document-oriented NoSQL store (Hive) where images are embedded deep within `ChatSession` objects, making efficient retrieval and deletion complex without a relational "media" table.
+**Solution:** I implemented a projection pattern in `StorageService` (`getGalleryImages`) that dynamically aggregates images into transient `MediaItem` objects on-the-fly. For deletion (`deleteImage`), I used the timestamp and session ID to locate the parent message and perform an atomic read-modify-write update to the immutable `ChatSession`, ensuring referential integrity without explicit foreign keys.
+**Reusable Pattern:** This "Projection DTO" pattern allows creating cross-cutting views (like galleries or search results) over a hierarchical document store without data duplication, while keeping the source of truth in the primary aggregate root (`ChatSession`).

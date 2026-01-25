@@ -9,6 +9,7 @@ import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
+import '../features/gallery/domain/models/media_item.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
@@ -867,6 +868,79 @@ class StorageService {
       title: json['title'],
       content: json['content'],
     );
+  }
+
+  // Gallery
+  List<MediaItem> getGalleryImages() {
+    final List<MediaItem> mediaItems = [];
+    final sessions = getChatSessions();
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (int i = 0; i < message.images!.length; i++) {
+            mediaItems.add(
+              MediaItem(
+                chatId: session.id,
+                chatTitle: session.title,
+                messageTimestamp: message.timestamp,
+                imageIndex: i,
+                base64Image: message.images![i],
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp descending (newest first)
+    mediaItems.sort((a, b) => b.messageTimestamp.compareTo(a.messageTimestamp));
+    return mediaItems;
+  }
+
+  Future<void> deleteImage(MediaItem item) async {
+    final session = getChatSession(item.chatId);
+    if (session == null) return;
+
+    // Find message by timestamp
+    final messageIndex = session.messages.indexWhere(
+      (m) => m.timestamp.isAtSameMomentAs(item.messageTimestamp),
+    );
+
+    if (messageIndex != -1) {
+      final message = session.messages[messageIndex];
+      if (message.images != null && message.images!.length > item.imageIndex) {
+        // Verify it's the same image
+        if (message.images![item.imageIndex] == item.base64Image) {
+          // Create new images list
+          final newImages = List<String>.from(message.images!);
+          newImages.removeAt(item.imageIndex);
+
+          if (newImages.isEmpty && message.content.trim().isEmpty) {
+            // Delete message if empty
+            final newMessages = List<ChatMessage>.from(session.messages);
+            newMessages.removeAt(messageIndex);
+            final updatedSession = session.copyWith(messages: newMessages);
+            await saveChatSession(updatedSession, log: false);
+            await logActivity(
+              'Image Deleted',
+              'Deleted image and empty message from chat ${session.title}',
+            );
+          } else {
+            final updatedMessage = message.copyWith(images: newImages);
+            final newMessages = List<ChatMessage>.from(session.messages);
+            newMessages[messageIndex] = updatedMessage;
+            final updatedSession = session.copyWith(messages: newMessages);
+
+            await saveChatSession(updatedSession, log: false);
+            await logActivity(
+              'Image Deleted',
+              'Deleted image from chat ${session.title}',
+            );
+          }
+        }
+      }
+    }
   }
 
   // Statistics
