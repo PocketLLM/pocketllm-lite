@@ -189,7 +189,9 @@ class ChatNotifier extends Notifier<ChatState> {
           .read(storageServiceProvider)
           .getSetting(AppConstants.hapticFeedbackKey, defaultValue: true);
 
-      String assistantContent = '';
+      // Optimization: Use StringBuffer instead of String concatenation
+      // This avoids O(N^2) memory allocation/copying during streaming
+      final buffer = StringBuffer();
       DateTime? lastHapticTime;
       DateTime? lastUiUpdateTime;
 
@@ -203,26 +205,28 @@ class ChatNotifier extends Notifier<ChatState> {
             lastHapticTime = now;
           }
         }
-        assistantContent += chunk;
+        buffer.write(chunk);
 
         // Optimize: Throttle UI updates to ~20 FPS (50ms) to prevent excessive
         // rebuilds and Markdown re-parsing on every token.
         if (lastUiUpdateTime == null ||
             now.difference(lastUiUpdateTime) >
                 const Duration(milliseconds: 50)) {
-          state = state.copyWith(streamingContent: assistantContent);
+          state = state.copyWith(streamingContent: buffer.toString());
           lastUiUpdateTime = now;
         }
       }
 
+      final fullContent = buffer.toString();
+
       // Ensure the final state reflects the complete content
-      if (state.streamingContent != assistantContent) {
-        state = state.copyWith(streamingContent: assistantContent);
+      if (state.streamingContent != fullContent) {
+        state = state.copyWith(streamingContent: fullContent);
       }
 
       final assistantMessage = ChatMessage(
         role: 'assistant',
-        content: assistantContent,
+        content: fullContent,
         timestamp: DateTime.now(),
       );
 
@@ -232,7 +236,7 @@ class ChatNotifier extends Notifier<ChatState> {
       );
 
       final userTokens = _estimateTokens(text);
-      final aiTokens = _estimateTokens(assistantContent);
+      final aiTokens = _estimateTokens(fullContent);
       final totalTokens = userTokens + aiTokens;
 
       await ref.read(usageLimitsProvider.notifier).consumeTokens(totalTokens);
