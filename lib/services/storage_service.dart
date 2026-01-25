@@ -261,7 +261,7 @@ class StorageService {
   // Pinned Chats
   List<String> getPinnedChatIds() {
     return List<String>.from(
-      _settingsBox.get(AppConstants.pinnedChatsKey, defaultValue: <String>[]),
+      getSetting(AppConstants.pinnedChatsKey, defaultValue: <String>[]),
     );
   }
 
@@ -288,7 +288,7 @@ class StorageService {
   // Archived Chats
   List<String> getArchivedChatIds() {
     return List<String>.from(
-      _settingsBox.get(AppConstants.archivedChatsKey, defaultValue: <String>[]),
+      getSetting(AppConstants.archivedChatsKey, defaultValue: <String>[]),
     );
   }
 
@@ -316,11 +316,39 @@ class StorageService {
     await _settingsBox.put(AppConstants.archivedChatsKey, archived);
   }
 
+  Future<void> bulkArchiveChats(List<String> chatIds) async {
+    final archived = getArchivedChatIds();
+    final pinned = getPinnedChatIds();
+    bool changed = false;
+    bool pinnedChanged = false;
+
+    for (final id in chatIds) {
+      if (!archived.contains(id)) {
+        archived.add(id);
+        changed = true;
+
+        // Unpin if archived
+        if (pinned.contains(id)) {
+          pinned.remove(id);
+          pinnedChanged = true;
+        }
+      }
+    }
+
+    if (changed) {
+      await saveSetting(AppConstants.archivedChatsKey, archived);
+      if (pinnedChanged) {
+        await saveSetting(AppConstants.pinnedChatsKey, pinned);
+      }
+      await logActivity('Bulk Archive', 'Archived ${chatIds.length} chats');
+    }
+  }
+
   // Chat Tags
   Map<String, List<String>> _getChatTagsMap() {
     if (_cachedTags != null) return _cachedTags!;
 
-    final rawMap = _settingsBox.get(AppConstants.chatTagsKey, defaultValue: {});
+    final rawMap = getSetting(AppConstants.chatTagsKey, defaultValue: {});
     // Convert dynamic map to Map<String, List<String>>
     if (rawMap is Map) {
       _cachedTags = rawMap.map((key, value) {
@@ -357,6 +385,29 @@ class StorageService {
       map[chatId] = tags;
       await _settingsBox.put(AppConstants.chatTagsKey, map);
       await logActivity('Tag Added', 'Added tag "$tag" to chat $chatId');
+    }
+  }
+
+  Future<void> bulkAddTagsToChats(List<String> chatIds, List<String> tagsToAdd) async {
+    final map = _getChatTagsMap();
+    bool changed = false;
+
+    for (final chatId in chatIds) {
+      final currentTags = map[chatId] ?? [];
+      for (final tag in tagsToAdd) {
+        if (!currentTags.contains(tag)) {
+          currentTags.add(tag);
+          changed = true;
+        }
+      }
+      if (changed) { // Optimize: only update map if specific chat changed
+         map[chatId] = currentTags;
+      }
+    }
+
+    if (changed) {
+      await saveSetting(AppConstants.chatTagsKey, map);
+      await logActivity('Bulk Tagging', 'Added tags to ${chatIds.length} chats');
     }
   }
 

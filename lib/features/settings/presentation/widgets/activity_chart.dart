@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' as intl;
 import '../../../../services/storage_service.dart';
 
 class ActivityChart extends StatelessWidget {
@@ -102,7 +102,7 @@ class BarChartPainter extends CustomPainter {
 
       // Draw Label (Day)
       final textSpan = TextSpan(
-        text: DateFormat.E().format(item.date)[0], // First letter of day (M, T, W...)
+        text: intl.DateFormat.E().format(item.date)[0], // First letter of day (M, T, W...)
         style: textStyle.copyWith(fontWeight: FontWeight.w600),
       );
       final textPainter = TextPainter(
