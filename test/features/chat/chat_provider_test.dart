@@ -120,4 +120,61 @@ void main() {
     expect(state.topP, 0.5);
     expect(state.systemPrompt, 'Be concise');
   });
+
+  test('ChatNotifier regenerates last response correctly', () async {
+    final mockOllama = MockOllamaService();
+    final mockStorage = MockStorageService();
+
+    final container = ProviderContainer(
+      overrides: [
+        ollamaServiceProvider.overrideWithValue(mockOllama),
+        storageServiceProvider.overrideWithValue(mockStorage),
+        usageLimitsProvider.overrideWith(UsageLimitsNotifier.new),
+      ],
+    );
+
+    final notifier = container.read(chatProvider.notifier);
+
+    // Initial message
+    await notifier.sendMessage('ping');
+
+    var messages = container.read(chatProvider).messages;
+    expect(messages.length, 2);
+    expect(messages[1].content, 'pong');
+
+    // Regenerate
+    await notifier.regenerateLastResponse();
+
+    messages = container.read(chatProvider).messages;
+    expect(messages.length, 2);
+    expect(messages[1].content, 'pong');
+  });
+
+  test('ChatNotifier edits message correctly', () async {
+    final mockOllama = MockOllamaService();
+    final mockStorage = MockStorageService();
+
+    final container = ProviderContainer(
+      overrides: [
+        ollamaServiceProvider.overrideWithValue(mockOllama),
+        storageServiceProvider.overrideWithValue(mockStorage),
+        usageLimitsProvider.overrideWith(UsageLimitsNotifier.new),
+      ],
+    );
+
+    final notifier = container.read(chatProvider.notifier);
+
+    await notifier.sendMessage('ping');
+
+    var messages = container.read(chatProvider).messages;
+    final oldUserMsg = messages[0];
+
+    // Edit 'ping' to 'stream'
+    await notifier.editMessage(oldUserMsg, 'stream');
+
+    messages = container.read(chatProvider).messages;
+    expect(messages.length, 2);
+    expect(messages[0].content, 'stream');
+    expect(messages[1].content, 'chunk'); // 'stream' produces 'chunk'
+  });
 }

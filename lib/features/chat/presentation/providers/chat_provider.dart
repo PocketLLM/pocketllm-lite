@@ -165,7 +165,56 @@ class ChatNotifier extends Notifier<ChatState> {
       isGenerating: true,
     );
 
+    await _generateResponse();
+  }
+
+  Future<void> regenerateLastResponse() async {
+    if (state.isGenerating || state.messages.isEmpty) return;
+
+    final lastMsg = state.messages.last;
+    if (lastMsg.role != 'assistant') return;
+
+    // Remove the last assistant message
+    final updatedMessages = state.messages.sublist(
+      0,
+      state.messages.length - 1,
+    );
+    state = state.copyWith(messages: updatedMessages, isGenerating: true);
+
+    await _generateResponse();
+  }
+
+  Future<void> editMessage(ChatMessage oldMessage, String newContent) async {
+    if (state.isGenerating) return;
+
+    final index = state.messages.indexOf(oldMessage);
+    if (index == -1) return;
+
+    // Keep messages before the edited one
+    final prefixMessages = state.messages.sublist(0, index);
+
+    // Create updated user message
+    final updatedUserMsg = ChatMessage(
+      role: 'user',
+      content: newContent,
+      timestamp: DateTime.now(), // Update timestamp? Or keep old? Let's update to show "new" thread.
+      images: oldMessage.images, // Keep original images
+    );
+
+    state = state.copyWith(
+      messages: [...prefixMessages, updatedUserMsg],
+      isGenerating: true,
+    );
+
+    await _generateResponse();
+  }
+
+
+  Future<void> _generateResponse() async {
     final ollama = ref.read(ollamaServiceProvider);
+
+    // User input is the last message in current state
+    final userText = state.messages.isNotEmpty ? state.messages.last.content : '';
 
     final history = state.messages
         .map((m) => {"role": m.role, "content": m.content, "images": m.images})
@@ -205,8 +254,6 @@ class ChatNotifier extends Notifier<ChatState> {
         }
         assistantContent += chunk;
 
-        // Optimize: Throttle UI updates to ~20 FPS (50ms) to prevent excessive
-        // rebuilds and Markdown re-parsing on every token.
         if (lastUiUpdateTime == null ||
             now.difference(lastUiUpdateTime) >
                 const Duration(milliseconds: 50)) {
@@ -215,7 +262,6 @@ class ChatNotifier extends Notifier<ChatState> {
         }
       }
 
-      // Ensure the final state reflects the complete content
       if (state.streamingContent != assistantContent) {
         state = state.copyWith(streamingContent: assistantContent);
       }
@@ -231,13 +277,16 @@ class ChatNotifier extends Notifier<ChatState> {
         streamingContent: '',
       );
 
-      final userTokens = _estimateTokens(text);
+      final userTokens = _estimateTokens(userText);
       final aiTokens = _estimateTokens(assistantContent);
       final totalTokens = userTokens + aiTokens;
 
       await ref.read(usageLimitsProvider.notifier).consumeTokens(totalTokens);
     } catch (e) {
-      // Handle potential errors, e.g., show a message to the user
+      // Handle potential errors
+      // In case of error, we should probably set isGenerating to false so user can retry.
+      // Maybe we should add a "error" state or toast.
+      // For now, keeping existing behavior (just stop).
     } finally {
       state = state.copyWith(isGenerating: false, streamingContent: '');
       _saveSession();
