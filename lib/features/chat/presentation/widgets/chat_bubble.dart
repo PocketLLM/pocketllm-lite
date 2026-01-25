@@ -6,6 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/providers.dart';
 import '../../../../core/utils/image_decoder.dart';
 import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/utils/url_validator.dart';
@@ -205,17 +206,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       );
     }
 
-    return ValueListenableBuilder(
-      valueListenable: storage.starredMessagesListenable,
-      builder: (context, _, __) {
-        final isStarred = storage.isMessageStarred(message);
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        mainAxisAlignment:
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isUser && showAvatars) ...[
@@ -239,12 +234,14 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               hint: 'Double tap and hold for options',
               onLongPress: () {
                 HapticFeedback.mediumImpact();
-                _showFocusedMenu(context, isUser, isStarred);
+                final currentIsStarred = storage.isMessageStarred(message);
+                _showFocusedMenu(context, isUser, currentIsStarred);
               },
               child: GestureDetector(
                 onLongPress: () {
                   HapticFeedback.mediumImpact();
-                  _showFocusedMenu(context, isUser, isStarred);
+                  final currentIsStarred = storage.isMessageStarred(message);
+                  _showFocusedMenu(context, isUser, currentIsStarred);
                 },
                 child: RepaintBoundary(
                   child: Container(
@@ -322,14 +319,28 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (isStarred) ...[
-                                const Icon(
-                                  Icons.star,
-                                  size: 12,
-                                  color: Colors.amber,
-                                ),
-                                const SizedBox(width: 4),
-                              ],
+                              ValueListenableBuilder(
+                                valueListenable:
+                                    storage.starredMessagesListenable,
+                                builder: (context, _, __) {
+                                  final isStarred =
+                                      storage.isMessageStarred(message);
+                                  if (!isStarred) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.star,
+                                        size: 12,
+                                        color: Colors.amber,
+                                      ),
+                                      const SizedBox(width: 4),
+                                    ],
+                                  );
+                                },
+                              ),
                               Text(
                                 _formattedTimestamp,
                                 style: TextStyle(
@@ -365,8 +376,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           ],
         ],
       ),
-    );
-      },
     );
   }
 
