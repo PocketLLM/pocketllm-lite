@@ -44,39 +44,47 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: connectionStatusAsync.when(
                 data: (isConnected) {
                   if (!isConnected) {
-                    return InkWell(
-                      onTap: () => _showConnectionHelpDialog(context),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
+                    return Semantics(
+                      button: true,
+                      label: 'Connection Status: Not Connected',
+                      hint: 'Tap to troubleshoot connection issues',
+                      child: Tooltip(
+                        message: 'Connection Status: Not Connected',
+                        child: InkWell(
+                          onTap: () => _showConnectionHelpDialog(context),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.red.withValues(alpha: 0.3),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.red.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.cloud_off,
+                                  size: 14,
+                                  color: Colors.red,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Not Connected',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelMedium
+                                      ?.copyWith(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.cloud_off,
-                              size: 14,
-                              color: Colors.red,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Not Connected',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
-                                  ?.copyWith(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                          ],
                         ),
                       ),
                     );
@@ -99,103 +107,108 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                       if (models.isEmpty) return const Text('No Models');
 
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            isExpanded: false,
-                            value: currentValue,
-                            icon: Icon(
-                              Icons.expand_more,
-                              size: 20,
-                              color: Theme.of(context).iconTheme.color,
-                            ),
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  color: Theme.of(context).brightness ==
+                      return Semantics(
+                        label: 'Select AI Model',
+                        container: true,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              isExpanded: false,
+                              value: currentValue,
+                              icon: Icon(
+                                Icons.expand_more,
+                                size: 20,
+                                color: Theme.of(context).iconTheme.color,
+                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
+                              dropdownColor:
+                                  Theme.of(context).brightness ==
                                           Brightness.dark
-                                      ? Colors.white
-                                      : Colors.black,
-                                ),
-                            dropdownColor:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? const Color(0xFF1E1E1E)
-                                    : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            elevation: 4,
-                            selectedItemBuilder: (BuildContext context) {
-                              return models.map<Widget>((m) {
-                                return Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.smart_toy_outlined,
-                                      size: 16,
-                                      color: Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? Colors.white70
-                                          : Colors.black87,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    ConstrainedBox(
-                                      constraints:
-                                          const BoxConstraints(maxWidth: 150),
-                                      child: Text(
+                                      ? const Color(0xFF1E1E1E)
+                                      : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              elevation: 4,
+                              selectedItemBuilder: (BuildContext context) {
+                                return models.map<Widget>((m) {
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.smart_toy_outlined,
+                                        size: 16,
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.white70
+                                            : Colors.black87,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      ConstrainedBox(
+                                        constraints:
+                                            const BoxConstraints(maxWidth: 150),
+                                        child: Text(
+                                          m.name,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                  fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }).toList();
+                              },
+                              items: models.map<DropdownMenuItem<String>>((m) {
+                                return DropdownMenuItem<String>(
+                                  value: m.name,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.smart_toy_outlined,
+                                        size: 16,
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.white70
+                                            : Colors.black87,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
                                         m.name,
                                         overflow: TextOverflow.ellipsis,
                                         style: Theme.of(context)
                                             .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                                fontWeight: FontWeight.bold),
+                                            .bodyMedium,
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 );
-                              }).toList();
-                            },
-                            items: models.map<DropdownMenuItem<String>>((m) {
-                              return DropdownMenuItem<String>(
-                                value: m.name,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.smart_toy_outlined,
-                                      size: 16,
-                                      color: Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? Colors.white70
-                                          : Colors.black87,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      m.name,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (newModel) {
-                              if (newModel != null &&
-                                  newModel != selectedModel) {
-                                HapticFeedback.selectionClick();
-                                ref
-                                    .read(chatProvider.notifier)
-                                    .setModel(newModel);
-                              }
-                            },
+                              }).toList(),
+                              onChanged: (newModel) {
+                                if (newModel != null &&
+                                    newModel != selectedModel) {
+                                  HapticFeedback.selectionClick();
+                                  ref
+                                      .read(chatProvider.notifier)
+                                      .setModel(newModel);
+                                }
+                              },
+                            ),
                           ),
                         ),
                       );
