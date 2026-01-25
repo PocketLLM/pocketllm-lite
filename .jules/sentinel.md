@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Release Notes IP Leakage
+**Vulnerability:** Markdown in `UpdateDialog` (release notes) rendered network images, allowing attackers to track user IPs via tracking pixels if the GitHub release body was compromised.
+**Learning:** External content rendered via `MarkdownBody` must always use a custom `imageBuilder` to block or sanitize network requests, even if the source (GitHub API) is trusted, as the content (user-generated release notes) might not be.
+**Prevention:** Always use `MarkdownHandlers.imageBuilder` when rendering Markdown from external sources to block non-local images.

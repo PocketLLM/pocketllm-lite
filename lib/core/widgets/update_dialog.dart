@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../utils/markdown_handlers.dart';
+import '../utils/url_validator.dart';
 import '../../services/update_service.dart';
 
 /// Dialog to show update information and download progress
@@ -295,6 +297,23 @@ class _UpdateDialogState extends State<UpdateDialog>
                         ),
                         child: MarkdownBody(
                           data: widget.release.body,
+                          // Block network images to prevent IP leakage
+                          // ignore: deprecated_member_use
+                          imageBuilder: MarkdownHandlers.imageBuilder,
+                          // Handle links securely
+                          onTapLink: (text, href, title) async {
+                            if (href != null) {
+                              final uri = Uri.tryParse(href);
+                              if (uri != null && UrlValidator.isSecureUrl(uri)) {
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(
+                                    uri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                }
+                              }
+                            }
+                          },
                           styleSheet: MarkdownStyleSheet.fromTheme(theme)
                               .copyWith(
                                 p: theme.textTheme.bodyMedium,
