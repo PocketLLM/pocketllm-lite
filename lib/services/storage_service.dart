@@ -316,6 +316,29 @@ class StorageService {
     await _settingsBox.put(AppConstants.archivedChatsKey, archived);
   }
 
+  Future<void> bulkArchiveChats(List<String> chatIds) async {
+    final archived = getArchivedChatIds();
+    final pinned = getPinnedChatIds();
+    int archivedCount = 0;
+
+    for (final id in chatIds) {
+      if (!archived.contains(id)) {
+        archived.add(id);
+        archivedCount++;
+      }
+      // Business Rule: Unpin if archived
+      if (pinned.contains(id)) {
+        pinned.remove(id);
+      }
+    }
+
+    if (archivedCount > 0) {
+      await _settingsBox.put(AppConstants.archivedChatsKey, archived);
+      await _settingsBox.put(AppConstants.pinnedChatsKey, pinned);
+      await logActivity('Bulk Archive', 'Archived $archivedCount chats');
+    }
+  }
+
   // Chat Tags
   Map<String, List<String>> _getChatTagsMap() {
     if (_cachedTags != null) return _cachedTags!;
@@ -357,6 +380,33 @@ class StorageService {
       map[chatId] = tags;
       await _settingsBox.put(AppConstants.chatTagsKey, map);
       await logActivity('Tag Added', 'Added tag "$tag" to chat $chatId');
+    }
+  }
+
+  Future<void> bulkAddTagsToChats(List<String> chatIds, List<String> tags) async {
+    if (chatIds.isEmpty || tags.isEmpty) return;
+
+    final map = _getChatTagsMap();
+    int updatedCount = 0;
+
+    for (final chatId in chatIds) {
+      final currentTags = map[chatId] ?? [];
+      bool changed = false;
+      for (final tag in tags) {
+        if (!currentTags.contains(tag)) {
+          currentTags.add(tag);
+          changed = true;
+        }
+      }
+      if (changed) {
+        map[chatId] = currentTags;
+        updatedCount++;
+      }
+    }
+
+    if (updatedCount > 0) {
+      await _settingsBox.put(AppConstants.chatTagsKey, map);
+      await logActivity('Bulk Tag', 'Added ${tags.length} tags to $updatedCount chats');
     }
   }
 
