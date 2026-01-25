@@ -12,6 +12,7 @@ import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
 import '../../../settings/presentation/widgets/export_dialog.dart';
 import '../dialogs/tag_editor_dialog.dart';
+import '../dialogs/bulk_tag_dialog.dart';
 import 'archived_chats_screen.dart';
 
 class ChatHistoryScreen extends ConsumerStatefulWidget {
@@ -350,6 +351,16 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                     icon: const Icon(Icons.download),
                     tooltip: 'Export selected chats',
                     onPressed: _selectedIds.isEmpty ? null : _exportSelected,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.archive_outlined),
+                    tooltip: 'Archive selected chats',
+                    onPressed: _selectedIds.isEmpty ? null : _archiveSelected,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.label_outline),
+                    tooltip: 'Tag selected chats',
+                    onPressed: _selectedIds.isEmpty ? null : _tagSelected,
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
@@ -1387,6 +1398,74 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       context: context,
       builder: (context) => ExportDialog(selectedChatIds: _selectedIds),
     );
+  }
+
+  Future<void> _archiveSelected() async {
+    if (_selectedIds.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Archive Selected?'),
+        content: Text('Archive ${_selectedIds.length} chats? They will be moved to the Archived folder.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Archive'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final storage = ref.read(storageServiceProvider);
+      await storage.bulkArchiveChats(_selectedIds.toList());
+
+      if (mounted) {
+        setState(() {
+          _selectedIds.clear();
+          _isSelectionMode = false;
+        });
+        HapticFeedback.mediumImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chats archived successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _tagSelected() async {
+    if (_selectedIds.isEmpty) return;
+
+    final storage = ref.read(storageServiceProvider);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => BulkTagDialog(
+        chatIds: _selectedIds.toList(),
+        storage: storage,
+      ),
+    );
+
+    if (result == true && mounted) {
+      setState(() {
+        _selectedIds.clear();
+        _isSelectionMode = false;
+      });
+      HapticFeedback.mediumImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tags added successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   Future<void> _deleteSelected() async {
