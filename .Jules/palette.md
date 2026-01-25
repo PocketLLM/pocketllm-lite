@@ -65,3 +65,7 @@
 ## 2026-01-21 - [Chat List Context]
 **Learning:** In chat history lists, displaying only the date forces users to recall conversations by time alone, which is difficult. Showing a snippet of the last message provides immediate context (semantic memory) and significantly speeds up list scanning.
 **Action:** Always include a text preview (truncated to 1 line) and use the *last message timestamp* (not creation date) in chat list items to maximize information density and relevance.
+
+## 2026-01-22 - [Dynamic List Accessibility]
+**Learning:** For dynamic lists of interactive items (like file attachments), static tooltips (e.g., "Remove image") fail to provide sufficient context for screen reader users to distinguish between items.
+**Action:** Always include the item's index and total count in the tooltip (e.g., "Remove image 1 of 3") to allow users to confidently identify and act on specific items in a list.
