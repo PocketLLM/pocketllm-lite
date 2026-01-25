@@ -320,6 +320,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               ),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
+                tooltip: 'Stop searching',
                 onPressed: () {
                   setState(() {
                     _isSearching = false;
@@ -332,6 +333,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 if (_searchQuery.isNotEmpty)
                   IconButton(
                     icon: const Icon(Icons.clear),
+                    tooltip: 'Clear query',
                     onPressed: () {
                       _searchController.clear();
                     },
@@ -1509,11 +1511,24 @@ class _EmptyHistoryState extends StatelessWidget {
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeOutQuart,
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: child,
+                ),
+              );
+            },
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: isDark
                       ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
@@ -1551,6 +1566,6 @@ class _EmptyHistoryState extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 }
