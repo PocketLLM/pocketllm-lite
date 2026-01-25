@@ -14,6 +14,7 @@ import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/draft_message_provider.dart';
 import 'three_dot_loading_indicator.dart';
+import '../dialogs/edit_message_dialog.dart';
 
 // Helper class for formatting timestamps
 class TimestampFormatter {
@@ -38,8 +39,9 @@ class TimestampFormatter {
 
 class ChatBubble extends ConsumerStatefulWidget {
   final ChatMessage message;
+  final bool isLast;
 
-  const ChatBubble({super.key, required this.message});
+  const ChatBubble({super.key, required this.message, this.isLast = false});
 
   @override
   ConsumerState<ChatBubble> createState() => _ChatBubbleState();
@@ -385,6 +387,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
         ), // Slight dim initially, animated in widget
         pageBuilder: (context, _, __) => _FocusedMenuOverlay(
           message: widget.message,
+          isLast: widget.isLast,
           bubbleSize: size,
           bubbleOffset: offset,
           isUser: isUser,
@@ -430,6 +433,7 @@ class _FocusedMenuOverlay extends ConsumerWidget {
   final Widget
       child; // We will reconstruct visually or use cached image if needed, but easier to rebuild basic container
   final ChatMessage message;
+  final bool isLast;
   final Size bubbleSize;
   final Offset bubbleOffset;
   final bool isUser;
@@ -440,6 +444,7 @@ class _FocusedMenuOverlay extends ConsumerWidget {
   const _FocusedMenuOverlay({
     required this.child,
     required this.message,
+    required this.isLast,
     required this.bubbleSize,
     required this.bubbleOffset,
     required this.isUser,
@@ -631,8 +636,24 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                 if (isUser) ...[
                   const SizedBox(width: 12),
                   _buildIconBtn(context, Icons.edit, 'Edit', () {
-                    // Populate the input with the message content
-                    ref.read(draftMessageProvider.notifier).state = message.content;
+                    showDialog(
+                      context: context,
+                      builder: (context) => EditMessageDialog(
+                        initialContent: message.content,
+                        onSave: (newContent) {
+                          ref
+                              .read(chatProvider.notifier)
+                              .editMessage(message, newContent);
+                        },
+                      ),
+                    );
+                    Navigator.pop(context);
+                  }),
+                ],
+                if (!isUser && isLast) ...[
+                  const SizedBox(width: 12),
+                  _buildIconBtn(context, Icons.refresh, 'Regenerate', () {
+                    ref.read(chatProvider.notifier).regenerateLastResponse();
                     Navigator.pop(context);
                   }),
                 ],

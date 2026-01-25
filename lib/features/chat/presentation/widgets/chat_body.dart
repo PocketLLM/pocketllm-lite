@@ -173,6 +173,7 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
                   return ChatBubble(
                     key: ValueKey(messages[index]),
                     message: messages[index],
+                    isLast: index == messages.length - 1,
                   );
                 } else {
                   return const _StreamingChatBubble();
