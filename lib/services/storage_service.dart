@@ -607,6 +607,8 @@ class StorageService {
       AppConstants.archivedChatsKey,
       AppConstants.chatTagsKey,
       AppConstants.starredMessagesKey,
+      AppConstants.userNameKey,
+      AppConstants.userAvatarPathKey,
     };
 
     for (final key in _settingsBox.keys) {
