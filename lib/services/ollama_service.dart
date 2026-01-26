@@ -77,7 +77,7 @@ class OllamaService {
     };
 
     if (options != null) body["options"] = options;
-    
+
     // Handle system prompt by prepending it to messages if provided
     final List<Map<String, dynamic>> finalMessages = List.from(messages);
     if (system != null && system.isNotEmpty) {
@@ -86,12 +86,9 @@ class OllamaService {
       if (finalMessages.isNotEmpty) {
         hasSystem = finalMessages.first['role'] == 'system';
       }
-      
+
       if (!hasSystem) {
-        finalMessages.insert(0, {
-          "role": "system",
-          "content": system,
-        });
+        finalMessages.insert(0, {"role": "system", "content": system});
       }
     }
     body["messages"] = finalMessages;
@@ -99,8 +96,8 @@ class OllamaService {
     request.body = jsonEncode(body);
 
     try {
-      // We can't use _client.send(request) directly if _client is a standard IOClient 
-      // because we want a streamed response. 
+      // We can't use _client.send(request) directly if _client is a standard IOClient
+      // because we want a streamed response.
       // However, for testing with MockClient, we want to use the injected client.
       // Standard http.Client.send returns a StreamedResponse.
       final streamedResponse = await _client
@@ -110,9 +107,10 @@ class OllamaService {
       if (streamedResponse.statusCode == 200) {
         // Use LineSplitter to correctly handle chunks that might be split
         // across JSON object boundaries, ensuring no data is lost and reducing string allocations.
-        await for (final line in streamedResponse.stream
-            .transform(utf8.decoder)
-            .transform(const LineSplitter())) {
+        await for (final line
+            in streamedResponse.stream
+                .transform(utf8.decoder)
+                .transform(const LineSplitter())) {
           if (line.trim().isEmpty) continue;
           try {
             final json = jsonDecode(line);
@@ -150,9 +148,10 @@ class OllamaService {
 
       if (streamedResponse.statusCode == 200) {
         // Use LineSplitter to properly handle split chunks in NDJSON stream
-        await for (final line in streamedResponse.stream
-            .transform(utf8.decoder)
-            .transform(const LineSplitter())) {
+        await for (final line
+            in streamedResponse.stream
+                .transform(utf8.decoder)
+                .transform(const LineSplitter())) {
           if (line.trim().isEmpty) continue;
           try {
             final json = jsonDecode(line);

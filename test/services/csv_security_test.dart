@@ -41,7 +41,7 @@ void main() {
     });
 
     test('Should escape fields starting with Tab and Carriage Return', () {
-       final maliciousSession = ChatSession(
+      final maliciousSession = ChatSession(
         id: '2',
         title: '\tmalicious_tab',
         model: 'model',
@@ -57,21 +57,27 @@ void main() {
       expect(csv, contains("'\rmalicious_cr"));
     });
 
-    test('Should escape fields starting with whitespace and dangerous characters', () {
-      final maliciousSession = ChatSession(
-        id: '3',
-        title: '   =cmd',
-        model: 'model',
-        messages: [],
-        createdAt: DateTime(2023, 1, 1),
-        systemPrompt: '\t=cmd',
-      );
+    test(
+      'Should escape fields starting with whitespace and dangerous characters',
+      () {
+        final maliciousSession = ChatSession(
+          id: '3',
+          title: '   =cmd',
+          model: 'model',
+          messages: [],
+          createdAt: DateTime(2023, 1, 1),
+          systemPrompt: '\t=cmd',
+        );
 
-      final service = TestStorageService([maliciousSession]);
-      final csv = service.exportToCsv();
+        final service = TestStorageService([maliciousSession]);
+        final csv = service.exportToCsv();
 
-      expect(csv, contains("'   =cmd"));
-      expect(csv, contains("'\t=cmd")); // \t is both whitespace (for trim) and dangerous char
-    });
+        expect(csv, contains("'   =cmd"));
+        expect(
+          csv,
+          contains("'\t=cmd"),
+        ); // \t is both whitespace (for trim) and dangerous char
+      },
+    );
   });
 }
