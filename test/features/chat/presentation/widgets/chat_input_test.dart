@@ -16,6 +16,17 @@ class MockStorageService extends StorageService {
   }
 
   @override
+  String? getDraft(String chatId) {
+    return null;
+  }
+
+  @override
+  Future<void> saveDraft(String chatId, String draft) async {}
+
+  @override
+  Future<void> deleteDraft(String chatId) async {}
+
+  @override
   Future<void> saveChatSession(ChatSession session, {bool log = true}) async {}
 }
 
@@ -46,12 +57,8 @@ void main() {
     expect(textField.maxLength, AppConstants.maxInputLength);
 
     // Verify buildCounter is set (to hidden)
-    // We can't easily execute the buildCounter to check return value without context,
-    // but we can check it's not null.
     expect(textField.buildCounter, isNotNull);
 
-    // To be sure, we can call it if we want, but checking isNotNull is likely enough
-    // to verify the property was set.
     final counter = textField.buildCounter!(
       tester.element(textFieldFinder),
       currentLength: 0,
@@ -59,5 +66,37 @@ void main() {
       maxLength: 100
     );
     expect(counter, isNull);
+  });
+
+  testWidgets('ChatInput shows Add Attachment button', (WidgetTester tester) async {
+    final mockStorage = MockStorageService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          storageServiceProvider.overrideWithValue(mockStorage),
+          usageLimitsProvider.overrideWith(UsageLimitsNotifier.new),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ChatInput(),
+          ),
+        ),
+      ),
+    );
+
+    // Find the Add Attachment button by Tooltip
+    final addButtonFinder = find.byTooltip('Add Attachment');
+    expect(addButtonFinder, findsOneWidget);
+
+    // Tap it to ensure it doesn't crash (opens bottom sheet)
+    await tester.tap(addButtonFinder);
+    await tester.pumpAndSettle();
+
+    // Verify BottomSheet content
+    expect(find.text('Attach'), findsOneWidget);
+    expect(find.text('Camera'), findsOneWidget);
+    expect(find.text('Gallery'), findsOneWidget);
+    expect(find.text('Document / Code'), findsOneWidget);
   });
 }
