@@ -561,52 +561,60 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _selectedImages.length,
-                  itemBuilder: (c, i) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            _selectedImages[i],
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                            // Optimize memory: Decode only to the size we need (60 * 3 for HiDPI)
-                            cacheWidth: 180,
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: IconButton(
-                            alignment: Alignment.topRight,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ),
-                            tooltip: 'Remove image',
-                            onPressed: () =>
-                                setState(() => _selectedImages.removeAt(i)),
-                            icon: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: const BoxDecoration(
-                                color: Colors.black54,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 14,
+                  itemBuilder: (c, i) {
+                    final index = i + 1;
+                    final total = _selectedImages.length;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Stack(
+                        children: [
+                          Semantics(
+                            label: 'Attached image $index of $total',
+                            image: true,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                _selectedImages[i],
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                // Optimize memory: Decode only to the size we need (60 * 3 for HiDPI)
+                                cacheWidth: 180,
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: IconButton(
+                              alignment: Alignment.topRight,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 40,
+                                minHeight: 40,
+                              ),
+                              tooltip: 'Remove image $index of $total',
+                              onPressed: () =>
+                                  setState(() => _selectedImages.removeAt(i)),
+                              icon: Container(
+                                width: 24,
+                                height: 24,
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             AnimatedContainer(
