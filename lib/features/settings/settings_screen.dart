@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../../core/constants/legal_constants.dart';
 import '../../core/utils/url_validator.dart';
+import '../../core/utils/markdown_handlers.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
@@ -1805,6 +1806,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Expanded(
               child: Markdown(
                 data: content,
+                imageBuilder: MarkdownHandlers.imageBuilder,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
