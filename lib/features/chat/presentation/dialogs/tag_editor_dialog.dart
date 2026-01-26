@@ -78,14 +78,13 @@ class _TagEditorDialogState extends State<TagEditorDialog> {
               Wrap(
                 spacing: 8,
                 runSpacing: 4,
-                children:
-                    _currentTags.map((tag) {
-                      return InputChip(
-                        label: Text(tag),
-                        onDeleted: () => _removeTag(tag),
-                        deleteIcon: const Icon(Icons.close, size: 16),
-                      );
-                    }).toList(),
+                children: _currentTags.map((tag) {
+                  return InputChip(
+                    label: Text(tag),
+                    onDeleted: () => _removeTag(tag),
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 16),
             ],
@@ -123,16 +122,15 @@ class _TagEditorDialogState extends State<TagEditorDialog> {
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 4,
-                    children:
-                        _availableTags.map((tag) {
-                          return ActionChip(
-                            label: Text(tag),
-                            onPressed: () => _addTag(tag),
-                            avatar: const Icon(Icons.add, size: 14),
-                            padding: EdgeInsets.zero,
-                            labelStyle: const TextStyle(fontSize: 12),
-                          );
-                        }).toList(),
+                    children: _availableTags.map((tag) {
+                      return ActionChip(
+                        label: Text(tag),
+                        onPressed: () => _addTag(tag),
+                        avatar: const Icon(Icons.add, size: 14),
+                        padding: EdgeInsets.zero,
+                        labelStyle: const TextStyle(fontSize: 12),
+                      );
+                    }).toList(),
                   ),
                 ),
               ),
