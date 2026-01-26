@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2026-01-26 - Permissive Cleartext Traffic
+**Vulnerability:** The Android application implicitly allowed cleartext (HTTP) traffic to all domains (or relied on default OS behavior), potentially exposing data to Man-in-the-Middle attacks if the user configured a non-localhost endpoint.
+**Learning:** Default network security configurations on Android can vary by API level and can be too permissive or implicitly insecure for apps handling sensitive data.
+**Prevention:** Explicitly define a `network_security_config.xml` that blocks `cleartextTrafficPermitted` globally, and whitelists only necessary local domains (localhost, 127.0.0.1, 10.0.2.2).
