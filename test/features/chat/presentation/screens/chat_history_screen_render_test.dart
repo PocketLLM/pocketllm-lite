@@ -25,13 +25,16 @@ class MockStorageService extends Mock implements StorageService {
     String? tag,
   }) {
     // Return a large list to simulate performance need
-    return List.generate(100, (index) => ChatSession(
-      id: 'id_$index',
-      title: 'Chat $index',
-      model: 'llama3',
-      messages: [],
-      createdAt: DateTime.now().subtract(Duration(days: index)),
-    ));
+    return List.generate(
+      100,
+      (index) => ChatSession(
+        id: 'id_$index',
+        title: 'Chat $index',
+        model: 'llama3',
+        messages: [],
+        createdAt: DateTime.now().subtract(Duration(days: index)),
+      ),
+    );
   }
 
   @override
@@ -66,7 +69,9 @@ class MockUsageLimitsNotifier extends UsageLimitsNotifier {
 }
 
 void main() {
-  testWidgets('ChatHistoryScreen uses CustomScrollView for performance', (WidgetTester tester) async {
+  testWidgets('ChatHistoryScreen uses CustomScrollView for performance', (
+    WidgetTester tester,
+  ) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(
       ProviderScope(
@@ -74,9 +79,7 @@ void main() {
           storageServiceProvider.overrideWithValue(MockStorageService()),
           usageLimitsProvider.overrideWith(() => MockUsageLimitsNotifier()),
         ],
-        child: MaterialApp(
-          home: ChatHistoryScreen(),
-        ),
+        child: MaterialApp(home: ChatHistoryScreen()),
       ),
     );
 

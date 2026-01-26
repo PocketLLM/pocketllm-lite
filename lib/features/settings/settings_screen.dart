@@ -623,7 +623,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         modelsAsync.when(
           data: (models) {
             if (models.isEmpty) {
-              return const Text('No models found. Download one using the + button.');
+              return const Text(
+                'No models found. Download one using the + button.',
+              );
             }
             return Column(
               children: [
@@ -1358,6 +1360,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     context: context,
                     builder: (context) => const ImportDialog(),
                   );
+                },
+              ),
+              ListTile(
+                title: const Text('Manage Tags'),
+                subtitle: const Text('Rename or delete tags globally'),
+                leading: const Icon(Icons.label_outline),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/tags');
                 },
               ),
               ListTile(
