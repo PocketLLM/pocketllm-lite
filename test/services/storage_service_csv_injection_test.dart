@@ -28,7 +28,11 @@ void main() {
         model: 'llama3',
         createdAt: DateTime(2023, 1, 1),
         messages: [
-          ChatMessage(role: 'user', content: '+2+2', timestamp: DateTime(2023, 1, 1)),
+          ChatMessage(
+            role: 'user',
+            content: '+2+2',
+            timestamp: DateTime(2023, 1, 1),
+          ),
         ],
         systemPrompt: '@SUM(1,1)',
       );
