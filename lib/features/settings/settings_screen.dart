@@ -1461,6 +1461,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           child: Column(
             children: [
+              ListTile(
+                title: const Text('User Profile'),
+                subtitle: const Text('Name and Avatar'),
+                trailing: const Icon(Icons.chevron_right),
+                leading: const Icon(Icons.person_outline),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/profile');
+                },
+              ),
+              const Divider(height: 1, indent: 56),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(

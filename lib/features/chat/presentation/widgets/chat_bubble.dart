@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -6,11 +7,13 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/providers.dart';
 import '../../../../core/utils/image_decoder.dart';
 import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/utils/url_validator.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
+import '../../../settings/presentation/providers/user_profile_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/draft_message_provider.dart';
 import 'three_dot_loading_indicator.dart';
@@ -159,6 +162,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final showAvatars = appearance.showAvatars;
 
     final storage = ref.watch(storageServiceProvider);
+    final userProfile = ref.watch(userProfileProvider);
 
     // Show loading indicator for empty assistant messages (AI is generating)
     if (!isUser && message.content.isEmpty) {
@@ -355,11 +359,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               child: CircleAvatar(
                 radius: 14,
                 backgroundColor: theme.colorScheme.secondaryContainer,
-                child: Icon(
-                  Icons.person,
-                  size: 16,
-                  color: theme.colorScheme.onSecondaryContainer,
-                ),
+                backgroundImage: userProfile.avatarPath != null
+                    ? FileImage(File(userProfile.avatarPath!))
+                    : null,
+                child: userProfile.avatarPath == null
+                    ? Icon(
+                        Icons.person,
+                        size: 16,
+                        color: theme.colorScheme.onSecondaryContainer,
+                      )
+                    : null,
               ),
             ),
           ],

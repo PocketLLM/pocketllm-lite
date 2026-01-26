@@ -37,6 +37,10 @@ class AppConstants {
   static const String msgOpacityKey = 'msg_opacity';
   static const String customBgColorKey = 'custom_bg_color'; // Optional
 
+  // User Profile
+  static const String userNameKey = 'user_name';
+  static const String userAvatarPathKey = 'user_avatar_path';
+
   // Prompt Enhancer
   static const String promptEnhancerModelKey = 'prompt_enhancer_model';
 
