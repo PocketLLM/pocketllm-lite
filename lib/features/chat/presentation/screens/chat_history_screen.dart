@@ -12,6 +12,7 @@ import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
 import '../../../settings/presentation/widgets/export_dialog.dart';
 import '../dialogs/tag_editor_dialog.dart';
+import '../dialogs/bulk_tag_dialog.dart';
 import 'archived_chats_screen.dart';
 
 class ChatHistoryScreen extends ConsumerStatefulWidget {
@@ -346,6 +347,16 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               ),
               actions: [
                 if (_isSelectionMode) ...[
+                  IconButton(
+                    icon: const Icon(Icons.archive_outlined),
+                    tooltip: 'Archive selected chats',
+                    onPressed: _selectedIds.isEmpty ? null : _archiveSelected,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.label_outline),
+                    tooltip: 'Tag selected chats',
+                    onPressed: _selectedIds.isEmpty ? null : _tagSelected,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.download),
                     tooltip: 'Export selected chats',
@@ -1377,6 +1388,55 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
           }
         },
       );
+    }
+  }
+
+  Future<void> _archiveSelected() async {
+    if (_selectedIds.isEmpty) return;
+
+    final storage = ref.read(storageServiceProvider);
+    await storage.bulkArchiveChats(_selectedIds.toList());
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${_selectedIds.length} chats archived')),
+      );
+      setState(() {
+        _selectedIds.clear();
+        _isSelectionMode = false;
+      });
+      HapticFeedback.mediumImpact();
+    }
+  }
+
+  Future<void> _tagSelected() async {
+    if (_selectedIds.isEmpty) return;
+
+    final storage = ref.read(storageServiceProvider);
+    final tag = await showDialog<String>(
+      context: context,
+      builder:
+          (context) => BulkTagDialog(
+            selectedCount: _selectedIds.length,
+            storage: storage,
+          ),
+    );
+
+    if (tag != null && mounted) {
+      await storage.bulkAddTag(_selectedIds.toList(), tag);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${_selectedIds.length} chats tagged with "$tag"'),
+          ),
+        );
+        setState(() {
+          _selectedIds.clear();
+          _isSelectionMode = false;
+        });
+        HapticFeedback.mediumImpact();
+      }
     }
   }
 
