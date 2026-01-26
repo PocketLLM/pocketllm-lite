@@ -933,6 +933,46 @@ class StorageService {
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
+
+  // Media Gallery
+  List<MediaItem> getAllMedia() {
+    final List<MediaItem> media = [];
+    final sessions = getChatSessions();
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (final image in message.images!) {
+            media.add(MediaItem(
+              chatId: session.id,
+              imageUrl: image,
+              timestamp: message.timestamp,
+              messageContent: message.content,
+            ));
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp desc
+    media.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+    return media;
+  }
+}
+
+class MediaItem {
+  final String chatId;
+  final String imageUrl; // Base64
+  final DateTime timestamp;
+  final String? messageContent;
+
+  MediaItem({
+    required this.chatId,
+    required this.imageUrl,
+    required this.timestamp,
+    this.messageContent,
+  });
 }
 
 class UsageStatistics {
