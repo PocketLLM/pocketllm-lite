@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - External Content Markdown Image Tracking
+**Vulnerability:** The `UpdateDialog` rendered GitHub release notes using `MarkdownBody` without a custom `imageBuilder`. Malicious release notes could contain tracking pixels (images) to leak user IPs.
+**Learning:** `flutter_markdown` renders network images by default. When displaying content from external sources (even semi-trusted ones like GitHub), you must strictly control what is rendered.
+**Prevention:** Always use a custom `imageBuilder` that blocks `http`/`https` schemes when rendering Markdown from external or untrusted sources.

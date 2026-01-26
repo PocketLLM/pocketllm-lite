@@ -1,0 +1,247 @@
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 67.0.0 (93.0.0 available)
+  analyzer 6.4.1 (10.0.1 available)
+  build 2.4.1 (4.0.4 available)
+  build_config 1.1.2 (1.2.0 available)
+  build_resolvers 2.4.2 (3.0.4 available)
+  build_runner 2.4.13 (2.10.5 available)
+  build_runner_core 7.3.2 (9.3.2 available)
+  built_value 8.12.1 (8.12.3 available)
+  characters 1.4.0 (1.4.1 available)
+  code_builder 4.11.0 (4.11.1 available)
+  connectivity_plus 6.1.5 (7.0.0 available)
+  dart_style 2.3.6 (3.1.4 available)
+  ffi 2.1.4 (2.1.5 available)
+  file_picker 8.3.7 (10.3.8 available)
+  flutter_launcher_icons 0.13.1 (0.14.4 available)
+  flutter_lints 5.0.0 (6.0.0 available)
+  flutter_markdown 0.7.7+1 (discontinued replaced by flutter_markdown_plus)
+  flutter_riverpod 3.0.3 (3.2.0 available)
+  go_router 17.0.0 (17.0.1 available)
+  google_fonts 6.3.3 (8.0.0 available)
+  google_mobile_ads 5.3.1 (7.0.0 available)
+  image 4.5.4 (4.7.2 available)
+  image_picker_android 0.8.13+10 (0.8.13+12 available)
+  lints 5.1.1 (6.0.0 available)
+  matcher 0.12.17 (0.12.18 available)
+  material_color_utilities 0.11.1 (0.13.0 available)
+  meta 1.17.0 (1.18.0 available)
+  mockito 5.4.4 (5.6.3 available)
+  path_provider_foundation 2.5.1 (2.6.0 available)
+  riverpod 3.0.3 (3.2.0 available)
+  shared_preferences 2.5.3 (2.5.4 available)
+  shelf_web_socket 2.0.1 (3.0.0 available)
+  source_gen 1.5.0 (4.2.0 available)
+  source_helper 1.3.5 (1.3.10 available)
+  test 1.26.3 (1.29.0 available)
+  test_api 0.7.7 (0.7.9 available)
+  test_core 0.6.12 (0.6.15 available)
+  url_launcher_web 2.4.1 (2.4.2 available)
+  watcher 1.1.4 (1.2.1 available)
+  webview_flutter 4.13.0 (4.13.1 available)
+Got dependencies!
+1 package is discontinued.
+39 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /app/test/markdown_image_security_test.dart
+00:00 +0: /app/test/markdown_image_security_test.dart: UpdateDialog blocks network images in release notes
+00:03 +1: /app/test/features/chat/chat_provider_test.dart: ChatNotifier maintains history and sends message correctly
+00:03 +2: /app/test/features/chat/chat_provider_test.dart: ChatNotifier handles streamed response correctly
+00:04 +3: /app/test/features/chat/chat_provider_test.dart: ChatNotifier updates settings correctly
+00:05 +4: /app/test/features/chat/presentation/screens/chat_history_screen_render_test.dart: ChatHistoryScreen uses CustomScrollView for performance
+00:07 +5: /app/test/features/chat/presentation/widgets/chat_input_test.dart: ChatInput has maxLength set to AppConstants.maxInputLength
+══╡ EXCEPTION CAUGHT BY WIDGETS LIBRARY ╞═══════════════════════════════════════════════════════════
+The following LateError was thrown building KeyedSubtree-[GlobalKey#45095]:
+LateInitializationError: Field '_settingsBox@25089923' has not been initialized.
+
+The relevant error-causing widget was:
+  Scaffold Scaffold:file:///app/test/features/chat/presentation/widgets/chat_input_test.dart:33:17
+
+When the exception was thrown, this was the stack:
+#0      StorageService._settingsBox (package:pocketllm_lite/services/storage_service.dart)
+#1      StorageService._getDraftsMap (package:pocketllm_lite/services/storage_service.dart:420:20)
+#2      StorageService.getDraft (package:pocketllm_lite/services/storage_service.dart:443:20)
+#3      _ChatInputState._loadDraft (package:pocketllm_lite/features/chat/presentation/widgets/chat_input.dart:60:27)
+#4      _ChatInputState.initState (package:pocketllm_lite/features/chat/presentation/widgets/chat_input.dart:35:5)
+#5      StatefulElement._firstBuild (package:flutter/src/widgets/framework.dart:5953:55)
+#6      ComponentElement.mount (package:flutter/src/widgets/framework.dart:5796:5)
+...     Normal element mounting (25 frames)
+#31     Element.inflateWidget (package:flutter/src/widgets/framework.dart:4590:20)
+#32     MultiChildRenderObjectElement.inflateWidget (package:flutter/src/widgets/framework.dart:7269:36)
+#33     MultiChildRenderObjectElement.mount (package:flutter/src/widgets/framework.dart:7285:32)
+...     Normal element mounting (364 frames)
+#397    Element.inflateWidget (package:flutter/src/widgets/framework.dart:4590:20)
+#398    MultiChildRenderObjectElement.inflateWidget (package:flutter/src/widgets/framework.dart:7269:36)
+#399    MultiChildRenderObjectElement.mount (package:flutter/src/widgets/framework.dart:7285:32)
+...     Normal element mounting (487 frames)
+#886    Element.inflateWidget (package:flutter/src/widgets/framework.dart:4590:20)
+#887    Element.updateChild (package:flutter/src/widgets/framework.dart:4053:20)
+#888    ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+#889    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#890    ProxyElement.update (package:flutter/src/widgets/framework.dart:6152:5)
+#891    _InheritedNotifierElement.update (package:flutter/src/widgets/inherited_notifier.dart:108:11)
+#892    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#893    ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+#894    StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+#895    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#896    StatefulElement.update (package:flutter/src/widgets/framework.dart:6010:5)
+#897    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#898    ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+#899    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#900    ProxyElement.update (package:flutter/src/widgets/framework.dart:6152:5)
+#901    _InheritedNotifierElement.update (package:flutter/src/widgets/inherited_notifier.dart:108:11)
+#902    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#903    ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+#904    StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+#905    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#906    StatefulElement.update (package:flutter/src/widgets/framework.dart:6010:5)
+#907    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#908    ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+#909    StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+#910    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#911    StatefulElement.update (package:flutter/src/widgets/framework.dart:6010:5)
+#912    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#913    ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+#914    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#915    ProxyElement.update (package:flutter/src/widgets/framework.dart:6152:5)
+#916    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#917    ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+#918    StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+#919    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#920    StatefulElement.update (package:flutter/src/widgets/framework.dart:6010:5)
+#921    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#922    ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+#923    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#924    ProxyElement.update (package:flutter/src/widgets/framework.dart:6152:5)
+#925    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#926    ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+#927    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#928    ProxyElement.update (package:flutter/src/widgets/framework.dart:6152:5)
+#929    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#930    _RawViewElement._updateChild (package:flutter/src/widgets/view.dart:481:16)
+#931    _RawViewElement.update (package:flutter/src/widgets/view.dart:568:5)
+#932    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#933    ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+#934    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#935    StatelessElement.update (package:flutter/src/widgets/framework.dart:5898:5)
+#936    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#937    ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:5844:16)
+#938    StatefulElement.performRebuild (package:flutter/src/widgets/framework.dart:5985:11)
+#939    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#940    StatefulElement.update (package:flutter/src/widgets/framework.dart:6010:5)
+#941    Element.updateChild (package:flutter/src/widgets/framework.dart:4037:15)
+#942    RootElement._rebuild (package:flutter/src/widgets/binding.dart:1782:16)
+#943    RootElement.update (package:flutter/src/widgets/binding.dart:1760:5)
+#944    RootElement.performRebuild (package:flutter/src/widgets/binding.dart:1774:7)
+#945    Element.rebuild (package:flutter/src/widgets/framework.dart:5532:7)
+#946    BuildScope._tryRebuild (package:flutter/src/widgets/framework.dart:2750:15)
+#947    BuildScope._flushDirtyElements (package:flutter/src/widgets/framework.dart:2807:11)
+#948    BuildOwner.buildScope (package:flutter/src/widgets/framework.dart:3111:18)
+#949    AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:1506:19)
+#950    RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#951    SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1434:15)
+#952    SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1347:9)
+#953    AutomatedTestWidgetsFlutterBinding.pump.<anonymous closure> (package:flutter_test/src/binding.dart:1335:9)
+#956    TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#957    AutomatedTestWidgetsFlutterBinding.pump (package:flutter_test/src/binding.dart:1324:27)
+#958    WidgetTester.pumpWidget.<anonymous closure> (package:flutter_test/src/widget_tester.dart:598:22)
+#961    TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#962    WidgetTester.pumpWidget (package:flutter_test/src/widget_tester.dart:595:27)
+#963    main.<anonymous closure> (file:///app/test/features/chat/presentation/widgets/chat_input_test.dart:26:18)
+#964    testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:29)
+<asynchronous suspension>
+#965    TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 5 frames from dart:async and package:stack_trace)
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TypeWidgetFinder:<Found 0 widgets with type "TextField": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///app/test/features/chat/presentation/widgets/chat_input_test.dart:42:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///app/test/features/chat/presentation/widgets/chat_input_test.dart line 42
+The test description was:
+  ChatInput has maxLength set to AppConstants.maxInputLength
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following message was thrown:
+Multiple exceptions (2) were detected during the running of the current test, and at least one was
+unexpected.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:07 +5 -1: /app/test/features/chat/presentation/widgets/chat_input_test.dart: ChatInput has maxLength set to AppConstants.maxInputLength [E]
+  Test failed. See exception logs above.
+  The test description was: ChatInput has maxLength set to AppConstants.maxInputLength
+
+00:08 +5 -1: /app/test/core/utils/image_decoder_test.dart: IsolateImageDecoder decodes images correctly
+00:08 +6 -1: /app/test/core/utils/image_decoder_test.dart: IsolateImageDecoder caches decoded images
+00:08 +7 -1: /app/test/core/utils/image_decoder_test.dart: IsolateImageDecoder respects LRU eviction policy
+00:08 +8 -1: /app/test/core/utils/image_decoder_test.dart: IsolateImageDecoder handles empty list
+00:08 +9 -1: /app/test/core/utils/url_validator_test.dart: UrlValidator allows http and https
+00:08 +10 -1: /app/test/core/utils/url_validator_test.dart: UrlValidator allows mailto
+00:08 +11 -1: /app/test/core/utils/url_validator_test.dart: UrlValidator blocks javascript scheme
+00:08 +12 -1: /app/test/core/utils/url_validator_test.dart: UrlValidator blocks file scheme
+00:08 +13 -1: /app/test/core/utils/url_validator_test.dart: UrlValidator blocks unknown schemes
+00:08 +14 -1: /app/test/core/utils/url_validator_test.dart: UrlValidator handles invalid uris
+00:08 +15 -1: /app/test/core/utils/url_validator_test.dart: UrlValidator handles mixed case schemes
+00:08 +16 -1: /app/test/core/utils/url_validator_test.dart: UrlValidator isHttpUrlString strictly enforces http/https
+00:09 +17 -1: /app/test/widget_test.dart: App smoke test
+00:09 +18 -1: /app/test/services/storage_service_csv_injection_test.dart: StorageService CSV Injection Security exportToCsv escapes malicious formula characters
+00:09 +19 -1: /app/test/services/storage_service_csv_injection_test.dart: StorageService CSV Injection Security exportToCsv escapes malicious characters with quoting
+00:10 +20 -1: /app/test/services/ollama_service_test.dart: OllamaService Tests generateChatStream prepends system prompt correctly
+00:10 +21 -1: /app/test/services/ollama_service_test.dart: OllamaService Tests generateChatStream includes options (temperature, top_p)
+00:10 +22 -1: /app/test/services/ollama_service_test.dart: OllamaService Tests generateChatStream sends correct history
+00:10 +23 -1: /app/test/services/ollama_service_security_test.dart: OllamaService Security Tests updateBaseUrl throws ArgumentError for invalid schemes
+00:10 +24 -1: /app/test/services/ollama_service_security_test.dart: OllamaService Security Tests updateBaseUrl throws ArgumentError for non-url strings
+00:10 +25 -1: /app/test/services/ollama_service_security_test.dart: OllamaService Security Tests updateBaseUrl accepts valid http/https urls
+00:11 +26 -1: /app/test/services/storage_service_statistics_test.dart: StorageService Statistics Tests getUsageStatistics calculates correct values
+00:11 +27 -1: /app/test/services/storage_service_statistics_test.dart: StorageService Statistics Tests getUsageStatistics handles empty data
+00:11 +28 -1: /app/test/services/storage_service_settings_export_test.dart: StorageService Settings Export Tests exportData includes settings when requested
+00:11 +29 -1: /app/test/services/storage_service_settings_export_test.dart: StorageService Settings Export Tests exportData excludes settings when not requested
+00:11 +30 -1: /app/test/services/storage_service_settings_export_test.dart: StorageService Settings Export Tests exportData excludes settings by default
+00:12 +31 -1: /app/test/services/storage_service_pin_test.dart: StorageService Pinning togglePin adds and removes pin and logs activity
+00:12 +32 -1: /app/test/services/pdf_export_service_test.dart: PdfExportService generates PDF data
+Helvetica-Bold has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+Helvetica has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+Unable to find a font to draw "•" (U+2022) try to provide a TextStyle.fontFallback
+00:13 +33 -1: /app/test/services/storage_service_markdown_test.dart: StorageService - Markdown Export Escapes malicious Markdown structure in messages
+00:13 +34 -1: /app/test/services/storage_service_markdown_test.dart: StorageService - Markdown Export Preserves multiline content in blockquotes
+00:14 +35 -1: /app/test/services/storage_service_export_test.dart: StorageService Export Tests exportData filters by chatIds
+00:14 +36 -1: /app/test/services/storage_service_export_test.dart: StorageService Export Tests exportData includes all if chatIds is null
+00:14 +37 -1: /app/test/services/storage_service_export_test.dart: StorageService Export Tests exportToCsv filters by chatIds
+00:14 +38 -1: /app/test/services/storage_service_export_test.dart: StorageService Export Tests exportToMarkdown filters by chatIds
+00:14 +39 -1: /app/test/services/storage_service_log_test.dart: StorageService Activity Logging exportData logs activity
+00:14 +40 -1: /app/test/services/storage_service_log_test.dart: StorageService Activity Logging exportToCsv logs activity
+00:14 +41 -1: /app/test/services/storage_service_log_test.dart: StorageService Activity Logging exportToMarkdown logs activity
+00:14 +42 -1: /app/test/services/storage_service_log_test.dart: StorageService Activity Logging exportActivityLogsToCsv logs activity and returns correct format
+00:14 +43 -1: /app/test/services/storage_service_log_test.dart: StorageService Activity Logging exportActivityLogsToJson logs activity and returns correct format
+00:15 +44 -1: /app/test/services/ollama_service_pull_streaming_test.dart: OllamaService Pull Streaming Tests pullModel handles split JSON chunks correctly
+00:15 +45 -1: /app/test/services/storage_service_search_test.dart: StorageService Search & Filter Logic Search by query (case insensitive)
+00:15 +46 -1: /app/test/services/storage_service_search_test.dart: StorageService Search & Filter Logic Search by query (no match)
+00:15 +47 -1: /app/test/services/storage_service_search_test.dart: StorageService Search & Filter Logic Search by message content
+00:15 +48 -1: /app/test/services/storage_service_search_test.dart: StorageService Search & Filter Logic Search by message content (assistant response)
+00:15 +49 -1: /app/test/services/storage_service_search_test.dart: StorageService Search & Filter Logic Filter by Model
+00:15 +50 -1: /app/test/services/storage_service_search_test.dart: StorageService Search & Filter Logic Filter by Date (Last 7 days)
+00:15 +51 -1: /app/test/services/storage_service_search_test.dart: StorageService Search & Filter Logic Combined Filter (Query + Model)
+00:15 +52 -1: /app/test/services/storage_service_search_test.dart: StorageService Search & Filter Logic Combined Filter (Query + Date)
+00:15 +53 -1: /app/test/services/storage_service_search_test.dart: StorageService Search & Filter Logic Get Available Models
+00:16 +54 -1: /app/test/services/csv_security_test.dart: CSV Injection Security Should escape fields starting with dangerous characters
+00:16 +55 -1: /app/test/services/csv_security_test.dart: CSV Injection Security Should escape fields starting with Tab and Carriage Return
+00:16 +56 -1: /app/test/services/csv_security_test.dart: CSV Injection Security Should escape fields starting with whitespace and dangerous characters
+00:16 +57 -1: /app/test/services/ollama_service_streaming_test.dart: OllamaService Streaming Tests generateChatStream handles split JSON chunks correctly
+Collected output: [Hello , world!]
+00:16 +58 -1: Some tests failed.
