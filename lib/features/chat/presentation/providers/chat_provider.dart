@@ -189,7 +189,7 @@ class ChatNotifier extends Notifier<ChatState> {
           .read(storageServiceProvider)
           .getSetting(AppConstants.hapticFeedbackKey, defaultValue: true);
 
-      String assistantContent = '';
+      final assistantBuffer = StringBuffer();
       DateTime? lastHapticTime;
       DateTime? lastUiUpdateTime;
 
@@ -203,26 +203,28 @@ class ChatNotifier extends Notifier<ChatState> {
             lastHapticTime = now;
           }
         }
-        assistantContent += chunk;
+        assistantBuffer.write(chunk);
 
         // Optimize: Throttle UI updates to ~20 FPS (50ms) to prevent excessive
         // rebuilds and Markdown re-parsing on every token.
         if (lastUiUpdateTime == null ||
             now.difference(lastUiUpdateTime) >
                 const Duration(milliseconds: 50)) {
-          state = state.copyWith(streamingContent: assistantContent);
+          state = state.copyWith(streamingContent: assistantBuffer.toString());
           lastUiUpdateTime = now;
         }
       }
 
+      final finalContent = assistantBuffer.toString();
+
       // Ensure the final state reflects the complete content
-      if (state.streamingContent != assistantContent) {
-        state = state.copyWith(streamingContent: assistantContent);
+      if (state.streamingContent != finalContent) {
+        state = state.copyWith(streamingContent: finalContent);
       }
 
       final assistantMessage = ChatMessage(
         role: 'assistant',
-        content: assistantContent,
+        content: finalContent,
         timestamp: DateTime.now(),
       );
 
@@ -232,7 +234,7 @@ class ChatNotifier extends Notifier<ChatState> {
       );
 
       final userTokens = _estimateTokens(text);
-      final aiTokens = _estimateTokens(assistantContent);
+      final aiTokens = _estimateTokens(finalContent);
       final totalTokens = userTokens + aiTokens;
 
       await ref.read(usageLimitsProvider.notifier).consumeTokens(totalTokens);
