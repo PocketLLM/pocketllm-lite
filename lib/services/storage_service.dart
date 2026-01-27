@@ -692,13 +692,17 @@ class StorageService {
     }
 
     for (final session in sessions) {
-      buffer.writeln('## ${session.title}');
-      buffer.writeln('**Model:** ${session.model}');
+      // Sanitize title and model to prevent structure injection
+      final safeTitle = session.title.replaceAll('\n', ' ');
+      final safeModel = session.model.replaceAll('\n', ' ');
+
+      buffer.writeln('## $safeTitle');
+      buffer.writeln('**Model:** $safeModel');
       buffer.writeln('**Date:** ${session.createdAt.toString()}\n');
 
       if (session.systemPrompt != null && session.systemPrompt!.isNotEmpty) {
         buffer.writeln('### System Prompt');
-        buffer.writeln('> ${session.systemPrompt}\n');
+        buffer.writeln(_escapeMarkdownContent(session.systemPrompt!));
       }
 
       for (final msg in session.messages) {

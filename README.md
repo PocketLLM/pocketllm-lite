@@ -22,7 +22,7 @@ A premium, privacy-first, offline AI chat application for Android/iOS, integrati
     *   **Live Preview**: Theme your chat bubbles, create presets, and adjust corner radius.
     *   **Dynamic Chat History**: Rename, bulk delete, and organize chats.
     *   **System Prompts**: 15+ rich presets (Productivity Coach, Fitness Trainer, etc.).
-*   **Interactive UI**: Haptic feedback, smooth animations, and a focused menu for messages.
+    *   **Interactive UI**: Haptic feedback, smooth animations, and a focused menu for messages.
 *   **Markdown Support**: Full rendering for code blocks, tables, and links.
 *   **Privacy Centric**: History stored locally using secure Hive database.
 
