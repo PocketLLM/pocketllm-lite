@@ -13,7 +13,8 @@ class ThreeDotLoadingIndicator extends StatefulWidget {
   });
 
   @override
-  State<ThreeDotLoadingIndicator> createState() => _ThreeDotLoadingIndicatorState();
+  State<ThreeDotLoadingIndicator> createState() =>
+      _ThreeDotLoadingIndicatorState();
 }
 
 class _ThreeDotLoadingIndicatorState extends State<ThreeDotLoadingIndicator>

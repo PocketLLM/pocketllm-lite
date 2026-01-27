@@ -12,11 +12,7 @@ void main() {
       model: 'llama3',
       createdAt: DateTime.now(),
       messages: [
-        ChatMessage(
-          role: 'user',
-          content: 'Hello',
-          timestamp: DateTime.now(),
-        ),
+        ChatMessage(role: 'user', content: 'Hello', timestamp: DateTime.now()),
         ChatMessage(
           role: 'assistant',
           content: 'Hi there!',

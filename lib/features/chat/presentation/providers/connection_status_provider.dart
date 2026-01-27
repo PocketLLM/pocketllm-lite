@@ -17,14 +17,14 @@ class ConnectionCheckerNotifier extends AsyncNotifier<bool> {
     // Initial check
     final ollama = ref.watch(ollamaServiceProvider);
     final isConnected = await ollama.checkConnection();
-    
+
     // Start periodic checking
     _startPeriodicCheck();
-    
+
     ref.onDispose(() {
       _timer?.cancel();
     });
-    
+
     return isConnected;
   }
 
@@ -55,6 +55,7 @@ class ConnectionCheckerNotifier extends AsyncNotifier<bool> {
 }
 
 /// Provider that automatically checks connection status periodically
-final autoConnectionStatusProvider = AsyncNotifierProvider<ConnectionCheckerNotifier, bool>(
-  ConnectionCheckerNotifier.new,
-);
+final autoConnectionStatusProvider =
+    AsyncNotifierProvider<ConnectionCheckerNotifier, bool>(
+      ConnectionCheckerNotifier.new,
+    );

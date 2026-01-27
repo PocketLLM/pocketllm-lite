@@ -13,7 +13,8 @@ class TemplateManagementScreen extends ConsumerStatefulWidget {
       _TemplateManagementScreenState();
 }
 
-class _TemplateManagementScreenState extends ConsumerState<TemplateManagementScreen> {
+class _TemplateManagementScreenState
+    extends ConsumerState<TemplateManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -22,11 +23,11 @@ class _TemplateManagementScreenState extends ConsumerState<TemplateManagementScr
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-             if (GoRouter.of(context).canPop()) {
-               context.pop();
-             } else {
-               context.go('/settings');
-             }
+            if (GoRouter.of(context).canPop()) {
+              context.pop();
+            } else {
+              context.go('/settings');
+            }
           },
         ),
       ),
@@ -36,9 +37,9 @@ class _TemplateManagementScreenState extends ConsumerState<TemplateManagementScr
         // The sheet handles editing/deleting. Selection returns content.
         onSelect: (content) {
           Clipboard.setData(ClipboardData(text: content));
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Copied to clipboard')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
         },
       ),
     );

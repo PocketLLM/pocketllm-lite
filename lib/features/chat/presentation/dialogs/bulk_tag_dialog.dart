@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../services/storage_service.dart';
 
-class TagEditorDialog extends StatefulWidget {
-  final String chatId;
+class BulkTagDialog extends StatefulWidget {
+  final List<String> selectedChatIds;
   final StorageService storage;
 
-  const TagEditorDialog({
+  const BulkTagDialog({
     super.key,
-    required this.chatId,
+    required this.selectedChatIds,
     required this.storage,
   });
 
   @override
-  State<TagEditorDialog> createState() => _TagEditorDialogState();
+  State<BulkTagDialog> createState() => _BulkTagDialogState();
 }
 
-class _TagEditorDialogState extends State<TagEditorDialog> {
+class _BulkTagDialogState extends State<BulkTagDialog> {
   final TextEditingController _tagController = TextEditingController();
-  late List<String> _currentTags;
   late Set<String> _availableTags;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -29,10 +29,7 @@ class _TagEditorDialogState extends State<TagEditorDialog> {
 
   void _refreshTags() {
     setState(() {
-      _currentTags = widget.storage.getTagsForChat(widget.chatId);
       _availableTags = widget.storage.getAllTags();
-      // Remove tags already assigned to this chat from suggestions
-      _availableTags.removeAll(_currentTags);
     });
   }
 
@@ -44,56 +41,44 @@ class _TagEditorDialogState extends State<TagEditorDialog> {
 
   Future<void> _addTag(String tag) async {
     final cleanTag = tag.trim();
-    if (cleanTag.isNotEmpty && !_currentTags.contains(cleanTag)) {
-      await widget.storage.addTagToChat(widget.chatId, cleanTag);
-      _tagController.clear();
-      _refreshTags();
-      HapticFeedback.lightImpact();
-    }
-  }
+    if (cleanTag.isEmpty) return;
 
-  Future<void> _removeTag(String tag) async {
-    await widget.storage.removeTagFromChat(widget.chatId, tag);
-    _refreshTags();
-    HapticFeedback.lightImpact();
+    setState(() => _isSaving = true);
+
+    try {
+      await widget.storage.bulkAddTagToChats(widget.selectedChatIds, cleanTag);
+      HapticFeedback.mediumImpact();
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Manage Tags'),
+      title: Text('Tag ${widget.selectedChatIds.length} Chats'),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Current Tags
-            if (_currentTags.isNotEmpty) ...[
-              const Text(
-                'Current Tags:',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: _currentTags.map((tag) {
-                  return InputChip(
-                    label: Text(tag),
-                    onDeleted: () => _removeTag(tag),
-                    deleteIcon: const Icon(Icons.close, size: 16),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-            ],
+            const Text(
+              'Add a tag to all selected chats:',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
 
-            // Add New Tag
+            // Input
             TextField(
               controller: _tagController,
               decoration: InputDecoration(
-                labelText: 'Add Tag',
+                labelText: 'Tag Name',
                 hintText: 'Enter tag name',
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.add),
@@ -105,6 +90,7 @@ class _TagEditorDialogState extends State<TagEditorDialog> {
                   vertical: 8,
                 ),
               ),
+              enabled: !_isSaving,
               onSubmitted: _addTag,
             ),
 
@@ -125,7 +111,7 @@ class _TagEditorDialogState extends State<TagEditorDialog> {
                     children: _availableTags.map((tag) {
                       return ActionChip(
                         label: Text(tag),
-                        onPressed: () => _addTag(tag),
+                        onPressed: _isSaving ? null : () => _addTag(tag),
                         avatar: const Icon(Icons.add, size: 14),
                         padding: EdgeInsets.zero,
                         labelStyle: const TextStyle(fontSize: 12),
@@ -135,13 +121,19 @@ class _TagEditorDialogState extends State<TagEditorDialog> {
                 ),
               ),
             ],
+
+            if (_isSaving)
+              const Padding(
+                padding: EdgeInsets.only(top: 16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
           ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Done'),
+          onPressed: _isSaving ? null : () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
         ),
       ],
     );
