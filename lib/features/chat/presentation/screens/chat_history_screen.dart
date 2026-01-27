@@ -12,6 +12,7 @@ import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
 import '../../../settings/presentation/widgets/export_dialog.dart';
 import '../dialogs/tag_editor_dialog.dart';
+import '../dialogs/bulk_tag_dialog.dart';
 import 'archived_chats_screen.dart';
 
 class ChatHistoryScreen extends ConsumerStatefulWidget {
@@ -153,7 +154,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     );
   }
 
-  String? _getMatchingSnippet(ChatSession session, RegExp? queryRegex, String query) {
+  String? _getMatchingSnippet(
+    ChatSession session,
+    RegExp? queryRegex,
+    String query,
+  ) {
     if (query.isEmpty || queryRegex == null) return null;
 
     // Search in messages using cached regex
@@ -190,7 +195,12 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     int index = lowerText.indexOf(lowerQuery, start);
 
     if (index == -1) {
-      return Text(text, style: style, maxLines: 2, overflow: TextOverflow.ellipsis);
+      return Text(
+        text,
+        style: style,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      );
     }
 
     while (index != -1) {
@@ -291,9 +301,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   Future<void> _handleViewArchived() async {
     HapticFeedback.lightImpact();
     await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ArchivedChatsScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ArchivedChatsScreen()),
     );
     if (mounted) setState(() {});
   }
@@ -347,6 +355,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               actions: [
                 if (_isSelectionMode) ...[
                   IconButton(
+                    icon: const Icon(Icons.label_outline),
+                    tooltip: 'Tag selected chats',
+                    onPressed: _selectedIds.isEmpty ? null : _bulkTagSelected,
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.download),
                     tooltip: 'Export selected chats',
                     onPressed: _selectedIds.isEmpty ? null : _exportSelected,
@@ -372,10 +385,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                       Icons.filter_list,
                       color:
                           (_selectedModelFilter != null ||
-                                  _selectedDateFilter != null ||
-                                  _selectedTagFilter != null)
-                              ? theme.colorScheme.primary
-                              : null,
+                              _selectedDateFilter != null ||
+                              _selectedTagFilter != null)
+                          ? theme.colorScheme.primary
+                          : null,
                     ),
                     tooltip: 'Filter chats',
                     onPressed: () => _showFilterDialog(storage),
@@ -529,8 +542,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         padding: const EdgeInsets.only(right: 8),
                         child: Chip(
                           label: Text('Model: $_selectedModelFilter'),
-                          onDeleted:
-                              () => setState(() => _selectedModelFilter = null),
+                          onDeleted: () =>
+                              setState(() => _selectedModelFilter = null),
                         ),
                       ),
                     if (_selectedTagFilter != null)
@@ -538,8 +551,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         padding: const EdgeInsets.only(right: 8),
                         child: Chip(
                           label: Text('Tag: $_selectedTagFilter'),
-                          onDeleted:
-                              () => setState(() => _selectedTagFilter = null),
+                          onDeleted: () =>
+                              setState(() => _selectedTagFilter = null),
                         ),
                       ),
                     if (_selectedDateFilter != null)
@@ -547,8 +560,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         label: Text(
                           'After: ${_formatDate(_selectedDateFilter!).split(' ')[0]}',
                         ),
-                        onDeleted:
-                            () => setState(() => _selectedDateFilter = null),
+                        onDeleted: () =>
+                            setState(() => _selectedDateFilter = null),
                       ),
                   ],
                 ),
@@ -663,17 +676,14 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         ),
                       ),
                       SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            return _buildChatListTile(
-                              session: pinnedSessions[index],
-                              storage: storage,
-                              theme: theme,
-                              isPinned: true,
-                            );
-                          },
-                          childCount: pinnedSessions.length,
-                        ),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          return _buildChatListTile(
+                            session: pinnedSessions[index],
+                            storage: storage,
+                            theme: theme,
+                            isPinned: true,
+                          );
+                        }, childCount: pinnedSessions.length),
                       ),
                       SliverToBoxAdapter(
                         child: Padding(
@@ -691,19 +701,16 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                       ),
                     ],
                     SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final session = recentSessions[index];
-                          return _buildChatListTile(
-                            session: session,
-                            storage: storage,
-                            theme: theme,
-                            isPinned:
-                                !isFiltering && storage.isPinned(session.id),
-                          );
-                        },
-                        childCount: recentSessions.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final session = recentSessions[index];
+                        return _buildChatListTile(
+                          session: session,
+                          storage: storage,
+                          theme: theme,
+                          isPinned:
+                              !isFiltering && storage.isPinned(session.id),
+                        );
+                      }, childCount: recentSessions.length),
                     ),
                     const SliverPadding(padding: EdgeInsets.only(bottom: 8)),
                   ],
@@ -914,8 +921,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                           child: Text('All Tags'),
                         ),
                         ...tags.map(
-                          (t) =>
-                              DropdownMenuItem<String>(value: t, child: Text(t)),
+                          (t) => DropdownMenuItem<String>(
+                            value: t,
+                            child: Text(t),
+                          ),
                         ),
                       ],
                       onChanged: (val) {
@@ -1020,9 +1029,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 Navigator.pop(sheetContext);
                 showDialog(
                   context: context,
-                  builder:
-                      (context) =>
-                          TagEditorDialog(chatId: session.id, storage: storage),
+                  builder: (context) =>
+                      TagEditorDialog(chatId: session.id, storage: storage),
                 ).then((_) {
                   if (mounted) setState(() {});
                 });
@@ -1380,6 +1388,32 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     }
   }
 
+  Future<void> _bulkTagSelected() async {
+    if (_selectedIds.isEmpty) return;
+
+    final storage = ref.read(storageServiceProvider);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => BulkTagDialog(
+        selectedChatIds: _selectedIds.toList(),
+        storage: storage,
+      ),
+    );
+
+    if (result == true && mounted) {
+      setState(() {
+        _isSelectionMode = false;
+        _selectedIds.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tags added successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   Future<void> _exportSelected() async {
     if (_selectedIds.isEmpty) return;
 
@@ -1516,15 +1550,15 @@ class _EmptyHistoryState extends StatelessWidget {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
-                      : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      ? colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.3,
+                        )
+                      : colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.5,
+                        ),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  icon,
-                  size: 48,
-                  color: colorScheme.primary,
-                ),
+                child: Icon(icon, size: 48, color: colorScheme.primary),
               ),
               const SizedBox(height: 24),
               Text(
@@ -1543,10 +1577,7 @@ class _EmptyHistoryState extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-              if (action != null) ...[
-                const SizedBox(height: 32),
-                action!,
-              ],
+              if (action != null) ...[const SizedBox(height: 32), action!],
             ],
           ),
         ),

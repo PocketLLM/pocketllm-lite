@@ -13,10 +13,7 @@ enum ExportFormat { json, csv, markdown, pdf }
 class ExportDialog extends ConsumerStatefulWidget {
   final Set<String>? selectedChatIds;
 
-  const ExportDialog({
-    super.key,
-    this.selectedChatIds,
-  });
+  const ExportDialog({super.key, this.selectedChatIds});
 
   @override
   ConsumerState<ExportDialog> createState() => _ExportDialogState();
@@ -268,7 +265,8 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: (_isLoading ||
+          onPressed:
+              (_isLoading ||
                   (isJson &&
                       !_includeChats &&
                       !_includePrompts &&
