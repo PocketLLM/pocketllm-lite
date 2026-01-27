@@ -13,3 +13,7 @@
 ## 2024-05-25 - [Hive Box Rebuild Scope]
 **Learning:** Using `box.listenable()` on a Hive box that stores mixed data types (settings, tags, drafts) triggers rebuilds for all listeners on ANY change. For UI components dependent on a single key (like starred messages), this causes unnecessary re-renders when unrelated data changes.
 **Action:** Use `box.listenable(keys: ['specific_key'])` to scope rebuilds, and implement in-memory caching (e.g., `Set`) for expensive derived data to avoid repeated deserialization during builds.
+
+## 2026-01-27 - [Scoped UI Updates for Lists]
+**Learning:** Wrapping a complex list item (e.g., Markdown ChatBubble) with a `ValueListenableBuilder` listening to a shared collection change causes ALL items to rebuild fully when ONE item changes. This defeats the purpose of caching/memoization inside the item.
+**Action:** Push the `ValueListenableBuilder` (or state listener) as deep as possible into the widget tree, wrapping ONLY the specific widget that needs to change (e.g., the star icon), to prevent expensive parent rebuilds.
