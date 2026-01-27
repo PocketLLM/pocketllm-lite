@@ -65,3 +65,7 @@
 ## 2026-01-21 - [Chat List Context]
 **Learning:** In chat history lists, displaying only the date forces users to recall conversations by time alone, which is difficult. Showing a snippet of the last message provides immediate context (semantic memory) and significantly speeds up list scanning.
 **Action:** Always include a text preview (truncated to 1 line) and use the *last message timestamp* (not creation date) in chat list items to maximize information density and relevance.
+
+## 2024-06-01 - [Actionable Empty States in Sheets]
+**Learning:** Empty states in modal sheets often miss Call-to-Actions (CTAs) because developers assume the screen is "view-only" or "secondary". However, if the user opens a list to pick something and finds it empty, they likely want to create one immediately.
+**Action:** Always verify that empty states in bottom sheets / dialogs provide a direct path to populate the content, even if a button exists in the header.

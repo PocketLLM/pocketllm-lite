@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers.dart';
-import '../../../../services/storage_service.dart';
 
 class TemplatesSheet extends ConsumerStatefulWidget {
   final Function(String content) onSelect;
@@ -214,10 +213,13 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
                     color: theme.colorScheme.primary.withValues(alpha: 0.3),
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'No templates yet',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'No templates yet',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -228,14 +230,12 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  if (widget.isFullScreen) ...[
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () => _showEditDialog(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create New Template'),
-                    ),
-                  ]
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: () => _showEditDialog(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create New Template'),
+                  ),
                 ],
               ),
             )
