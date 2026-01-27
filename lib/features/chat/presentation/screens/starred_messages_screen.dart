@@ -30,11 +30,11 @@ class _StarredMessagesScreenState extends ConsumerState<StarredMessagesScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-             if (GoRouter.of(context).canPop()) {
-               context.pop();
-             } else {
-               context.go('/settings');
-             }
+            if (GoRouter.of(context).canPop()) {
+              context.pop();
+            } else {
+              context.go('/settings');
+            }
           },
         ),
       ),
@@ -143,7 +143,9 @@ class _StarredMessagesScreenState extends ConsumerState<StarredMessagesScreen> {
                                 ),
                               ),
                               Text(
-                                DateFormat.yMMMd().format(item.message.timestamp),
+                                DateFormat.yMMMd().format(
+                                  item.message.timestamp,
+                                ),
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: theme.colorScheme.onSurfaceVariant,
