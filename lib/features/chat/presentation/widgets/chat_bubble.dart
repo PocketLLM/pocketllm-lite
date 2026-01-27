@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/utils/image_decoder.dart';
 import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/utils/url_validator.dart';
+import '../../../../core/providers.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
