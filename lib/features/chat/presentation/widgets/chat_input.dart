@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
@@ -27,6 +28,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final _focusNode = FocusNode();
   final _picker = ImagePicker();
   final List<Uint8List> _selectedImages = [];
+  final List<PlatformFile> _selectedFiles = [];
   Timer? _debounceTimer;
 
   @override
@@ -141,9 +143,40 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
   }
 
+  Future<void> _pickFile() async {
+    final storage = ref.read(storageServiceProvider);
+    if (storage.getSetting(
+      AppConstants.hapticFeedbackKey,
+      defaultValue: false,
+    )) {
+      HapticFeedback.selectionClick();
+    }
+
+    final fileService = ref.read(fileServiceProvider);
+    final file = await fileService.pickTextFile();
+
+    if (file != null) {
+      // Check for duplicates
+      if (!_selectedFiles.any((f) => f.name == file.name && f.size == file.size)) {
+        setState(() {
+          _selectedFiles.add(file);
+        });
+      } else {
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('File already selected'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   void _send() async {
     final text = _controller.text;
-    if (text.trim().isEmpty && _selectedImages.isEmpty) return;
+    if (text.trim().isEmpty && _selectedImages.isEmpty && _selectedFiles.isEmpty) return;
 
     if (text.length > AppConstants.maxInputLength) {
       if (mounted) {
@@ -212,6 +245,36 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       HapticFeedback.lightImpact();
     }
 
+    // Process files
+    final StringBuffer messageBuffer = StringBuffer();
+    if (_selectedFiles.isNotEmpty) {
+      final fileService = ref.read(fileServiceProvider);
+      for (final file in _selectedFiles) {
+        try {
+          final content = await fileService.readTextFile(file);
+          messageBuffer.writeln('File: ${file.name}');
+          messageBuffer.writeln('```');
+          messageBuffer.writeln(content);
+          messageBuffer.writeln('```');
+          messageBuffer.writeln();
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error reading ${file.name}: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return; // Stop sending if file read fails
+        }
+      }
+    }
+
+    if (text.isNotEmpty) {
+      messageBuffer.write(text);
+    }
+
     final imagesToSend = _selectedImages
         .map((bytes) => base64Encode(bytes))
         .toList();
@@ -224,13 +287,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     ref
         .read(chatProvider.notifier)
         .sendMessage(
-          _controller.text,
+          messageBuffer.toString(),
           images: imagesToSend.isNotEmpty ? imagesToSend : null,
         );
 
     _controller.clear();
     setState(() {
       _selectedImages.clear();
+      _selectedFiles.clear();
     });
   }
 
@@ -554,6 +618,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Display Images
             if (_selectedImages.isNotEmpty)
               Container(
                 height: 70,
@@ -605,6 +670,50 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+              ),
+            // Display Files
+            if (_selectedFiles.isNotEmpty)
+              Container(
+                height: 50,
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedFiles.length,
+                  itemBuilder: (c, i) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.description, size: 16, color: theme.colorScheme.primary),
+                          const SizedBox(width: 8),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 150),
+                            child: Text(
+                              _selectedFiles[i].name,
+                              style: const TextStyle(fontSize: 12),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                            icon: const Icon(Icons.close, size: 16),
+                            onPressed: () => setState(() => _selectedFiles.removeAt(i)),
+                            tooltip: 'Remove file',
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -702,7 +811,36 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             child: Padding(
                               padding: const EdgeInsets.all(6),
                               child: Icon(
-                                Icons.add,
+                                Icons.add_a_photo,
+                                size: 20,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: isGenerating ? 0.5 : 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Attach File Button
+                    Semantics(
+                      label: 'Attach File',
+                      button: true,
+                      enabled: !isGenerating,
+                      child: Tooltip(
+                        message: 'Attach File',
+                        child: Material(
+                          color: (isDark ? Colors.grey[800] : Colors.grey[300])
+                              ?.withValues(alpha: isGenerating ? 0.5 : 1.0),
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: isGenerating ? null : _pickFile,
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.description,
                                 size: 20,
                                 color: theme.colorScheme.onSurface.withValues(
                                   alpha: isGenerating ? 0.5 : 1.0,
@@ -809,7 +947,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   builder: (context, value, child) {
                     final canSend =
                         (value.text.trim().isNotEmpty ||
-                            _selectedImages.isNotEmpty) &&
+                            _selectedImages.isNotEmpty ||
+                            _selectedFiles.isNotEmpty) &&
                         !isGenerating;
 
                     return AnimatedContainer(
