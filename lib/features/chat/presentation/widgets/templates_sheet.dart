@@ -180,10 +180,13 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Quick Templates',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Quick Templates',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 TextButton.icon(
@@ -208,16 +211,22 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.bolt,
-                    size: 48,
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                  Semantics(
+                    excludeSemantics: true,
+                    child: Icon(
+                      Icons.bolt,
+                      size: 48,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'No templates yet',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'No templates yet',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -228,14 +237,12 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  if (widget.isFullScreen) ...[
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () => _showEditDialog(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create New Template'),
-                    ),
-                  ]
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: () => _showEditDialog(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create New Template'),
+                  ),
                 ],
               ),
             )
