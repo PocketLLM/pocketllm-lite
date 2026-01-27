@@ -11,7 +11,6 @@ import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
-import 'dart:typed_data';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
@@ -182,46 +181,58 @@ class StorageService {
     DateTime? fromDate,
     String? tag,
   }) {
-    List<ChatSession> results = getChatSessions();
-
-    // 0. Filter by Tag
-    if (tag != null && tag.isNotEmpty) {
-      final tagsMap = _getChatTagsMap();
-      results = results.where((s) {
-        final sessionTags = tagsMap[s.id];
-        return sessionTags != null && sessionTags.contains(tag);
-      }).toList();
+    // Return early if no filters
+    if (query.isEmpty && model == null && fromDate == null && tag == null) {
+      return getChatSessions();
     }
 
-    // 1. Filter by Query (Title & Content)
-    if (query.isNotEmpty) {
-      // Use RegExp with caseSensitive: false to avoid allocating lowercased strings
-      // for potentially large message content, reducing memory churn during search.
-      final queryRegex = RegExp(RegExp.escape(query), caseSensitive: false);
-      results = results.where((s) {
+    final sessions = getChatSessions();
+    // Only get tags map if we are filtering by tag
+    final Map<String, List<String>>? tagsMap = (tag != null && tag.isNotEmpty)
+        ? _getChatTagsMap()
+        : null;
+
+    final queryRegex = query.isNotEmpty
+        ? RegExp(RegExp.escape(query), caseSensitive: false)
+        : null;
+
+    return sessions.where((s) {
+      // 0. Filter by Tag
+      if (tag != null && tag.isNotEmpty) {
+        final sessionTags = tagsMap![s.id];
+        if (sessionTags == null || !sessionTags.contains(tag)) {
+          return false;
+        }
+      }
+
+      // 1. Filter by Model
+      if (model != null && model.isNotEmpty) {
+        if (s.model != model) return false;
+      }
+
+      // 2. Filter by Date
+      if (fromDate != null) {
+        if (!s.createdAt.isAfter(fromDate)) return false;
+      }
+
+      // 3. Filter by Query (Title & Content)
+      if (queryRegex != null) {
         // Check title
         if (queryRegex.hasMatch(s.title)) return true;
 
         // Check messages content
+        bool found = false;
         for (final message in s.messages) {
-          if (queryRegex.hasMatch(message.content)) return true;
+          if (queryRegex.hasMatch(message.content)) {
+            found = true;
+            break;
+          }
         }
+        if (!found) return false;
+      }
 
-        return false;
-      }).toList();
-    }
-
-    // 2. Filter by Model
-    if (model != null && model.isNotEmpty) {
-      results = results.where((s) => s.model == model).toList();
-    }
-
-    // 3. Filter by Date
-    if (fromDate != null) {
-      results = results.where((s) => s.createdAt.isAfter(fromDate)).toList();
-    }
-
-    return results;
+      return true;
+    }).toList();
   }
 
   Set<String> getAvailableModels() {
@@ -717,7 +728,7 @@ class StorageService {
     if (content.isEmpty) return '>\n';
     const prefix = '> ';
     // Split by newline and prepend blockquote prefix to each line
-    return content.split('\n').map((line) => '$prefix$line').join('\n') + '\n';
+    return '${content.split('\n').map((line) => '$prefix$line').join('\n')}\n';
   }
 
   String _escapeCsv(String field) {
