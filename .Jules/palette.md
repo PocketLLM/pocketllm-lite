@@ -65,3 +65,7 @@
 ## 2026-01-21 - [Chat List Context]
 **Learning:** In chat history lists, displaying only the date forces users to recall conversations by time alone, which is difficult. Showing a snippet of the last message provides immediate context (semantic memory) and significantly speeds up list scanning.
 **Action:** Always include a text preview (truncated to 1 line) and use the *last message timestamp* (not creation date) in chat list items to maximize information density and relevance.
+
+## 2026-02-05 - [Accessibility in Bottom Sheets]
+**Learning:** Empty states in bottom sheets can trap users if the primary action (Call-to-Action) is hidden based on screen size or mode (e.g., hidden in non-fullscreen). Also, text headers in sheets must be explicitly marked with `Semantics(header: true)` for screen reader users to navigate effectively.
+**Action:** Ensure empty states always provide a clear, visible CTA regardless of layout mode, and wrap all visual headings in `Semantics(header: true)`.

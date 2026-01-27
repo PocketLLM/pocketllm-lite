@@ -240,10 +240,9 @@ class _EmptyState extends ConsumerWidget {
                 child: Icon(
                   Icons.chat_bubble_outline,
                   size: 80,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.5),
                 ),
               ),
               const SizedBox(height: 24),
@@ -252,8 +251,8 @@ class _EmptyState extends ConsumerWidget {
                 child: Text(
                   'How can I help you?',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -269,10 +268,7 @@ class _EmptyState extends ConsumerWidget {
                 builder: (context, value, child) {
                   return Transform.translate(
                     offset: Offset(0, 20 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: child,
-                    ),
+                    child: Opacity(opacity: value, child: child),
                   );
                 },
                 child: Wrap(

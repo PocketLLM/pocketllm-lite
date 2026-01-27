@@ -115,7 +115,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ] else ...[
-             const Text(
+            const Text(
               'Backup file found:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
@@ -130,7 +130,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
               'Ready to import?',
               style: TextStyle(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.primary
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ],
@@ -145,17 +145,31 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
           FilledButton.icon(
             onPressed: _isLoading ? null : _pickFile,
             icon: _isLoading
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Icon(Icons.folder_open, size: 18),
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.folder_open, size: 18),
             label: const Text('Select File'),
           )
         else
           FilledButton.icon(
-             onPressed: _isLoading ? null : _handleImport,
-             icon: _isLoading
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Icon(Icons.check, size: 18),
-             label: const Text('Import'),
+            onPressed: _isLoading ? null : _handleImport,
+            icon: _isLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.check, size: 18),
+            label: const Text('Import'),
           ),
       ],
     );
@@ -167,10 +181,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
         Icon(icon, size: 16, color: Colors.grey),
         const SizedBox(width: 8),
         Text('$label: '),
-        Text(
-          '$count',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        Text('$count', style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
     );
   }

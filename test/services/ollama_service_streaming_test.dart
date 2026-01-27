@@ -23,7 +23,9 @@ void main() {
       final mockClient = MockClient(controller.stream);
       final service = OllamaService(client: mockClient);
 
-      final messages = [{'role': 'user', 'content': 'Hi'}];
+      final messages = [
+        {'role': 'user', 'content': 'Hi'},
+      ];
       final stream = service.generateChatStream('model', messages);
 
       final collectedOutput = <String>[];
@@ -34,7 +36,8 @@ void main() {
       // Chunk 1: First complete JSON + half of second JSON
       // {"message": {"content": "Hello "}, "done": false}
       // {"message": {"content": "wor
-      final chunk1 = '{"message": {"content": "Hello "}, "done": false}\n{"message": {"content": "wor';
+      final chunk1 =
+          '{"message": {"content": "Hello "}, "done": false}\n{"message": {"content": "wor';
       controller.add(utf8.encode(chunk1));
 
       // Wait a bit to ensure processing
