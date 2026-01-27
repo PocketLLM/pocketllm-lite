@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Incomplete Markdown Sanitization
+**Vulnerability:** While message bodies were sanitized in Markdown export, Chat Titles and System Prompts were not, allowing structure injection via newlines in titles or multi-line system prompts.
+**Learning:** Security controls must be applied consistently to ALL user-controlled fields, not just the most obvious ones (message body).
+**Prevention:** Audit all fields included in an export template against the sanitization strategy.

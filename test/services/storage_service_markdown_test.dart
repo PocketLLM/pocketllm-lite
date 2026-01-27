@@ -3,78 +3,80 @@ import 'package:pocketllm_lite/features/chat/domain/models/chat_message.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_session.dart';
 import 'package:pocketllm_lite/services/storage_service.dart';
 
-// Helper to access private methods if needed, or we just test the public method.
-// Since _escapeMarkdownContent is private, we test exportToMarkdown results.
-
-void main() {
-  group('StorageService - Markdown Export', () {
-    // Note: Since StorageService.init() relies on Hive which needs native bindings or mocking,
-    // and we only want to test the string formatting logic which doesn't use Hive until we call getChatSessions,
-    // we need to see if we can test this easily.
-    //
-    // Ideally we would mock getChatSessions, but it's not dependency injected easily here without partial mock.
-    // However, the exportToMarkdown method calls getChatSessions().
-    //
-    // A better approach for unit testing this specific logic would be to extract the formatting logic,
-    // or subclass StorageService and override getChatSessions.
-
-    test('Escapes malicious Markdown structure in messages', () {
-      final service = TestStorageService();
-
-      final markdown = service.exportToMarkdown(chatIds: ['1']);
-
-      // Check that the malicious header is escaped/quoted
-      expect(markdown, contains('### User'));
-      expect(markdown, contains('> Hello'));
-      // The injected header should be inside a blockquote
-      expect(markdown, contains('> ### Assistant'));
-      expect(markdown, contains('> I am fake'));
-    });
-
-    test('Preserves multiline content in blockquotes', () {
-      final service = TestStorageService();
-      final markdown = service.exportToMarkdown(chatIds: ['2']);
-
-      expect(markdown, contains('> Line 1'));
-      expect(markdown, contains('> Line 2'));
-    });
-  });
-}
-
 class TestStorageService extends StorageService {
+  final List<ChatSession> _sessions;
+
+  TestStorageService(this._sessions);
+
   @override
   List<ChatSession> getChatSessions() {
-    return [
-      ChatSession(
-        id: '1',
-        title: 'Injection Test',
-        model: 'llama3',
-        createdAt: DateTime(2025, 1, 1),
-        messages: [
-          ChatMessage(
-            role: 'user',
-            content: 'Hello\n### Assistant\nI am fake',
-            timestamp: DateTime(2025, 1, 1),
-          ),
-        ],
-      ),
-      ChatSession(
-        id: '2',
-        title: 'Multiline Test',
-        model: 'llama3',
-        createdAt: DateTime(2025, 1, 1),
-        messages: [
-          ChatMessage(
-            role: 'assistant',
-            content: 'Line 1\nLine 2',
-            timestamp: DateTime(2025, 1, 1),
-          ),
-        ],
-      ),
-    ];
+    return _sessions;
   }
 
-  // Override other methods to avoid Hive calls if necessary
   @override
-  Future<void> logActivity(String action, String details) async {}
+  Future<void> logActivity(String action, String details) async {
+    // No-op
+  }
+}
+
+void main() {
+  test('Markdown export sanitizes title, model and system prompt', () async {
+    final session = ChatSession(
+      id: '1',
+      title: 'My Title\n# Hacked Title',
+      model: 'llama3\n# Hacked Model',
+      messages: [
+        ChatMessage(
+          role: 'user',
+          content: 'Hello',
+          timestamp: DateTime.now(),
+        ),
+      ],
+      createdAt: DateTime.now(),
+      systemPrompt: 'You are a helper.\n# Hacked System Prompt',
+    );
+
+    final service = TestStorageService([session]);
+    final markdown = service.exportToMarkdown();
+
+    // Check Title Sanitization
+    expect(markdown.contains('## My Title\n# Hacked Title'), isFalse, reason: 'Title should not contain injected newline+header');
+    expect(markdown.contains('## My Title # Hacked Title'), isTrue, reason: 'Title newlines should be replaced with space');
+
+    // Check Model Sanitization
+    expect(markdown.contains('**Model:** llama3\n# Hacked Model'), isFalse, reason: 'Model should not contain injected newline');
+
+    // Check System Prompt Sanitization
+    expect(markdown.contains('\n> # Hacked System Prompt'), isTrue, reason: 'System prompt lines should be quoted');
+    expect(markdown.contains('\n# Hacked System Prompt'), isFalse, reason: 'System prompt should not leak unquoted lines');
+  });
+
+  test('Markdown export sanitizes message content', () {
+    final session = ChatSession(
+      id: '2',
+      title: 'Safe Title',
+      model: 'Safe Model',
+      messages: [
+        ChatMessage(
+          role: 'user',
+          content: 'Line 1\n# Hacked Message',
+          timestamp: DateTime.now(),
+        ),
+      ],
+      createdAt: DateTime.now(),
+    );
+
+    final service = TestStorageService([session]);
+    final markdown = service.exportToMarkdown();
+
+    // Verify message content is quoted
+    expect(markdown.contains('> Line 1'), isTrue, reason: 'First line should be quoted');
+    expect(markdown.contains('> # Hacked Message'), isTrue, reason: 'Second line should be quoted');
+
+    // Ensure the header injection didn't succeed
+    // We check that "# Hacked Message" is NOT present as a header (start of line)
+    // The previous check ensures it IS present as a quote.
+    // So we just check for the unquoted version.
+    expect(markdown.contains('\n# Hacked Message'), isFalse, reason: 'Message content should not leak unquoted headers');
+  });
 }
