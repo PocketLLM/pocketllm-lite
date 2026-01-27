@@ -1361,6 +1361,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
               ListTile(
+                title: const Text('Media Gallery'),
+                subtitle: const Text('View all attached images'),
+                leading: const Icon(Icons.photo_library_outlined),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/media');
+                },
+              ),
+              ListTile(
                 title: const Text('Starred Messages'),
                 subtitle: const Text('View bookmarked messages'),
                 leading: const Icon(Icons.star_outline),

@@ -9,6 +9,7 @@ import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
+import '../features/chat/domain/models/media_item.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
@@ -542,6 +543,33 @@ class StorageService {
   Future<void> clearActivityLogs() async {
     await _activityLogBox.clear();
     await logActivity('Logs Cleared', 'Cleared activity log history');
+  }
+
+  // Media Gallery
+  List<MediaItem> getAllImages() {
+    final List<MediaItem> mediaItems = [];
+    final sessions = getChatSessions();
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (final image in message.images!) {
+            mediaItems.add(
+              MediaItem(
+                chatId: session.id,
+                messageTimestamp: message.timestamp,
+                timestamp: message.timestamp,
+                base64Image: image,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    // Sort by newest first
+    mediaItems.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return mediaItems;
   }
 
   // Export
