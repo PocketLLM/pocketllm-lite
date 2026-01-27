@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Settings Injection via Import
+**Vulnerability:** The data import function (`importData`) blindly accepted all keys in the `settings` map, allowing malicious import files to overwrite restricted internal values (e.g., `token_balance`, `total_chats_created`).
+**Learning:** Whitelisting keys for *export* is not enough; *import* logic must also strictly validate/whitelist keys to prevent state corruption, especially when internal state shares the same storage mechanism as user preferences.
+**Prevention:** Define a static `_allowedSettingsKeys` set and use it to filter keys in both export AND import operations.
