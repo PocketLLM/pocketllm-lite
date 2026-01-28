@@ -7,6 +7,7 @@ import 'package:pocketllm_lite/services/storage_service.dart';
 import 'package:pocketllm_lite/core/constants/app_constants.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_session.dart';
 import 'package:pocketllm_lite/services/usage_limits_provider.dart';
+import 'package:pocketllm_lite/services/ollama_service.dart';
 
 // Mock StorageService
 class MockStorageService extends StorageService {
@@ -17,16 +18,32 @@ class MockStorageService extends StorageService {
 
   @override
   Future<void> saveChatSession(ChatSession session, {bool log = true}) async {}
+
+  @override
+  String? getDraft(String key) => null;
+
+  @override
+  Future<void> saveDraft(String key, String content) async {}
+
+  @override
+  Future<void> deleteDraft(String key) async {}
+}
+
+class MockOllamaService extends Fake implements OllamaService {
+  @override
+  Future<bool> checkConnection() async => true;
 }
 
 void main() {
   testWidgets('ChatInput has maxLength set to AppConstants.maxInputLength', (WidgetTester tester) async {
     final mockStorage = MockStorageService();
+    final mockOllama = MockOllamaService();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           storageServiceProvider.overrideWithValue(mockStorage),
+          ollamaServiceProvider.overrideWithValue(mockOllama),
           usageLimitsProvider.overrideWith(UsageLimitsNotifier.new),
         ],
         child: const MaterialApp(

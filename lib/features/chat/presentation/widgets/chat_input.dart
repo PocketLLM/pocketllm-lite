@@ -815,9 +815,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       decoration: BoxDecoration(
-                        color: canSend
+                        // Keep primary color while generating to show active processing state
+                        color: (canSend || isGenerating)
                             ? theme.colorScheme.primary
-                            : Colors.grey,
+                            : (isDark ? Colors.grey[800] : Colors.grey[300]),
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
@@ -827,14 +828,17 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           transitionBuilder: (child, animation) =>
                               ScaleTransition(scale: animation, child: child),
                           child: isGenerating
-                              ? SizedBox(
-                                  key: const ValueKey('spinner'),
-                                  width: 18,
-                                  height: 18,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(
-                                      Colors.white,
+                              ? Semantics(
+                                  label: 'Generating response',
+                                  child: SizedBox(
+                                    key: const ValueKey('spinner'),
+                                    width: 18,
+                                    height: 18,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation(
+                                        Colors.white,
+                                      ),
                                     ),
                                   ),
                                 )
