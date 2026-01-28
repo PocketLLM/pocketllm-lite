@@ -64,25 +64,34 @@ void main() {
       expect(storage.logs.first['details'], contains('Markdown'));
     });
 
-    test('exportActivityLogsToCsv logs activity and returns correct format', () {
-      final csv = storage.exportActivityLogsToCsv();
-      expect(storage.logs.length, 1);
-      expect(storage.logs.first['action'], 'Data Export');
-      expect(storage.logs.first['details'], contains('activity logs as CSV'));
+    test(
+      'exportActivityLogsToCsv logs activity and returns correct format',
+      () {
+        final csv = storage.exportActivityLogsToCsv();
+        expect(storage.logs.length, 1);
+        expect(storage.logs.first['action'], 'Data Export');
+        expect(storage.logs.first['details'], contains('activity logs as CSV'));
 
-      expect(csv, contains('Timestamp,Action,Details'));
-      expect(csv, contains('Chat Created'));
-      expect(csv, contains('Settings Changed'));
-    });
+        expect(csv, contains('Timestamp,Action,Details'));
+        expect(csv, contains('Chat Created'));
+        expect(csv, contains('Settings Changed'));
+      },
+    );
 
-    test('exportActivityLogsToJson logs activity and returns correct format', () {
-      final json = storage.exportActivityLogsToJson();
-      expect(storage.logs.length, 1);
-      expect(storage.logs.first['action'], 'Data Export');
-      expect(storage.logs.first['details'], contains('activity logs as JSON'));
+    test(
+      'exportActivityLogsToJson logs activity and returns correct format',
+      () {
+        final json = storage.exportActivityLogsToJson();
+        expect(storage.logs.length, 1);
+        expect(storage.logs.first['action'], 'Data Export');
+        expect(
+          storage.logs.first['details'],
+          contains('activity logs as JSON'),
+        );
 
-      expect(json, contains('"action": "Chat Created"'));
-      expect(json, contains('"action": "Settings Changed"'));
-    });
+        expect(json, contains('"action": "Chat Created"'));
+        expect(json, contains('"action": "Settings Changed"'));
+      },
+    );
   });
 }

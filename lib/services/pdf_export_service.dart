@@ -26,7 +26,8 @@ class PdfExportService {
             return [
               _buildHeader(session),
               pw.SizedBox(height: 20),
-              if (session.systemPrompt != null && session.systemPrompt!.isNotEmpty)
+              if (session.systemPrompt != null &&
+                  session.systemPrompt!.isNotEmpty)
                 _buildSystemPrompt(session.systemPrompt!),
               pw.SizedBox(height: 20),
               ...session.messages.map((msg) => _buildMessage(msg)),
@@ -46,18 +47,12 @@ class PdfExportService {
       children: [
         pw.Text(
           session.title,
-          style: pw.TextStyle(
-            fontSize: 24,
-            fontWeight: pw.FontWeight.bold,
-          ),
+          style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
         ),
         pw.SizedBox(height: 8),
         pw.Text(
           'Model: ${session.model} • Date: ${session.createdAt.toIso8601String().split('T')[0]}',
-          style: const pw.TextStyle(
-            fontSize: 12,
-            color: PdfColors.grey700,
-          ),
+          style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
         ),
       ],
     );
@@ -83,10 +78,7 @@ class PdfExportService {
             ),
           ),
           pw.SizedBox(height: 4),
-          pw.Text(
-            prompt,
-            style: const pw.TextStyle(fontSize: 10),
-          ),
+          pw.Text(prompt, style: const pw.TextStyle(fontSize: 10)),
         ],
       ),
     );
@@ -94,7 +86,9 @@ class PdfExportService {
 
   pw.Widget _buildMessage(dynamic message) {
     final isUser = message.role == 'user';
-    final align = isUser ? pw.CrossAxisAlignment.end : pw.CrossAxisAlignment.start;
+    final align = isUser
+        ? pw.CrossAxisAlignment.end
+        : pw.CrossAxisAlignment.start;
     final bg = isUser ? PdfColors.blue100 : PdfColors.grey100;
     final textColor = PdfColors.black;
 

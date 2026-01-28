@@ -20,7 +20,9 @@ class MockStorageService extends StorageService {
 }
 
 void main() {
-  testWidgets('ChatInput has maxLength set to AppConstants.maxInputLength', (WidgetTester tester) async {
+  testWidgets('ChatInput has maxLength set to AppConstants.maxInputLength', (
+    WidgetTester tester,
+  ) async {
     final mockStorage = MockStorageService();
 
     await tester.pumpWidget(
@@ -29,11 +31,7 @@ void main() {
           storageServiceProvider.overrideWithValue(mockStorage),
           usageLimitsProvider.overrideWith(UsageLimitsNotifier.new),
         ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: ChatInput(),
-          ),
-        ),
+        child: const MaterialApp(home: Scaffold(body: ChatInput())),
       ),
     );
 
@@ -56,7 +54,7 @@ void main() {
       tester.element(textFieldFinder),
       currentLength: 0,
       isFocused: false,
-      maxLength: 100
+      maxLength: 100,
     );
     expect(counter, isNull);
   });
