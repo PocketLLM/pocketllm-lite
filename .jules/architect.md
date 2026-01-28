@@ -14,3 +14,8 @@
 **Challenge:** Implementing visual analytics (bar charts) for usage stats without adding heavy external dependencies like `fl_chart` to keep the app lightweight.
 **Solution:** I implemented a custom `BarChartPainter` using Flutter's `CustomPaint` API. It handles dynamic scaling, zero-value placeholders, and theme-aware styling (using `Color.withValues`).
 **Reusable Pattern:** The `BarChartPainter` pattern separates the data model (`DailyActivity`) from the rendering logic, providing a lightweight template for other simple time-series visualizations.
+
+## 2026-05-25 - Denormalized Tag Management
+**Challenge:** Implementing global tag operations (rename/delete) efficiently when tags are stored per-chat in a NoSQL (Hive) environment without a central index.
+**Solution:** I utilized a separate, denormalized `Map<ChatId, List<Tags>>` stored in `settingsBox` (key: `chat_tags`). Global operations iterate this map (O(N) chats) rather than opening every `ChatSession` object.
+**Reusable Pattern:** For metadata that cuts across many entities (like tags), store a lightweight index/map in a "settings" or "index" box to allow global querying and manipulation without loading heavy entity objects.
