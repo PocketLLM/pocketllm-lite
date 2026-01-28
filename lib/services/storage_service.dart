@@ -9,6 +9,7 @@ import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
+import '../features/chat/domain/models/media_item.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
@@ -91,6 +92,39 @@ class StorageService {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return UnmodifiableListView(_cachedSessions!);
+  }
+
+  List<MediaItem> getAllImages() {
+    final List<MediaItem> allImages = [];
+    final sessions = getChatSessions();
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (int i = 0; i < message.images!.length; i++) {
+            final image = message.images![i];
+            // Unique ID construction to avoid collisions
+            final id =
+                '${session.id}_${message.timestamp.millisecondsSinceEpoch}_$i';
+
+            allImages.add(
+              MediaItem(
+                id: id,
+                chatId: session.id,
+                timestamp: message.timestamp,
+                base64Data: image,
+                index: i,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp descending (newest first)
+    allImages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+    return allImages;
   }
 
   Future<void> saveChatSession(ChatSession session, {bool log = true}) async {
