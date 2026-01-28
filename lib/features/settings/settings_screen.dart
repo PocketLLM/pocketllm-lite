@@ -1361,6 +1361,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
               ListTile(
+                title: const Text('Manage Tags'),
+                subtitle: const Text('Rename and delete tags globally'),
+                leading: const Icon(Icons.label_outline),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/tags');
+                },
+              ),
+              ListTile(
                 title: const Text('Starred Messages'),
                 subtitle: const Text('View bookmarked messages'),
                 leading: const Icon(Icons.star_outline),
