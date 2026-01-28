@@ -19,6 +19,15 @@ class StorageService {
   late Box _settingsBox;
   late Box _activityLogBox;
 
+  @visibleForTesting
+  set chatBox(Box<ChatSession> box) => _chatBox = box;
+
+  @visibleForTesting
+  set settingsBox(Box box) => _settingsBox = box;
+
+  @visibleForTesting
+  set activityLogBox(Box box) => _activityLogBox = box;
+
   // Cache for sorted chat sessions
   List<ChatSession>? _cachedSessions;
   // Cache for chat tags
@@ -143,6 +152,14 @@ class StorageService {
       await _settingsBox.put(AppConstants.chatTagsKey, tagsMap);
     }
 
+    // Remove associated starred messages (Data Remanence Fix)
+    final starred = getStarredMessages();
+    final initialLength = starred.length;
+    starred.removeWhere((s) => s.chatId == id);
+    if (starred.length != initialLength) {
+      await saveStarredMessages(starred);
+    }
+
     await logActivity('Chat Deleted', 'Deleted chat (ID: $id)');
   }
 
@@ -152,6 +169,8 @@ class StorageService {
     await _chatBox.clear();
     await _settingsBox.delete(AppConstants.pinnedChatsKey);
     await _settingsBox.delete(AppConstants.chatTagsKey);
+    await _settingsBox.delete(AppConstants.starredMessagesKey);
+    _cachedStarredMessages = null;
     await logActivity('History Cleared', 'Deleted all chat history');
   }
 
