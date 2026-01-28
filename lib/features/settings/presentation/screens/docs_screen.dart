@@ -3,6 +3,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/utils/url_validator.dart';
+import '../../../../core/utils/markdown_handlers.dart';
 
 class Docs extends StatefulWidget {
   const Docs({super.key});
@@ -365,6 +366,8 @@ ollama pull <model-name>
       data: content,
       selectable: true,
       padding: const EdgeInsets.all(16),
+      // ignore: deprecated_member_use
+      imageBuilder: MarkdownHandlers.imageBuilder,
       styleSheet: MarkdownStyleSheet(
         h1: const TextStyle(
           fontSize: 24,

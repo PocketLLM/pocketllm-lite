@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2026-02-02 - Markdown Image Tracking
+**Vulnerability:** `Markdown` widgets rendered external images by default, allowing remote servers to track user IP addresses and usage patterns via release notes or documentation.
+**Learning:** Offline-first apps must explicitly block network requests in renderers, as "privacy-first" isn't the default for general-purpose widgets like `flutter_markdown`.
+**Prevention:** Use `Markdown(imageBuilder: ...)` to inspect and block `http`/`https` schemes, ensuring only local or trusted assets are rendered.
