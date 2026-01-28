@@ -106,14 +106,18 @@ class PromptManagementScreen extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final prompt = prompts[index];
                 return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+                      color: Theme.of(
+                        context,
+                      ).dividerColor.withValues(alpha: 0.1),
                     ),
                   ),
                   child: ListTile(
@@ -173,7 +177,9 @@ class PromptManagementScreen extends ConsumerWidget {
 
         return StatefulBuilder(
           builder: (context, setState) => Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -222,7 +228,8 @@ class PromptManagementScreen extends ConsumerWidget {
                   TextField(
                     controller: contentCtrl,
                     onChanged: (_) {
-                      if (contentError != null) setState(() => contentError = null);
+                      if (contentError != null)
+                        setState(() => contentError = null);
                     },
                     decoration: InputDecoration(
                       hintText: 'Enter the detailed instructions for the AI...',
@@ -243,8 +250,8 @@ class PromptManagementScreen extends ConsumerWidget {
                     children: [
                       if (prompt != null)
                         TextButton.icon(
-                          onPressed:
-                              () => _confirmDelete(context, storage, prompt),
+                          onPressed: () =>
+                              _confirmDelete(context, storage, prompt),
                           icon: const Icon(
                             Icons.delete_outline,
                             color: Colors.red,
@@ -292,16 +299,18 @@ class PromptManagementScreen extends ConsumerWidget {
                           ElevatedButton(
                             onPressed: () async {
                               final titleEmpty = titleCtrl.text.trim().isEmpty;
-                              final contentEmpty = contentCtrl.text.trim().isEmpty;
+                              final contentEmpty = contentCtrl.text
+                                  .trim()
+                                  .isEmpty;
 
                               if (titleEmpty || contentEmpty) {
                                 setState(() {
-                                  titleError =
-                                      titleEmpty ? 'Title is required' : null;
-                                  contentError =
-                                      contentEmpty
-                                          ? 'Content is required'
-                                          : null;
+                                  titleError = titleEmpty
+                                      ? 'Title is required'
+                                      : null;
+                                  contentError = contentEmpty
+                                      ? 'Content is required'
+                                      : null;
                                 });
                                 HapticFeedback.lightImpact();
                                 return;

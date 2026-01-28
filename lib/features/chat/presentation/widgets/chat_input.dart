@@ -641,10 +641,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     LogicalKeyboardKey.enter,
                     control: true,
                   ): _send,
-                  const SingleActivator(
-                    LogicalKeyboardKey.enter,
-                    meta: true,
-                  ): _send,
+                  const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                      _send,
                 },
                 child: TextField(
                   controller: _controller,
@@ -656,12 +654,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   minLines: 1,
                   style: theme.textTheme.bodyLarge,
                   maxLength: AppConstants.maxInputLength,
-                  buildCounter: (
-                    context, {
-                    required currentLength,
-                    required isFocused,
-                    required maxLength,
-                  }) => null,
+                  buildCounter:
+                      (
+                        context, {
+                        required currentLength,
+                        required isFocused,
+                        required maxLength,
+                      }) => null,
                   decoration: InputDecoration(
                     hintText: _isEnhancing
                         ? 'Enhancing your prompt...'

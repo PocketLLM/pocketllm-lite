@@ -623,7 +623,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         modelsAsync.when(
           data: (models) {
             if (models.isEmpty) {
-              return const Text('No models found. Download one using the + button.');
+              return const Text(
+                'No models found. Download one using the + button.',
+              );
             }
             return Column(
               children: [

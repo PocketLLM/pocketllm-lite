@@ -44,7 +44,7 @@ void main() {
               role: 'user',
               content: 'Hello',
               timestamp: DateTime.now(),
-            )
+            ),
           ],
           createdAt: DateTime.now(),
         ),

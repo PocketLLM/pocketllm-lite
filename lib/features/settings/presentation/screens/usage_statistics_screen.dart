@@ -5,7 +5,9 @@ import '../../../../core/providers.dart';
 import '../../../../services/storage_service.dart';
 import '../widgets/activity_chart.dart';
 
-final usageStatisticsProvider = FutureProvider.autoDispose<UsageStatistics>((ref) async {
+final usageStatisticsProvider = FutureProvider.autoDispose<UsageStatistics>((
+  ref,
+) async {
   final storage = ref.watch(storageServiceProvider);
   return storage.getUsageStatistics();
 });
@@ -46,7 +48,10 @@ class UsageStatisticsScreen extends ConsumerWidget {
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
-          child: Text('Error loading stats: $err', style: TextStyle(color: theme.colorScheme.error)),
+          child: Text(
+            'Error loading stats: $err',
+            style: TextStyle(color: theme.colorScheme.error),
+          ),
         ),
       ),
     );
@@ -97,14 +102,22 @@ class UsageStatisticsScreen extends ConsumerWidget {
     return ActivityChart(activity: stats.dailyActivity);
   }
 
-  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,13 +158,17 @@ class UsageStatisticsScreen extends ConsumerWidget {
       children: [
         Text(
           'Activity',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -161,13 +178,12 @@ class UsageStatisticsScreen extends ConsumerWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Last Active',
-                    style: theme.textTheme.labelMedium,
-                  ),
+                  Text('Last Active', style: theme.textTheme.labelMedium),
                   Text(
                     lastActive,
-                    style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -188,12 +204,16 @@ class UsageStatisticsScreen extends ConsumerWidget {
       children: [
         Text(
           'Model Usage',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: sortedModels.isEmpty
@@ -205,33 +225,51 @@ class UsageStatisticsScreen extends ConsumerWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: sortedModels.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1, indent: 16, endIndent: 16),
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1, indent: 16, endIndent: 16),
                   itemBuilder: (context, index) {
                     final entry = sortedModels[index];
                     final percentage = stats.totalChats > 0
-                        ? (entry.value / stats.totalChats * 100).toStringAsFixed(1)
+                        ? (entry.value / stats.totalChats * 100)
+                              .toStringAsFixed(1)
                         : '0.0';
 
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundColor: theme.colorScheme.primaryContainer,
                         child: Text(
-                          entry.key.isNotEmpty ? entry.key[0].toUpperCase() : '?',
-                          style: TextStyle(color: theme.colorScheme.onPrimaryContainer),
+                          entry.key.isNotEmpty
+                              ? entry.key[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
                         ),
                       ),
-                      title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w500)),
+                      title: Text(
+                        entry.key,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
                       subtitle: LinearProgressIndicator(
-                        value: stats.totalChats > 0 ? entry.value / stats.totalChats : 0,
-                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                        value: stats.totalChats > 0
+                            ? entry.value / stats.totalChats
+                            : 0,
+                        backgroundColor:
+                            theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text('${entry.value} chats', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          Text('$percentage%', style: theme.textTheme.labelSmall),
+                          Text(
+                            '${entry.value} chats',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            '$percentage%',
+                            style: theme.textTheme.labelSmall,
+                          ),
                         ],
                       ),
                     );

@@ -216,156 +216,160 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
             mainAxisAlignment: isUser
                 ? MainAxisAlignment.end
                 : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isUser && showAvatars) ...[
-            Semantics(
-              excludeSemantics: true,
-              child: CircleAvatar(
-                radius: 14,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.auto_awesome,
-                  size: 16,
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Semantics(
-              container: true,
-              hint: 'Double tap and hold for options',
-              onLongPress: () {
-                HapticFeedback.mediumImpact();
-                _showFocusedMenu(context, isUser, isStarred);
-              },
-              child: GestureDetector(
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  _showFocusedMenu(context, isUser, isStarred);
-                },
-                child: RepaintBoundary(
-                  child: Container(
-                    key: _bubbleKey,
-                    padding: EdgeInsets.all(padding),
-                    decoration: BoxDecoration(
-                      color: bubbleColor,
-                      borderRadius: BorderRadius.circular(radius).copyWith(
-                        bottomRight: isUser ? const Radius.circular(0) : null,
-                        bottomLeft: !isUser ? const Radius.circular(0) : null,
-                      ),
-                      boxShadow: hasElevation
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 2,
-                                offset: const Offset(0, 1),
-                              ),
-                            ]
-                          : null,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!isUser && showAvatars) ...[
+                Semantics(
+                  excludeSemantics: true,
+                  child: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: theme.colorScheme.onPrimaryContainer,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_decodedImages != null &&
-                            _decodedImages!.isNotEmpty)
-                          ..._decodedImages!.map(
-                            (bytes) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.memory(
-                                  bytes,
-                                  height: 150,
-                                  fit: BoxFit.cover,
-                                  // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
-                                  cacheHeight: 450,
-                                ),
-                              ),
-                            ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Semantics(
+                  container: true,
+                  hint: 'Double tap and hold for options',
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    _showFocusedMenu(context, isUser, isStarred);
+                  },
+                  child: GestureDetector(
+                    onLongPress: () {
+                      HapticFeedback.mediumImpact();
+                      _showFocusedMenu(context, isUser, isStarred);
+                    },
+                    child: RepaintBoundary(
+                      child: Container(
+                        key: _bubbleKey,
+                        padding: EdgeInsets.all(padding),
+                        decoration: BoxDecoration(
+                          color: bubbleColor,
+                          borderRadius: BorderRadius.circular(radius).copyWith(
+                            bottomRight: isUser
+                                ? const Radius.circular(0)
+                                : null,
+                            bottomLeft: !isUser
+                                ? const Radius.circular(0)
+                                : null,
                           ),
-                        if (isUser)
-                          Text(
-                            message.content,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: Colors.white,
-                              fontSize: fontSize,
-                            ),
-                          )
-                        else
-                          MarkdownBody(
-                            data: message.content,
-                            // ignore: deprecated_member_use
-                            imageBuilder: MarkdownHandlers.imageBuilder,
-                            onTapLink: (text, href, title) async {
-                              if (href != null) {
-                                final uri = Uri.tryParse(href);
-                                // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
-                                if (uri != null &&
-                                    UrlValidator.isSecureUrl(uri) &&
-                                    await canLaunchUrl(uri)) {
-                                  await launchUrl(
-                                    uri,
-                                    mode: LaunchMode.externalApplication,
-                                  );
-                                }
-                              }
-                            },
-                            styleSheet: _getStyleSheet(theme, fontSize),
-                          ),
-                        // Timestamp display
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (isStarred) ...[
-                                const Icon(
-                                  Icons.star,
-                                  size: 12,
-                                  color: Colors.amber,
-                                ),
-                                const SizedBox(width: 4),
-                              ],
-                              Text(
-                                _formattedTimestamp,
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: fontSize * 0.7,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                          ),
+                          boxShadow: hasElevation
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 2,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
                         ),
-                      ],
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_decodedImages != null &&
+                                _decodedImages!.isNotEmpty)
+                              ..._decodedImages!.map(
+                                (bytes) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.memory(
+                                      bytes,
+                                      height: 150,
+                                      fit: BoxFit.cover,
+                                      // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
+                                      cacheHeight: 450,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (isUser)
+                              Text(
+                                message.content,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontSize: fontSize,
+                                ),
+                              )
+                            else
+                              MarkdownBody(
+                                data: message.content,
+                                // ignore: deprecated_member_use
+                                imageBuilder: MarkdownHandlers.imageBuilder,
+                                onTapLink: (text, href, title) async {
+                                  if (href != null) {
+                                    final uri = Uri.tryParse(href);
+                                    // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
+                                    if (uri != null &&
+                                        UrlValidator.isSecureUrl(uri) &&
+                                        await canLaunchUrl(uri)) {
+                                      await launchUrl(
+                                        uri,
+                                        mode: LaunchMode.externalApplication,
+                                      );
+                                    }
+                                  }
+                                },
+                                styleSheet: _getStyleSheet(theme, fontSize),
+                              ),
+                            // Timestamp display
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isStarred) ...[
+                                    const Icon(
+                                      Icons.star,
+                                      size: 12,
+                                      color: Colors.amber,
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    _formattedTimestamp,
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: fontSize * 0.7,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-          if (isUser && showAvatars) ...[
-            const SizedBox(width: 8),
-            Semantics(
-              excludeSemantics: true,
-              child: CircleAvatar(
-                radius: 14,
-                backgroundColor: theme.colorScheme.secondaryContainer,
-                child: Icon(
-                  Icons.person,
-                  size: 16,
-                  color: theme.colorScheme.onSecondaryContainer,
+              if (isUser && showAvatars) ...[
+                const SizedBox(width: 8),
+                Semantics(
+                  excludeSemantics: true,
+                  child: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: theme.colorScheme.secondaryContainer,
+                    child: Icon(
+                      Icons.person,
+                      size: 16,
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
+              ],
+            ],
+          ),
+        );
       },
     );
   }
@@ -398,7 +402,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                        isStarred ? 'Message unstarred' : 'Message starred'),
+                      isStarred ? 'Message unstarred' : 'Message starred',
+                    ),
                     duration: const Duration(seconds: 1),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -428,7 +433,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
 
 class _FocusedMenuOverlay extends ConsumerWidget {
   final Widget
-      child; // We will reconstruct visually or use cached image if needed, but easier to rebuild basic container
+  child; // We will reconstruct visually or use cached image if needed, but easier to rebuild basic container
   final ChatMessage message;
   final Size bubbleSize;
   final Offset bubbleOffset;
@@ -632,7 +637,8 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                   const SizedBox(width: 12),
                   _buildIconBtn(context, Icons.edit, 'Edit', () {
                     // Populate the input with the message content
-                    ref.read(draftMessageProvider.notifier).state = message.content;
+                    ref.read(draftMessageProvider.notifier).state =
+                        message.content;
                     Navigator.pop(context);
                   }),
                 ],
