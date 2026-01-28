@@ -711,6 +711,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   size: 20,
                                   color: Colors.grey,
                                 ),
+                                tooltip: 'Edit model settings',
                                 onPressed: () {
                                   HapticFeedback.lightImpact();
                                   showDialog(
@@ -727,13 +728,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   Icons.delete_outline,
                                   color: theme.colorScheme.error,
                                 ),
-                                onPressed: () async {
-                                  HapticFeedback.mediumImpact();
-                                  await ref
-                                      .read(ollamaServiceProvider)
-                                      .deleteModel(model.name);
-                                  await _refreshModels();
-                                },
+                                tooltip: 'Delete model',
+                                onPressed: () =>
+                                    _confirmDeleteModel(model.name),
                                 visualDensity: VisualDensity.compact,
                               ),
                             ],
@@ -1774,6 +1771,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDeleteModel(String modelName) async {
+    HapticFeedback.mediumImpact();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Model?'),
+        content: Text(
+          'Are you sure you want to delete "$modelName"?\n\n'
+          'You will need to re-download it to use it again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(ollamaServiceProvider).deleteModel(modelName);
+      await _refreshModels();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deleted model "$modelName"'),
+          ),
+        );
+      }
+    }
   }
 
   void _showMarkdownDialog(BuildContext context, String title, String content) {
