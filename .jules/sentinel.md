@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Orphaned Starred Messages (Data Remanence)
+**Vulnerability:** Starred messages persisted in `settings_box` after their parent chat session was deleted from `chat_box`, causing sensitive data to remain on device against user intent.
+**Learning:** When data is denormalized (copied) across multiple storage locations (e.g., Starred Messages vs Chat History), deletion logic must explicitly clean up all copies.
+**Prevention:** Implement "Cascade Delete" logic in the service layer or use a single source of truth where starred messages are referenced by ID rather than copied by value.
