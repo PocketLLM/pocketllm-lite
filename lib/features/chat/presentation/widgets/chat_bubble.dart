@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/utils/image_decoder.dart';
 import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/utils/url_validator.dart';
+import '../../../../core/providers.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
@@ -158,8 +159,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final hasElevation = appearance.bubbleElevation;
     final showAvatars = appearance.showAvatars;
 
-    final storage = ref.watch(storageServiceProvider);
-
     // Show loading indicator for empty assistant messages (AI is generating)
     if (!isUser && message.content.isEmpty) {
       return Padding(
@@ -205,17 +204,12 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       );
     }
 
-    return ValueListenableBuilder(
-      valueListenable: storage.starredMessagesListenable,
-      builder: (context, _, __) {
-        final isStarred = storage.isMessageStarred(message);
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isUser && showAvatars) ...[
@@ -239,11 +233,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               hint: 'Double tap and hold for options',
               onLongPress: () {
                 HapticFeedback.mediumImpact();
+                final storage = ref.read(storageServiceProvider);
+                final isStarred = storage.isMessageStarred(message);
                 _showFocusedMenu(context, isUser, isStarred);
               },
               child: GestureDetector(
                 onLongPress: () {
                   HapticFeedback.mediumImpact();
+                  final storage = ref.read(storageServiceProvider);
+                  final isStarred = storage.isMessageStarred(message);
                   _showFocusedMenu(context, isUser, isStarred);
                 },
                 child: RepaintBoundary(
@@ -317,30 +315,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                             styleSheet: _getStyleSheet(theme, fontSize),
                           ),
                         // Timestamp display
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (isStarred) ...[
-                                const Icon(
-                                  Icons.star,
-                                  size: 12,
-                                  color: Colors.amber,
-                                ),
-                                const SizedBox(width: 4),
-                              ],
-                              Text(
-                                _formattedTimestamp,
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: fontSize * 0.7,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        _buildTimestampRow(context, fontSize, message),
                       ],
                     ),
                   ),
@@ -366,6 +341,38 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
         ],
       ),
     );
+  }
+
+  Widget _buildTimestampRow(
+    BuildContext context,
+    double fontSize,
+    ChatMessage message,
+  ) {
+    final storage = ref.watch(storageServiceProvider);
+    return ValueListenableBuilder(
+      valueListenable: storage.starredMessagesListenable,
+      builder: (context, _, __) {
+        final isStarred = storage.isMessageStarred(message);
+        return Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isStarred) ...[
+                const Icon(Icons.star, size: 12, color: Colors.amber),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                _formattedTimestamp,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: fontSize * 0.7,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        );
       },
     );
   }
@@ -398,7 +405,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                        isStarred ? 'Message unstarred' : 'Message starred'),
+                      isStarred ? 'Message unstarred' : 'Message starred',
+                    ),
                     duration: const Duration(seconds: 1),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -428,7 +436,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
 
 class _FocusedMenuOverlay extends ConsumerWidget {
   final Widget
-      child; // We will reconstruct visually or use cached image if needed, but easier to rebuild basic container
+  child; // We will reconstruct visually or use cached image if needed, but easier to rebuild basic container
   final ChatMessage message;
   final Size bubbleSize;
   final Offset bubbleOffset;
@@ -632,7 +640,8 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                   const SizedBox(width: 12),
                   _buildIconBtn(context, Icons.edit, 'Edit', () {
                     // Populate the input with the message content
-                    ref.read(draftMessageProvider.notifier).state = message.content;
+                    ref.read(draftMessageProvider.notifier).state =
+                        message.content;
                     Navigator.pop(context);
                   }),
                 ],
