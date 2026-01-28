@@ -137,10 +137,10 @@ class StorageService {
     }
 
     // Remove tags if present
-    final tagsMap = _getChatTagsMap();
+    final tagsMap = getChatTagsMap();
     if (tagsMap.containsKey(id)) {
       tagsMap.remove(id);
-      await _settingsBox.put(AppConstants.chatTagsKey, tagsMap);
+      await saveChatTags(tagsMap);
     }
 
     await logActivity('Chat Deleted', 'Deleted chat (ID: $id)');
@@ -186,7 +186,7 @@ class StorageService {
 
     // 0. Filter by Tag
     if (tag != null && tag.isNotEmpty) {
-      final tagsMap = _getChatTagsMap();
+      final tagsMap = getChatTagsMap();
       results = results.where((s) {
         final sessionTags = tagsMap[s.id];
         return sessionTags != null && sessionTags.contains(tag);
@@ -317,7 +317,8 @@ class StorageService {
   }
 
   // Chat Tags
-  Map<String, List<String>> _getChatTagsMap() {
+  @visibleForTesting
+  Map<String, List<String>> getChatTagsMap() {
     if (_cachedTags != null) return _cachedTags!;
 
     final rawMap = _settingsBox.get(AppConstants.chatTagsKey, defaultValue: {});
@@ -335,13 +336,18 @@ class StorageService {
     return _cachedTags!;
   }
 
+  @visibleForTesting
+  Future<void> saveChatTags(Map<String, List<String>> tags) async {
+    await _settingsBox.put(AppConstants.chatTagsKey, tags);
+  }
+
   List<String> getTagsForChat(String chatId) {
-    final map = _getChatTagsMap();
+    final map = getChatTagsMap();
     return map[chatId] ?? [];
   }
 
   Set<String> getAllTags() {
-    final map = _getChatTagsMap();
+    final map = getChatTagsMap();
     final allTags = <String>{};
     for (final tags in map.values) {
       allTags.addAll(tags);
@@ -350,18 +356,18 @@ class StorageService {
   }
 
   Future<void> addTagToChat(String chatId, String tag) async {
-    final map = _getChatTagsMap();
+    final map = getChatTagsMap();
     final tags = map[chatId] ?? [];
     if (!tags.contains(tag)) {
       tags.add(tag);
       map[chatId] = tags;
-      await _settingsBox.put(AppConstants.chatTagsKey, map);
+      await saveChatTags(map);
       await logActivity('Tag Added', 'Added tag "$tag" to chat $chatId');
     }
   }
 
   Future<void> removeTagFromChat(String chatId, String tag) async {
-    final map = _getChatTagsMap();
+    final map = getChatTagsMap();
     if (map.containsKey(chatId)) {
       final tags = map[chatId]!;
       if (tags.contains(tag)) {
@@ -371,10 +377,61 @@ class StorageService {
         } else {
           map[chatId] = tags;
         }
-        await _settingsBox.put(AppConstants.chatTagsKey, map);
+        await saveChatTags(map);
         await logActivity('Tag Removed', 'Removed tag "$tag" from chat $chatId');
       }
     }
+  }
+
+  Future<void> renameTag(String oldTag, String newTag) async {
+    final map = getChatTagsMap();
+    bool changed = false;
+    for (final chatId in map.keys) {
+      final tags = map[chatId]!;
+      if (tags.contains(oldTag)) {
+        tags.remove(oldTag);
+        if (!tags.contains(newTag)) {
+          tags.add(newTag);
+        }
+        changed = true;
+      }
+    }
+    if (changed) {
+      await saveChatTags(map);
+      await logActivity('Tag Renamed', 'Renamed tag "$oldTag" to "$newTag"');
+    }
+  }
+
+  Future<void> deleteTagGlobal(String tag) async {
+    final map = getChatTagsMap();
+    bool changed = false;
+    final chatIds = map.keys.toList();
+    for (final chatId in chatIds) {
+      final tags = map[chatId]!;
+      if (tags.contains(tag)) {
+        tags.remove(tag);
+        if (tags.isEmpty) {
+          map.remove(chatId);
+        }
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      await saveChatTags(map);
+      await logActivity('Tag Deleted', 'Deleted tag "$tag" globally');
+    }
+  }
+
+  Map<String, int> getTagUsageCounts() {
+    final map = getChatTagsMap();
+    final counts = <String, int>{};
+    for (final tags in map.values) {
+      for (final tag in tags) {
+        counts[tag] = (counts[tag] ?? 0) + 1;
+      }
+    }
+    return counts;
   }
 
   // Message Templates
