@@ -153,7 +153,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     );
   }
 
-  String? _getMatchingSnippet(ChatSession session, RegExp? queryRegex, String query) {
+  String? _getMatchingSnippet(
+    ChatSession session,
+    RegExp? queryRegex,
+    String query,
+  ) {
     if (query.isEmpty || queryRegex == null) return null;
 
     // Search in messages using cached regex
@@ -190,7 +194,12 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     int index = lowerText.indexOf(lowerQuery, start);
 
     if (index == -1) {
-      return Text(text, style: style, maxLines: 2, overflow: TextOverflow.ellipsis);
+      return Text(
+        text,
+        style: style,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      );
     }
 
     while (index != -1) {
@@ -291,9 +300,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   Future<void> _handleViewArchived() async {
     HapticFeedback.lightImpact();
     await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ArchivedChatsScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ArchivedChatsScreen()),
     );
     if (mounted) setState(() {});
   }
@@ -372,10 +379,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                       Icons.filter_list,
                       color:
                           (_selectedModelFilter != null ||
-                                  _selectedDateFilter != null ||
-                                  _selectedTagFilter != null)
-                              ? theme.colorScheme.primary
-                              : null,
+                              _selectedDateFilter != null ||
+                              _selectedTagFilter != null)
+                          ? theme.colorScheme.primary
+                          : null,
                     ),
                     tooltip: 'Filter chats',
                     onPressed: () => _showFilterDialog(storage),
@@ -529,8 +536,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         padding: const EdgeInsets.only(right: 8),
                         child: Chip(
                           label: Text('Model: $_selectedModelFilter'),
-                          onDeleted:
-                              () => setState(() => _selectedModelFilter = null),
+                          onDeleted: () =>
+                              setState(() => _selectedModelFilter = null),
                         ),
                       ),
                     if (_selectedTagFilter != null)
@@ -538,8 +545,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         padding: const EdgeInsets.only(right: 8),
                         child: Chip(
                           label: Text('Tag: $_selectedTagFilter'),
-                          onDeleted:
-                              () => setState(() => _selectedTagFilter = null),
+                          onDeleted: () =>
+                              setState(() => _selectedTagFilter = null),
                         ),
                       ),
                     if (_selectedDateFilter != null)
@@ -547,8 +554,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         label: Text(
                           'After: ${_formatDate(_selectedDateFilter!).split(' ')[0]}',
                         ),
-                        onDeleted:
-                            () => setState(() => _selectedDateFilter = null),
+                        onDeleted: () =>
+                            setState(() => _selectedDateFilter = null),
                       ),
                   ],
                 ),
@@ -663,17 +670,14 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                         ),
                       ),
                       SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            return _buildChatListTile(
-                              session: pinnedSessions[index],
-                              storage: storage,
-                              theme: theme,
-                              isPinned: true,
-                            );
-                          },
-                          childCount: pinnedSessions.length,
-                        ),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          return _buildChatListTile(
+                            session: pinnedSessions[index],
+                            storage: storage,
+                            theme: theme,
+                            isPinned: true,
+                          );
+                        }, childCount: pinnedSessions.length),
                       ),
                       SliverToBoxAdapter(
                         child: Padding(
@@ -691,19 +695,16 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                       ),
                     ],
                     SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final session = recentSessions[index];
-                          return _buildChatListTile(
-                            session: session,
-                            storage: storage,
-                            theme: theme,
-                            isPinned:
-                                !isFiltering && storage.isPinned(session.id),
-                          );
-                        },
-                        childCount: recentSessions.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final session = recentSessions[index];
+                        return _buildChatListTile(
+                          session: session,
+                          storage: storage,
+                          theme: theme,
+                          isPinned:
+                              !isFiltering && storage.isPinned(session.id),
+                        );
+                      }, childCount: recentSessions.length),
                     ),
                     const SliverPadding(padding: EdgeInsets.only(bottom: 8)),
                   ],
@@ -914,8 +915,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                           child: Text('All Tags'),
                         ),
                         ...tags.map(
-                          (t) =>
-                              DropdownMenuItem<String>(value: t, child: Text(t)),
+                          (t) => DropdownMenuItem<String>(
+                            value: t,
+                            child: Text(t),
+                          ),
                         ),
                       ],
                       onChanged: (val) {
@@ -1020,9 +1023,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 Navigator.pop(sheetContext);
                 showDialog(
                   context: context,
-                  builder:
-                      (context) =>
-                          TagEditorDialog(chatId: session.id, storage: storage),
+                  builder: (context) =>
+                      TagEditorDialog(chatId: session.id, storage: storage),
                 ).then((_) {
                   if (mounted) setState(() {});
                 });
@@ -1509,45 +1511,59 @@ class _EmptyHistoryState extends StatelessWidget {
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
-                      : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  shape: BoxShape.circle,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeOutQuart,
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: Opacity(opacity: value, child: child),
+              );
+            },
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Semantics(
+                  excludeSemantics: true,
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? colorScheme.surfaceContainerHighest.withValues(
+                              alpha: 0.3,
+                            )
+                          : colorScheme.surfaceContainerHighest.withValues(
+                              alpha: 0.5,
+                            ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, size: 48, color: colorScheme.primary),
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  size: 48,
-                  color: colorScheme.primary,
+                const SizedBox(height: 24),
+                Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                title,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              if (action != null) ...[
-                const SizedBox(height: 32),
-                action!,
+                if (action != null) ...[const SizedBox(height: 32), action!],
               ],
-            ],
+            ),
           ),
         ),
       ),
