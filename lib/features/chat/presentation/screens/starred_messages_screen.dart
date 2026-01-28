@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/providers.dart';
-import '../../../../services/storage_service.dart';
 import '../../domain/models/starred_message.dart';
 import '../providers/chat_provider.dart';
 
@@ -39,7 +37,7 @@ class _StarredMessagesScreenState extends ConsumerState<StarredMessagesScreen> {
         ),
       ),
       body: ValueListenableBuilder(
-        valueListenable: storage.settingsBoxListenable,
+        valueListenable: storage.starredMessagesListenable,
         builder: (context, box, _) {
           final starred = storage.getStarredMessages();
           // Sort by starredAt descending (newest stars first)
