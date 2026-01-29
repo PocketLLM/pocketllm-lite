@@ -7,6 +7,7 @@ import 'package:pocketllm_lite/services/storage_service.dart';
 import 'package:pocketllm_lite/core/constants/app_constants.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_session.dart';
 import 'package:pocketllm_lite/services/usage_limits_provider.dart';
+import 'package:pocketllm_lite/features/chat/presentation/providers/chat_provider.dart';
 
 // Mock StorageService
 class MockStorageService extends StorageService {
@@ -14,6 +15,9 @@ class MockStorageService extends StorageService {
   dynamic getSetting(String key, {dynamic defaultValue}) {
     return defaultValue;
   }
+
+  @override
+  String? getDraft(String key) => null;
 
   @override
   Future<void> saveChatSession(ChatSession session, {bool log = true}) async {}
@@ -28,6 +32,7 @@ void main() {
         overrides: [
           storageServiceProvider.overrideWithValue(mockStorage),
           usageLimitsProvider.overrideWith(UsageLimitsNotifier.new),
+          chatProvider.overrideWith(ChatNotifier.new),
         ],
         child: const MaterialApp(
           home: Scaffold(

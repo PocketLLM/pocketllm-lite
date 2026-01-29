@@ -102,22 +102,31 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
-                'Attach Image',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+              Semantics(
+                header: true,
+                child: Text(
+                  'Attach Image',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               ListTile(
                 leading: const Icon(Icons.camera_alt),
                 title: const Text('Camera'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pop(context, ImageSource.camera);
+                },
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Gallery'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pop(context, ImageSource.gallery);
+                },
               ),
               const SizedBox(height: 16),
             ],
@@ -565,15 +574,19 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     padding: const EdgeInsets.only(right: 8),
                     child: Stack(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            _selectedImages[i],
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                            // Optimize memory: Decode only to the size we need (60 * 3 for HiDPI)
-                            cacheWidth: 180,
+                        Semantics(
+                          image: true,
+                          label: 'Attached image ${i + 1} of ${_selectedImages.length}',
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(
+                              _selectedImages[i],
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              // Optimize memory: Decode only to the size we need (60 * 3 for HiDPI)
+                              cacheWidth: 180,
+                            ),
                           ),
                         ),
                         Positioned(
@@ -586,7 +599,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               minWidth: 40,
                               minHeight: 40,
                             ),
-                            tooltip: 'Remove image',
+                            tooltip: 'Remove image ${i + 1} of ${_selectedImages.length}',
                             onPressed: () =>
                                 setState(() => _selectedImages.removeAt(i)),
                             icon: Container(
