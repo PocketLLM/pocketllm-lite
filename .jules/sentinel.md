@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Mass Assignment in Settings Import
+**Vulnerability:** The settings import functionality blindly iterated over all keys in the imported JSON and wrote them to the `settings` box, allowing attackers to overwrite restricted internal state (like usage limits).
+**Learning:** Whitelisting keys for export is insufficient if the same whitelist is not strictly enforced during import. Deserialization logic often implicitly trusts input structure.
+**Prevention:** Define a shared `_allowedSettingsKeys` constant and enforce it strictly in both export and import logic. Never trust keys provided in an imported file.
