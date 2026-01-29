@@ -14,3 +14,8 @@
 **Challenge:** Implementing visual analytics (bar charts) for usage stats without adding heavy external dependencies like `fl_chart` to keep the app lightweight.
 **Solution:** I implemented a custom `BarChartPainter` using Flutter's `CustomPaint` API. It handles dynamic scaling, zero-value placeholders, and theme-aware styling (using `Color.withValues`).
 **Reusable Pattern:** The `BarChartPainter` pattern separates the data model (`DailyActivity`) from the rendering logic, providing a lightweight template for other simple time-series visualizations.
+
+## 2026-05-26 - Aggregated Media Gallery
+**Challenge:** Aggregating media from nested data structures (ChatSession -> Messages -> Images) stored in Hive without a dedicated index, while maintaining performance.
+**Solution:** Implemented `StorageService.getAllImages` to dynamically aggregate and sort images on demand, mapping them to lightweight `MediaItem` DTOs with generated composite IDs.
+**Reusable Pattern:** Use `FutureProvider.autoDispose` in the UI to fetch expensive aggregated data, enabling automatic resource cleanup and separation of data logic from the widget tree.
