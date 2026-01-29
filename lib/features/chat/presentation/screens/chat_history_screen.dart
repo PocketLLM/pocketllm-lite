@@ -13,6 +13,7 @@ import '../providers/chat_provider.dart';
 import '../../../settings/presentation/widgets/export_dialog.dart';
 import '../dialogs/tag_editor_dialog.dart';
 import 'archived_chats_screen.dart';
+import 'media_gallery_screen.dart';
 
 class ChatHistoryScreen extends ConsumerStatefulWidget {
   const ChatHistoryScreen({super.key});
@@ -384,6 +385,18 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                     icon: const Icon(Icons.archive_outlined),
                     tooltip: 'Archived Chats',
                     onPressed: _handleViewArchived,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.photo_library_outlined),
+                    tooltip: 'Media Gallery',
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const MediaGalleryScreen(),
+                        ),
+                      );
+                    },
                   ),
                   IconButton(
                     icon: const Icon(Icons.checklist),

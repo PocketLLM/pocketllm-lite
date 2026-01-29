@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../core/constants/app_constants.dart';
 import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
+import '../features/chat/domain/models/media_item.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
@@ -226,6 +227,30 @@ class StorageService {
 
   Set<String> getAvailableModels() {
     return getChatSessions().map((s) => s.model).toSet();
+  }
+
+  List<MediaItem> getAllImages() {
+    final List<MediaItem> allImages = [];
+    final sessions = getChatSessions();
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (final img in message.images!) {
+            allImages.add(MediaItem(
+              imageBase64: img,
+              chatId: session.id,
+              timestamp: message.timestamp,
+            ));
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp descending
+    allImages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+    return allImages;
   }
 
   Future<void> saveSystemPrompt(SystemPrompt prompt) async {
