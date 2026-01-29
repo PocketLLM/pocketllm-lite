@@ -146,6 +146,39 @@ class StorageService {
     await logActivity('Chat Deleted', 'Deleted chat (ID: $id)');
   }
 
+  Future<void> deleteChats(List<String> ids) async {
+    if (ids.isEmpty) return;
+
+    // Optimistic update
+    if (_cachedSessions != null) {
+      _cachedSessions!.removeWhere((s) => ids.contains(s.id));
+    }
+
+    await _chatBox.deleteAll(ids);
+
+    // Remove from pinned list
+    final pinned = getPinnedChatIds();
+    bool pinnedChanged = false;
+    for (final id in ids) {
+      if (pinned.remove(id)) pinnedChanged = true;
+    }
+    if (pinnedChanged) {
+      await saveSetting(AppConstants.pinnedChatsKey, pinned);
+    }
+
+    // Remove tags
+    final tagsMap = _getChatTagsMap();
+    bool tagsChanged = false;
+    for (final id in ids) {
+      if (tagsMap.remove(id) != null) tagsChanged = true;
+    }
+    if (tagsChanged) {
+      await saveSetting(AppConstants.chatTagsKey, tagsMap);
+    }
+
+    await logActivity('Chats Deleted', 'Deleted ${ids.length} chats');
+  }
+
   Future<void> clearAllChats() async {
     _cachedSessions = null;
     _cachedTags = null;
@@ -261,7 +294,7 @@ class StorageService {
   // Pinned Chats
   List<String> getPinnedChatIds() {
     return List<String>.from(
-      _settingsBox.get(AppConstants.pinnedChatsKey, defaultValue: <String>[]),
+      getSetting(AppConstants.pinnedChatsKey, defaultValue: <String>[]),
     );
   }
 
@@ -285,10 +318,41 @@ class StorageService {
     await _settingsBox.put(AppConstants.pinnedChatsKey, pinned);
   }
 
+  Future<void> pinChats(List<String> ids) async {
+    if (ids.isEmpty) return;
+    final pinned = getPinnedChatIds();
+    int count = 0;
+    for (final id in ids) {
+      if (!pinned.contains(id)) {
+        pinned.add(id);
+        count++;
+      }
+    }
+    if (count > 0) {
+      await saveSetting(AppConstants.pinnedChatsKey, pinned);
+      await logActivity('Chats Pinned', 'Pinned $count chats');
+    }
+  }
+
+  Future<void> unpinChats(List<String> ids) async {
+    if (ids.isEmpty) return;
+    final pinned = getPinnedChatIds();
+    int count = 0;
+    for (final id in ids) {
+      if (pinned.remove(id)) {
+        count++;
+      }
+    }
+    if (count > 0) {
+      await saveSetting(AppConstants.pinnedChatsKey, pinned);
+      await logActivity('Chats Unpinned', 'Unpinned $count chats');
+    }
+  }
+
   // Archived Chats
   List<String> getArchivedChatIds() {
     return List<String>.from(
-      _settingsBox.get(AppConstants.archivedChatsKey, defaultValue: <String>[]),
+      getSetting(AppConstants.archivedChatsKey, defaultValue: <String>[]),
     );
   }
 
@@ -316,11 +380,53 @@ class StorageService {
     await _settingsBox.put(AppConstants.archivedChatsKey, archived);
   }
 
+  Future<void> archiveChats(List<String> ids) async {
+    if (ids.isEmpty) return;
+    final archived = getArchivedChatIds();
+    final pinned = getPinnedChatIds();
+    int count = 0;
+    bool pinnedChanged = false;
+
+    for (final id in ids) {
+      if (!archived.contains(id)) {
+        archived.add(id);
+        count++;
+        // Unpin if archived
+        if (pinned.remove(id)) pinnedChanged = true;
+      }
+    }
+
+    if (count > 0) {
+      await saveSetting(AppConstants.archivedChatsKey, archived);
+      if (pinnedChanged) {
+        await saveSetting(AppConstants.pinnedChatsKey, pinned);
+      }
+      await logActivity('Chats Archived', 'Archived $count chats');
+    }
+  }
+
+  Future<void> unarchiveChats(List<String> ids) async {
+    if (ids.isEmpty) return;
+    final archived = getArchivedChatIds();
+    int count = 0;
+
+    for (final id in ids) {
+      if (archived.remove(id)) {
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      await saveSetting(AppConstants.archivedChatsKey, archived);
+      await logActivity('Chats Unarchived', 'Unarchived $count chats');
+    }
+  }
+
   // Chat Tags
   Map<String, List<String>> _getChatTagsMap() {
     if (_cachedTags != null) return _cachedTags!;
 
-    final rawMap = _settingsBox.get(AppConstants.chatTagsKey, defaultValue: {});
+    final rawMap = getSetting(AppConstants.chatTagsKey, defaultValue: {});
     // Convert dynamic map to Map<String, List<String>>
     if (rawMap is Map) {
       _cachedTags = rawMap.map((key, value) {
@@ -374,6 +480,51 @@ class StorageService {
         await _settingsBox.put(AppConstants.chatTagsKey, map);
         await logActivity('Tag Removed', 'Removed tag "$tag" from chat $chatId');
       }
+    }
+  }
+
+  Future<void> addTagToChats(List<String> chatIds, String tag) async {
+    if (chatIds.isEmpty) return;
+    final map = _getChatTagsMap();
+    int count = 0;
+
+    for (final chatId in chatIds) {
+      final tags = map[chatId] ?? [];
+      if (!tags.contains(tag)) {
+        tags.add(tag);
+        map[chatId] = tags;
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      await saveSetting(AppConstants.chatTagsKey, map);
+      await logActivity('Tag Added', 'Added tag "$tag" to $count chats');
+    }
+  }
+
+  Future<void> removeTagFromChats(List<String> chatIds, String tag) async {
+    if (chatIds.isEmpty) return;
+    final map = _getChatTagsMap();
+    int count = 0;
+
+    for (final chatId in chatIds) {
+      if (map.containsKey(chatId)) {
+        final tags = map[chatId]!;
+        if (tags.remove(tag)) {
+          if (tags.isEmpty) {
+            map.remove(chatId);
+          } else {
+            map[chatId] = tags;
+          }
+          count++;
+        }
+      }
+    }
+
+    if (count > 0) {
+      await saveSetting(AppConstants.chatTagsKey, map);
+      await logActivity('Tag Removed', 'Removed tag "$tag" from $count chats');
     }
   }
 

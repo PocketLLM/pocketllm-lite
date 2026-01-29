@@ -12,6 +12,7 @@ import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
 import '../../../settings/presentation/widgets/export_dialog.dart';
 import '../dialogs/tag_editor_dialog.dart';
+import '../dialogs/bulk_tag_dialog.dart';
 import 'archived_chats_screen.dart';
 
 class ChatHistoryScreen extends ConsumerStatefulWidget {
@@ -346,6 +347,21 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               ),
               actions: [
                 if (_isSelectionMode) ...[
+                  IconButton(
+                    icon: const Icon(Icons.push_pin_outlined),
+                    tooltip: 'Pin/Unpin selected',
+                    onPressed: _selectedIds.isEmpty ? null : _handleBulkPin,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.archive_outlined),
+                    tooltip: 'Archive selected',
+                    onPressed: _selectedIds.isEmpty ? null : _handleBulkArchive,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.label_outline),
+                    tooltip: 'Tag selected',
+                    onPressed: _selectedIds.isEmpty ? null : _handleBulkTag,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.download),
                     tooltip: 'Export selected chats',
@@ -1389,6 +1405,102 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     );
   }
 
+  Future<void> _handleBulkPin() async {
+    final storage = ref.read(storageServiceProvider);
+    final pinned = storage.getPinnedChatIds();
+    // If ANY selected are unpinned, pin ALL. Otherwise unpin ALL.
+    bool pin = false;
+    for (final id in _selectedIds) {
+      if (!pinned.contains(id)) {
+        pin = true;
+        break;
+      }
+    }
+
+    try {
+      if (pin) {
+        await storage.pinChats(_selectedIds.toList());
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Pinned ${_selectedIds.length} chats')),
+          );
+        }
+      } else {
+        await storage.unpinChats(_selectedIds.toList());
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Unpinned ${_selectedIds.length} chats')),
+          );
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _selectedIds.clear();
+          _isSelectionMode = false;
+        });
+        HapticFeedback.mediumImpact();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating pins: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleBulkArchive() async {
+    final storage = ref.read(storageServiceProvider);
+    try {
+      // Always archive selected (user can view archives to unarchive)
+      await storage.archiveChats(_selectedIds.toList());
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Archived ${_selectedIds.length} chats')),
+        );
+        setState(() {
+          _selectedIds.clear();
+          _isSelectionMode = false;
+        });
+        HapticFeedback.mediumImpact();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error archiving chats: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleBulkTag() async {
+    final storage = ref.read(storageServiceProvider);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => BulkTagDialog(
+        chatIds: _selectedIds.toList(),
+        storage: storage,
+      ),
+    );
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tags added successfully')),
+      );
+      setState(() {
+        _selectedIds.clear();
+        _isSelectionMode = false;
+      });
+    }
+  }
+
   Future<void> _deleteSelected() async {
     if (_selectedIds.isEmpty) return;
 
@@ -1454,21 +1566,32 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       await _adService.showDeletionRewardedAd(
         onUserEarnedReward: (reward) async {
           final storage = ref.read(storageServiceProvider);
-          for (final id in _selectedIds) {
-            await storage.deleteChatSession(id);
-          }
-          if (mounted) {
-            setState(() {
-              _selectedIds.clear();
-              _isSelectionMode = false;
-            });
-            HapticFeedback.heavyImpact();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Chats deleted successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
+          try {
+            // Optimized bulk delete
+            await storage.deleteChats(_selectedIds.toList());
+
+            if (mounted) {
+              setState(() {
+                _selectedIds.clear();
+                _isSelectionMode = false;
+              });
+              HapticFeedback.heavyImpact();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Chats deleted successfully!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error deleting chats: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           }
         },
         onFailed: (error) {
