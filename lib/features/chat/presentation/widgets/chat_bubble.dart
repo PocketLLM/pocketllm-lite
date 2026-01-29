@@ -205,17 +205,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       );
     }
 
-    return ValueListenableBuilder(
-      valueListenable: storage.starredMessagesListenable,
-      builder: (context, _, __) {
-        final isStarred = storage.isMessageStarred(message);
+    // Optimization: Removed top-level ValueListenableBuilder.
+    // Instead, we only listen to changes in the timestamp row where the star icon is displayed.
+    // This prevents the entire message bubble (including expensive Markdown) from rebuilding
+    // when ANY message is starred/unstarred.
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isUser && showAvatars) ...[
@@ -239,11 +239,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               hint: 'Double tap and hold for options',
               onLongPress: () {
                 HapticFeedback.mediumImpact();
+                // Fetch status dynamically to avoid rebuild dependency
+                final isStarred = ref.read(storageServiceProvider).isMessageStarred(message);
                 _showFocusedMenu(context, isUser, isStarred);
               },
               child: GestureDetector(
                 onLongPress: () {
                   HapticFeedback.mediumImpact();
+                  // Fetch status dynamically to avoid rebuild dependency
+                  final isStarred = ref.read(storageServiceProvider).isMessageStarred(message);
                   _showFocusedMenu(context, isUser, isStarred);
                 },
                 child: RepaintBoundary(
@@ -319,26 +323,32 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                         // Timestamp display
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (isStarred) ...[
-                                const Icon(
-                                  Icons.star,
-                                  size: 12,
-                                  color: Colors.amber,
-                                ),
-                                const SizedBox(width: 4),
-                              ],
-                              Text(
-                                _formattedTimestamp,
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: fontSize * 0.7,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
+                          child: ValueListenableBuilder(
+                            valueListenable: storage.starredMessagesListenable,
+                            builder: (context, _, __) {
+                              final isStarred = storage.isMessageStarred(message);
+                              return Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isStarred) ...[
+                                    const Icon(
+                                      Icons.star,
+                                      size: 12,
+                                      color: Colors.amber,
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    _formattedTimestamp,
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: fontSize * 0.7,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -365,8 +375,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           ],
         ],
       ),
-    );
-      },
     );
   }
 
