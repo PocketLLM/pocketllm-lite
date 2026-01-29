@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-24 - Missing Network Security Config
+**Vulnerability:** The app claimed to enforce strict network security (blocking cleartext) but the `network_security_config.xml` file was missing and not referenced in the manifest, defaulting to insecure behavior on older Android versions or misconfigured devices.
+**Learning:** Documentation and READMEs can drift from the actual codebase state. "Security features" listed in docs must be verified in code.
+**Prevention:** Use CI checks (or `grep`) to verify the existence and linking of critical security configuration files during build.
