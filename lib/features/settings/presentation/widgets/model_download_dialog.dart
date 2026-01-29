@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers.dart';
 import '../../../chat/domain/models/pull_progress.dart';
@@ -9,7 +10,8 @@ class ModelDownloadDialog extends ConsumerStatefulWidget {
   const ModelDownloadDialog({super.key});
 
   @override
-  ConsumerState<ModelDownloadDialog> createState() => _ModelDownloadDialogState();
+  ConsumerState<ModelDownloadDialog> createState() =>
+      _ModelDownloadDialogState();
 }
 
 class _ModelDownloadDialogState extends ConsumerState<ModelDownloadDialog> {
@@ -19,6 +21,15 @@ class _ModelDownloadDialogState extends ConsumerState<ModelDownloadDialog> {
   double _percentage = 0.0;
   String? _error;
   StreamSubscription<PullProgress>? _subscription;
+
+  static const List<String> _popularModels = [
+    'llama3.2',
+    'llama3.2-vision',
+    'mistral',
+    'gemma2',
+    'phi3',
+    'qwen2.5',
+  ];
 
   @override
   void dispose() {
@@ -50,16 +61,18 @@ class _ModelDownloadDialogState extends ConsumerState<ModelDownloadDialog> {
           });
 
           if (progress.status == 'success') {
-             // Download complete
-             if (mounted) {
-               ScaffoldMessenger.of(context).showSnackBar(
-                 SnackBar(
-                   content: Text('Successfully downloaded $modelName'),
-                   backgroundColor: Colors.green,
-                 ),
-               );
-               Navigator.of(context).pop(true); // Return true to indicate success
-             }
+            // Download complete
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Successfully downloaded $modelName'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              Navigator.of(
+                context,
+              ).pop(true); // Return true to indicate success
+            }
           }
         },
         onError: (e) {
@@ -107,7 +120,10 @@ class _ModelDownloadDialogState extends ConsumerState<ModelDownloadDialog> {
               decoration: const InputDecoration(
                 hintText: 'e.g. llama3, mistral, llava',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               autofocus: true,
               textInputAction: TextInputAction.done,
@@ -116,7 +132,39 @@ class _ModelDownloadDialogState extends ConsumerState<ModelDownloadDialog> {
             const SizedBox(height: 8),
             Text(
               'Make sure you have enough disk space and a stable internet connection.',
-              style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Popular Models:',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _popularModels.map((model) {
+                return ActionChip(
+                  label: Text(model),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    _controller.text = model;
+                    _controller.selection = TextSelection.fromPosition(
+                      TextPosition(offset: model.length),
+                    );
+                  },
+                  visualDensity: VisualDensity.compact,
+                  labelStyle: const TextStyle(fontSize: 12),
+                  padding: const EdgeInsets.all(0),
+                );
+              }).toList(),
             ),
           ] else ...[
             Text(
@@ -124,7 +172,9 @@ class _ModelDownloadDialogState extends ConsumerState<ModelDownloadDialog> {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            LinearProgressIndicator(value: _percentage > 0 ? _percentage : null),
+            LinearProgressIndicator(
+              value: _percentage > 0 ? _percentage : null,
+            ),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -132,13 +182,19 @@ class _ModelDownloadDialogState extends ConsumerState<ModelDownloadDialog> {
                 Expanded(
                   child: Text(
                     _status ?? 'Initializing...',
-                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Text(
                   '${(_percentage * 100).toInt()}%',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -155,10 +211,7 @@ class _ModelDownloadDialogState extends ConsumerState<ModelDownloadDialog> {
       ),
       actions: [
         if (_isDownloading)
-          TextButton(
-            onPressed: _cancelDownload,
-            child: const Text('Cancel'),
-          )
+          TextButton(onPressed: _cancelDownload, child: const Text('Cancel'))
         else
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
