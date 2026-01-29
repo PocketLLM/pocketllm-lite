@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Missing Android Network Security Config
+**Vulnerability:** The app lacked an explicit `network_security_config.xml` to block cleartext traffic, potentially allowing HTTP connections to remote servers if `usesCleartextTraffic` defaults allowed it.
+**Learning:** Even if `minSdk` implies secure defaults (API 28+), explicitly defining a policy ensures consistent enforcement and allows safe exceptions for development (localhost).
+**Prevention:** Always include a `network_security_config.xml` that blocks cleartext traffic globally and whitelists only necessary local domains (`localhost`, `10.0.2.2`).
