@@ -9,6 +9,7 @@ import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
+import '../features/settings/domain/models/media_item.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
@@ -157,6 +158,28 @@ class StorageService {
 
   ChatSession? getChatSession(String id) {
     return _chatBox.get(id);
+  }
+
+  // Media Gallery
+  List<MediaItem> getAllImages() {
+    final sessions = getChatSessions();
+    final items = <MediaItem>[];
+
+    for (final session in sessions) {
+      for (final msg in session.messages) {
+        if (msg.images != null && msg.images!.isNotEmpty) {
+          for (final img in msg.images!) {
+            items.add(
+              MediaItem(session: session, message: msg, base64Image: img),
+            );
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp desc
+    items.sort((a, b) => b.message.timestamp.compareTo(a.message.timestamp));
+    return items;
   }
 
   // System Prompts
