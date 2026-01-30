@@ -814,12 +814,40 @@ class StorageService {
       final Map<String, dynamic> settings = Map<String, dynamic>.from(
         data['settings'],
       );
+
+      // Whitelist of keys allowed for import (matching export)
+      final allowedKeys = {
+        AppConstants.ollamaBaseUrlKey,
+        AppConstants.themeModeKey,
+        AppConstants.autoSaveChatsKey,
+        AppConstants.hapticFeedbackKey,
+        AppConstants.defaultModelKey,
+        AppConstants.userMsgColorKey,
+        AppConstants.aiMsgColorKey,
+        AppConstants.bubbleRadiusKey,
+        AppConstants.fontSizeKey,
+        AppConstants.chatPaddingKey,
+        AppConstants.showAvatarsKey,
+        AppConstants.bubbleElevationKey,
+        AppConstants.msgOpacityKey,
+        AppConstants.customBgColorKey,
+        AppConstants.promptEnhancerModelKey,
+        AppConstants.pinnedChatsKey,
+        AppConstants.archivedChatsKey,
+        AppConstants.chatTagsKey,
+        AppConstants.starredMessagesKey,
+      };
+
       for (final entry in settings.entries) {
-        await saveSetting(entry.key, entry.value);
-        if (entry.key == AppConstants.starredMessagesKey) {
-          _cachedStarredMessages = null;
+        final key = entry.key;
+        if (allowedKeys.contains(key) ||
+            key.startsWith(AppConstants.modelSettingsPrefixKey)) {
+          await saveSetting(key, entry.value);
+          if (key == AppConstants.starredMessagesKey) {
+            _cachedStarredMessages = null;
+          }
+          settingsImported++;
         }
-        settingsImported++;
       }
     }
 
