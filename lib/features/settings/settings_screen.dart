@@ -1335,6 +1335,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
               ListTile(
+                title: const Text('Manage Tags'),
+                subtitle: const Text('Organize, rename, or delete chat tags'),
+                leading: const Icon(Icons.label_outline),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/tags');
+                },
+              ),
+              ListTile(
                 title: const Text('Export Data'),
                 subtitle: const Text('Export chats and prompts to JSON'),
                 leading: const Icon(Icons.download),
