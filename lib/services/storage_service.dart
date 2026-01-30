@@ -9,6 +9,7 @@ import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
+import '../features/chat/domain/models/media_item.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
@@ -932,6 +933,40 @@ class StorageService {
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  // Media Gallery
+  List<MediaItem> getAllImages() {
+    final List<MediaItem> allImages = [];
+    final sessions = getChatSessions();
+
+    for (final session in sessions) {
+      for (int i = 0; i < session.messages.length; i++) {
+        final message = session.messages[i];
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (int j = 0; j < message.images!.length; j++) {
+            final image = message.images![j];
+            // Create a unique ID for the media item
+            final id =
+                '${session.id}_${message.timestamp.millisecondsSinceEpoch}_${image.hashCode}_$j';
+            allImages.add(
+              MediaItem(
+                id: id,
+                base64Image: image,
+                chatId: session.id,
+                chatTitle: session.title,
+                messageId: message.timestamp.millisecondsSinceEpoch.toString(),
+                timestamp: message.timestamp,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp descending
+    allImages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return allImages;
   }
 }
 
