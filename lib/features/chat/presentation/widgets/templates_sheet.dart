@@ -205,38 +205,52 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
         else if (_templates.isEmpty)
            Padding(
               padding: const EdgeInsets.all(32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.bolt,
-                    size: 48,
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No templates yet',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurfaceVariant,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOutQuart,
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 20 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: child,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Save common prompts for quick access.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurfaceVariant,
+                  );
+                },
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.bolt,
+                      size: 48,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
                     ),
-                  ),
-                  if (widget.isFullScreen) ...[
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () => _showEditDialog(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create New Template'),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No templates yet',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ]
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'Save common prompts for quick access.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (widget.isFullScreen) ...[
+                      const SizedBox(height: 24),
+                      FilledButton.icon(
+                        onPressed: () => _showEditDialog(),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Create New Template'),
+                      ),
+                    ]
+                  ],
+                ),
               ),
             )
           else
