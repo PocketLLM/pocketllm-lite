@@ -11,13 +11,35 @@ import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
-import 'dart:typed_data';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
   late Box<SystemPrompt> _systemPromptBox;
   late Box _settingsBox;
   late Box _activityLogBox;
+
+  // Whitelist of keys allowed for export and import
+  static const Set<String> _allowedSettingsKeys = {
+    AppConstants.ollamaBaseUrlKey,
+    AppConstants.themeModeKey,
+    AppConstants.autoSaveChatsKey,
+    AppConstants.hapticFeedbackKey,
+    AppConstants.defaultModelKey,
+    AppConstants.userMsgColorKey,
+    AppConstants.aiMsgColorKey,
+    AppConstants.bubbleRadiusKey,
+    AppConstants.fontSizeKey,
+    AppConstants.chatPaddingKey,
+    AppConstants.showAvatarsKey,
+    AppConstants.bubbleElevationKey,
+    AppConstants.msgOpacityKey,
+    AppConstants.customBgColorKey,
+    AppConstants.promptEnhancerModelKey,
+    AppConstants.pinnedChatsKey,
+    AppConstants.archivedChatsKey,
+    AppConstants.chatTagsKey,
+    AppConstants.starredMessagesKey,
+  };
 
   // Cache for sorted chat sessions
   List<ChatSession>? _cachedSessions;
@@ -60,8 +82,9 @@ class StorageService {
       _cachedSessions!.removeWhere((session) => session.id == event.key);
     } else if (event.value != null) {
       final ChatSession updatedSession = event.value as ChatSession;
-      final index = _cachedSessions!
-          .indexWhere((session) => session.id == updatedSession.id);
+      final index = _cachedSessions!.indexWhere(
+        (session) => session.id == updatedSession.id,
+      );
 
       if (index != -1) {
         final oldSession = _cachedSessions![index];
@@ -98,8 +121,7 @@ class StorageService {
 
     // Optimistic update for immediate UI response
     if (_cachedSessions != null) {
-      final index =
-          _cachedSessions!.indexWhere((s) => s.id == session.id);
+      final index = _cachedSessions!.indexWhere((s) => s.id == session.id);
       if (index != -1) {
         _cachedSessions![index] = session;
         // Assume createdAt didn't change for optimization in save path
@@ -107,7 +129,9 @@ class StorageService {
         // If it's a new session, it's likely the newest, so insert at top
         if (_cachedSessions!.isEmpty ||
             session.createdAt.isAfter(_cachedSessions!.first.createdAt) ||
-            session.createdAt.isAtSameMomentAs(_cachedSessions!.first.createdAt)) {
+            session.createdAt.isAtSameMomentAs(
+              _cachedSessions!.first.createdAt,
+            )) {
           _cachedSessions!.insert(0, session);
         } else {
           _cachedSessions!.add(session);
@@ -118,7 +142,10 @@ class StorageService {
     await _chatBox.put(session.id, session);
 
     if (log && isNew) {
-      await logActivity('Chat Created', 'Created new chat (ID: ${session.id}) with model ${session.model}');
+      await logActivity(
+        'Chat Created',
+        'Created new chat (ID: ${session.id}) with model ${session.model}',
+      );
     }
   }
 
@@ -233,15 +260,24 @@ class StorageService {
     await _systemPromptBox.put(prompt.id, prompt);
 
     if (isNew) {
-      await logActivity('System Prompt Created', 'Created system prompt (ID: ${prompt.id})');
+      await logActivity(
+        'System Prompt Created',
+        'Created system prompt (ID: ${prompt.id})',
+      );
     } else {
-      await logActivity('System Prompt Updated', 'Updated system prompt (ID: ${prompt.id})');
+      await logActivity(
+        'System Prompt Updated',
+        'Updated system prompt (ID: ${prompt.id})',
+      );
     }
   }
 
   Future<void> deleteSystemPrompt(String id) async {
     await _systemPromptBox.delete(id);
-    await logActivity('System Prompt Deleted', 'Deleted system prompt (ID: $id)');
+    await logActivity(
+      'System Prompt Deleted',
+      'Deleted system prompt (ID: $id)',
+    );
   }
 
   // Settings
@@ -250,7 +286,7 @@ class StorageService {
     // Don't log every setting change to avoid noise, or log specific important ones?
     // logging Ollama URL change might be good.
     if (key == AppConstants.ollamaBaseUrlKey) {
-       await logActivity('Settings Changed', 'Updated Ollama Base URL');
+      await logActivity('Settings Changed', 'Updated Ollama Base URL');
     }
   }
 
@@ -372,7 +408,10 @@ class StorageService {
           map[chatId] = tags;
         }
         await _settingsBox.put(AppConstants.chatTagsKey, map);
-        await logActivity('Tag Removed', 'Removed tag "$tag" from chat $chatId');
+        await logActivity(
+          'Tag Removed',
+          'Removed tag "$tag" from chat $chatId',
+        );
       }
     }
   }
@@ -392,10 +431,16 @@ class StorageService {
 
     if (index != -1) {
       templates[index] = template;
-      await logActivity('Template Updated', 'Updated template "${template['title']}"');
+      await logActivity(
+        'Template Updated',
+        'Updated template "${template['title']}"',
+      );
     } else {
       templates.add(template);
-      await logActivity('Template Created', 'Created template "${template['title']}"');
+      await logActivity(
+        'Template Created',
+        'Created template "${template['title']}"',
+      );
     }
 
     await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
@@ -411,7 +456,10 @@ class StorageService {
     if (template.isNotEmpty) {
       templates.removeWhere((t) => t['id'] == id);
       await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
-      await logActivity('Template Deleted', 'Deleted template "${template['title']}"');
+      await logActivity(
+        'Template Deleted',
+        'Deleted template "${template['title']}"',
+      );
     }
   }
 
@@ -484,7 +532,10 @@ class StorageService {
       // Unstar
       starred.removeAt(index);
       await saveStarredMessages(starred);
-      await logActivity('Message Unstarred', 'Unstarred message in chat $chatId');
+      await logActivity(
+        'Message Unstarred',
+        'Unstarred message in chat $chatId',
+      );
     } else {
       // Star
       final newStar = StarredMessage(
@@ -513,7 +564,10 @@ class StorageService {
 
     if (starred.length != initialLength) {
       await saveStarredMessages(starred);
-      await logActivity('Message Unstarred', 'Unstarred message (ID: $starredMessageId)');
+      await logActivity(
+        'Message Unstarred',
+        'Unstarred message (ID: $starredMessageId)',
+      );
     }
   }
 
@@ -529,7 +583,9 @@ class StorageService {
   }
 
   List<Map<String, dynamic>> getActivityLogs() {
-    final logs = _activityLogBox.values.map((e) => Map<String, dynamic>.from(e)).toList();
+    final logs = _activityLogBox.values
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
     // Sort by timestamp desc
     logs.sort((a, b) {
       final tA = DateTime.parse(a['timestamp']);
@@ -571,8 +627,9 @@ class StorageService {
 
     if (includePrompts) {
       // Prompts are not filtered by chatIds
-      data['prompts'] =
-          getSystemPrompts().map((p) => _systemPromptToJson(p)).toList();
+      data['prompts'] = getSystemPrompts()
+          .map((p) => _systemPromptToJson(p))
+          .toList();
     }
 
     if (includeSettings) {
@@ -586,32 +643,9 @@ class StorageService {
   Map<String, dynamic> getExportableSettings() {
     final Map<String, dynamic> settings = {};
 
-    // Whitelist of keys to export
-    final exportKeys = {
-      AppConstants.ollamaBaseUrlKey,
-      AppConstants.themeModeKey,
-      AppConstants.autoSaveChatsKey,
-      AppConstants.hapticFeedbackKey,
-      AppConstants.defaultModelKey,
-      AppConstants.userMsgColorKey,
-      AppConstants.aiMsgColorKey,
-      AppConstants.bubbleRadiusKey,
-      AppConstants.fontSizeKey,
-      AppConstants.chatPaddingKey,
-      AppConstants.showAvatarsKey,
-      AppConstants.bubbleElevationKey,
-      AppConstants.msgOpacityKey,
-      AppConstants.customBgColorKey,
-      AppConstants.promptEnhancerModelKey,
-      AppConstants.pinnedChatsKey,
-      AppConstants.archivedChatsKey,
-      AppConstants.chatTagsKey,
-      AppConstants.starredMessagesKey,
-    };
-
     for (final key in _settingsBox.keys) {
       final String keyStr = key.toString();
-      if (exportKeys.contains(keyStr) ||
+      if (_allowedSettingsKeys.contains(keyStr) ||
           keyStr.startsWith(AppConstants.modelSettingsPrefixKey)) {
         settings[keyStr] = _settingsBox.get(key);
       }
@@ -717,7 +751,7 @@ class StorageService {
     if (content.isEmpty) return '>\n';
     const prefix = '> ';
     // Split by newline and prepend blockquote prefix to each line
-    return content.split('\n').map((line) => '$prefix$line').join('\n') + '\n';
+    return '${content.split('\n').map((line) => '$prefix$line').join('\n')}\n';
   }
 
   String _escapeCsv(String field) {
@@ -735,7 +769,9 @@ class StorageService {
       escaped = "'$escaped";
     }
 
-    if (escaped.contains(',') || escaped.contains('"') || escaped.contains('\n')) {
+    if (escaped.contains(',') ||
+        escaped.contains('"') ||
+        escaped.contains('\n')) {
       return '"${escaped.replaceAll('"', '""')}"';
     }
     return escaped;
@@ -765,11 +801,7 @@ class StorageService {
   }
 
   Map<String, dynamic> _systemPromptToJson(SystemPrompt prompt) {
-    return {
-      'id': prompt.id,
-      'title': prompt.title,
-      'content': prompt.content,
-    };
+    return {'id': prompt.id, 'title': prompt.title, 'content': prompt.content};
   }
 
   // Import
@@ -815,8 +847,15 @@ class StorageService {
         data['settings'],
       );
       for (final entry in settings.entries) {
-        await saveSetting(entry.key, entry.value);
-        if (entry.key == AppConstants.starredMessagesKey) {
+        final key = entry.key;
+        // Validate key against whitelist to prevent hijacking internal state
+        if (!_allowedSettingsKeys.contains(key) &&
+            !key.startsWith(AppConstants.modelSettingsPrefixKey)) {
+          continue;
+        }
+
+        await saveSetting(key, entry.value);
+        if (key == AppConstants.starredMessagesKey) {
           _cachedStarredMessages = null;
         }
         settingsImported++;
@@ -856,8 +895,7 @@ class StorageService {
       role: json['role'],
       content: json['content'],
       timestamp: DateTime.parse(json['timestamp']),
-      images:
-          json['images'] != null ? List<String>.from(json['images']) : null,
+      images: json['images'] != null ? List<String>.from(json['images']) : null,
     );
   }
 
@@ -889,10 +927,8 @@ class StorageService {
       }
     }
 
-    final totalTokensUsed = getSetting(
-      AppConstants.totalTokensUsedKey,
-      defaultValue: 0,
-    ) as int;
+    final totalTokensUsed =
+        getSetting(AppConstants.totalTokensUsedKey, defaultValue: 0) as int;
 
     // Calculate Daily Activity (Last 7 Days)
     final now = DateTime.now();
