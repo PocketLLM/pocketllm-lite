@@ -141,7 +141,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _finishOnboarding() async {
     final storage = ref.read(storageServiceProvider);
     await storage.saveSetting(AppConstants.isFirstLaunchKey, false);
-    
+
     if (mounted) {
       // Show the offline notification popup
       final shouldGoToDocs = await showDialog<bool>(
@@ -151,7 +151,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           return const OfflineNotificationPopup();
         },
       );
-      
+
       // Navigate based on user choice
       if (mounted) {
         if (shouldGoToDocs == true) {

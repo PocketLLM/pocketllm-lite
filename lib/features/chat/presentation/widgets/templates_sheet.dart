@@ -81,7 +81,8 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
                   maxLines: 3,
                   textCapitalization: TextCapitalization.sentences,
                   onChanged: (_) {
-                    if (contentError != null) setState(() => contentError = null);
+                    if (contentError != null)
+                      setState(() => contentError = null);
                   },
                 ),
               ],
@@ -106,7 +107,9 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
                   }
 
                   final newTemplate = {
-                    'id': template?['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                    'id':
+                        template?['id'] ??
+                        DateTime.now().millisecondsSinceEpoch.toString(),
                     'title': title,
                     'content': content,
                   };
@@ -203,108 +206,106 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
             child: Center(child: CircularProgressIndicator()),
           )
         else if (_templates.isEmpty)
-           Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.bolt,
-                    size: 48,
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+          Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.bolt,
+                  size: 48,
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No templates yet',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Save common prompts for quick access.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No templates yet',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                ),
+                if (widget.isFullScreen) ...[
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: () => _showEditDialog(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create New Template'),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Save common prompts for quick access.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  if (widget.isFullScreen) ...[
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () => _showEditDialog(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create New Template'),
-                    ),
-                  ]
                 ],
-              ),
-            )
-          else
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: !widget.isFullScreen,
-                itemCount: _templates.length,
-                itemBuilder: (context, index) {
-                  final template = _templates[index];
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                      radius: 18,
-                      child: Icon(
-                        Icons.bolt,
-                        size: 18,
-                        color: theme.colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                    title: Text(
-                      template['title'] ?? '',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      template['content'] ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      widget.onSelect(template['content'] ?? '');
-                    },
-                    trailing: PopupMenuButton(
-                      icon: const Icon(Icons.more_vert, size: 20),
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          _showEditDialog(template);
-                        } else if (value == 'delete') {
-                          _confirmDelete(template['id']!);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit, size: 18),
-                              SizedBox(width: 12),
-                              Text('Edit'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, size: 18, color: Colors.red),
-                              SizedBox(width: 12),
-                              Text('Delete', style: TextStyle(color: Colors.red)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+              ],
             ),
+          )
+        else
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: !widget.isFullScreen,
+              itemCount: _templates.length,
+              itemBuilder: (context, index) {
+                final template = _templates[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    radius: 18,
+                    child: Icon(
+                      Icons.bolt,
+                      size: 18,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  title: Text(
+                    template['title'] ?? '',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    template['content'] ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    widget.onSelect(template['content'] ?? '');
+                  },
+                  trailing: PopupMenuButton(
+                    icon: const Icon(Icons.more_vert, size: 20),
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        _showEditDialog(template);
+                      } else if (value == 'delete') {
+                        _confirmDelete(template['id']!);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, size: 18),
+                            SizedBox(width: 12),
+                            Text('Edit'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 18, color: Colors.red),
+                            SizedBox(width: 12),
+                            Text('Delete', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
       ],
     );
 

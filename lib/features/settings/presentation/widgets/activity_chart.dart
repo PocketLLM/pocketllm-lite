@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../services/storage_service.dart';
@@ -15,28 +16,56 @@ class ActivityChart extends StatelessWidget {
       children: [
         Text(
           'Weekly Activity',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 16),
         Container(
           height: 180,
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
           ),
-          child: CustomPaint(
-            size: const Size(double.infinity, 150),
-            painter: BarChartPainter(
-              activity: activity,
-              primaryColor: theme.colorScheme.primary,
-              onSurfaceColor: theme.colorScheme.onSurface,
+          child: Semantics(
+            label: _getAccessibilityLabel(),
+            readOnly: true,
+            child: CustomPaint(
+              size: const Size(double.infinity, 150),
+              painter: BarChartPainter(
+                activity: activity,
+                primaryColor: theme.colorScheme.primary,
+                onSurfaceColor: theme.colorScheme.onSurface,
+              ),
             ),
           ),
         ),
       ],
     );
+  }
+
+  String _getAccessibilityLabel() {
+    if (activity.isEmpty) return 'No activity data available.';
+
+    final totalChats = activity.fold<int>(
+      0,
+      (sum, item) => sum + item.chatCount,
+    );
+    if (totalChats == 0) return 'No activity in the last 7 days.';
+
+    // Find peak day
+    final peakDay = activity.reduce(
+      (a, b) => a.chatCount > b.chatCount ? a : b,
+    );
+    final dayName = DateFormat('EEEE').format(peakDay.date);
+
+    return 'Bar chart of weekly activity. Total $totalChats chats in the last 7 days. Peak activity on $dayName with ${peakDay.chatCount} chats.';
   }
 }
 
@@ -65,7 +94,10 @@ class BarChartPainter extends CustomPainter {
     );
 
     final double barWidth = size.width / (activity.length * 1.5); // Adjust gap
-    final double maxVal = activity.map((e) => e.chatCount).reduce((a, b) => a > b ? a : b).toDouble();
+    final double maxVal = activity
+        .map((e) => e.chatCount)
+        .reduce((a, b) => a > b ? a : b)
+        .toDouble();
     // Ensure we have some height even if max is 0. If max is 0, effectiveMax is 5 (to show empty grid-like scale)
     final double effectiveMax = maxVal > 0 ? maxVal : 5;
 
@@ -75,7 +107,9 @@ class BarChartPainter extends CustomPainter {
     for (int i = 0; i < activity.length; i++) {
       final item = activity[i];
       final double barHeight = (item.chatCount / effectiveMax) * chartHeight;
-      final double x = (i * size.width / activity.length) + (size.width / activity.length - barWidth) / 2;
+      final double x =
+          (i * size.width / activity.length) +
+          (size.width / activity.length - barWidth) / 2;
       final double y = chartHeight - barHeight;
 
       // Draw Bar
@@ -102,12 +136,14 @@ class BarChartPainter extends CustomPainter {
 
       // Draw Label (Day)
       final textSpan = TextSpan(
-        text: DateFormat.E().format(item.date)[0], // First letter of day (M, T, W...)
+        text: DateFormat.E().format(
+          item.date,
+        )[0], // First letter of day (M, T, W...)
         style: textStyle.copyWith(fontWeight: FontWeight.w600),
       );
       final textPainter = TextPainter(
         text: textSpan,
-        textDirection: TextDirection.ltr,
+        textDirection: ui.TextDirection.ltr,
       );
       textPainter.layout();
       textPainter.paint(
@@ -117,7 +153,7 @@ class BarChartPainter extends CustomPainter {
 
       // Draw Value (Count) if bar is tall enough, otherwise above
       if (item.chatCount > 0) {
-         final countSpan = TextSpan(
+        final countSpan = TextSpan(
           text: item.chatCount.toString(),
           style: textStyle.copyWith(
             fontWeight: FontWeight.bold,
@@ -127,7 +163,7 @@ class BarChartPainter extends CustomPainter {
         );
         final countPainter = TextPainter(
           text: countSpan,
-          textDirection: TextDirection.ltr,
+          textDirection: ui.TextDirection.ltr,
         );
         countPainter.layout();
         countPainter.paint(
@@ -141,7 +177,7 @@ class BarChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant BarChartPainter oldDelegate) {
     return oldDelegate.activity != activity ||
-           oldDelegate.primaryColor != primaryColor ||
-           oldDelegate.onSurfaceColor != onSurfaceColor;
+        oldDelegate.primaryColor != primaryColor ||
+        oldDelegate.onSurfaceColor != onSurfaceColor;
   }
 }
