@@ -41,6 +41,7 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
   }
 
   void _showEditDialog([Map<String, String>? template]) {
+    HapticFeedback.lightImpact();
     final titleCtrl = TextEditingController(text: template?['title'] ?? '');
     final contentCtrl = TextEditingController(text: template?['content'] ?? '');
     final isEditing = template != null;
@@ -228,14 +229,12 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  if (widget.isFullScreen) ...[
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () => _showEditDialog(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create New Template'),
-                    ),
-                  ]
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: () => _showEditDialog(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create New Template'),
+                  ),
                 ],
               ),
             )

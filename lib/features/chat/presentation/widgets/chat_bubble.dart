@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +13,7 @@ import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/draft_message_provider.dart';
+import '../../../../core/providers.dart';
 import 'three_dot_loading_indicator.dart';
 
 // Helper class for formatting timestamps
@@ -476,7 +477,7 @@ class _FocusedMenuOverlay extends ConsumerWidget {
           // 1. Blur Backdrop
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
               child: Container(color: Colors.black.withValues(alpha: 0.4)),
             ),
           ),
