@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-24 - Mass Assignment in Settings Import
+**Vulnerability:** The `StorageService.importData` method blindly iterated over all keys in the imported `settings` map and saved them, allowing attackers to overwrite sensitive internal keys (e.g., `token_balance`, `usage_limits`) via a crafted JSON file.
+**Learning:** Functions that accept bulk input (like import or API deserialization) often default to blindly trusting the keys provided.
+**Prevention:** Always enforce a strict "Allow-list" (whitelist) of permitted keys when processing bulk input data, especially when it maps to internal state or database records.
