@@ -44,9 +44,7 @@ void main() {
           id: '2',
           title: 'Chat 2',
           model: 'llama3',
-          messages: [
-            ChatMessage(role: 'user', content: 'Q', timestamp: now),
-          ],
+          messages: [ChatMessage(role: 'user', content: 'Q', timestamp: now)],
           createdAt: now,
         ),
         ChatSession(
@@ -54,15 +52,17 @@ void main() {
           title: 'Chat 3',
           model: 'mistral',
           messages: [
-            ChatMessage(role: 'user', content: 'A', timestamp: now.subtract(const Duration(days: 10))),
+            ChatMessage(
+              role: 'user',
+              content: 'A',
+              timestamp: now.subtract(const Duration(days: 10)),
+            ),
           ],
           createdAt: now.subtract(const Duration(days: 10)),
         ),
       ];
 
-      final settings = {
-        AppConstants.totalTokensUsedKey: 5000,
-      };
+      final settings = {AppConstants.totalTokensUsedKey: 5000};
 
       service = TestStorageService(sessions, settings);
     });

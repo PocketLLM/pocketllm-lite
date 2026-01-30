@@ -8,13 +8,11 @@ import '../../../../core/providers.dart';
 class ModelSettingsDialog extends ConsumerStatefulWidget {
   final String modelName;
 
-  const ModelSettingsDialog({
-    super.key,
-    required this.modelName,
-  });
+  const ModelSettingsDialog({super.key, required this.modelName});
 
   @override
-  ConsumerState<ModelSettingsDialog> createState() => _ModelSettingsDialogState();
+  ConsumerState<ModelSettingsDialog> createState() =>
+      _ModelSettingsDialogState();
 }
 
 class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
@@ -71,9 +69,9 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
     await storage.saveSetting(key, settings);
 
     if (mounted) {
-       HapticFeedback.mediumImpact();
-       Navigator.of(context).pop();
-       ScaffoldMessenger.of(context).showSnackBar(
+      HapticFeedback.mediumImpact();
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Settings saved for ${widget.modelName}')),
       );
     }
@@ -90,29 +88,31 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
         content: SizedBox(
           width: double.maxFinite,
           child: presets.isEmpty
-          ? const Text('No presets found. Create one in Settings > Prompts.')
-          : ListView.builder(
-            shrinkWrap: true,
-            itemCount: presets.length,
-            itemBuilder: (context, index) {
-              final preset = presets[index];
-              return ListTile(
-                title: Text(preset.title),
-                subtitle: Text(
-                  preset.content,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12),
+              ? const Text(
+                  'No presets found. Create one in Settings > Prompts.',
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: presets.length,
+                  itemBuilder: (context, index) {
+                    final preset = presets[index];
+                    return ListTile(
+                      title: Text(preset.title),
+                      subtitle: Text(
+                        preset.content,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      onTap: () {
+                        setState(() {
+                          _systemPromptController.text = preset.content;
+                        });
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
                 ),
-                onTap: () {
-                  setState(() {
-                    _systemPromptController.text = preset.content;
-                  });
-                  Navigator.pop(context);
-                },
-              );
-            },
-          ),
         ),
         actions: [
           TextButton(
@@ -145,7 +145,10 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('System Prompt', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'System Prompt',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 TextButton(
                   onPressed: _showPresetsDialog,
                   child: const Text('Load Preset'),
@@ -164,7 +167,10 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
             const Divider(),
             ExpansionTile(
               title: const Text('Advanced Parameters'),
-              childrenPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+              childrenPadding: const EdgeInsets.symmetric(
+                horizontal: 0,
+                vertical: 8,
+              ),
               children: [
                 // Temperature
                 Row(
@@ -240,10 +246,7 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        FilledButton(
-          onPressed: _saveSettings,
-          child: const Text('Save'),
-        ),
+        FilledButton(onPressed: _saveSettings, child: const Text('Save')),
       ],
     );
   }

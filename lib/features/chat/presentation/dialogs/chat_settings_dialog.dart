@@ -98,10 +98,12 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                         (p) => DropdownMenuItem(
                           value: p.id,
                           child: Text(
-                            p.title, 
+                            p.title,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.white
                                   : Colors.black,
                             ),
@@ -122,10 +124,10 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                 child: Text(
                   'Applying this will set the system prompt context for this chat.',
                   style: TextStyle(
-                    fontSize: 12, 
-                    color: Theme.of(context).brightness == Brightness.dark 
-                        ? Colors.grey[400] 
-                        : Colors.grey[700]
+                    fontSize: 12,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[400]
+                        : Colors.grey[700],
                   ),
                 ),
               ),
@@ -165,10 +167,10 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
             Text(
               'Controls randomness. Higher = more creative.',
               style: TextStyle(
-                fontSize: 12, 
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.grey[400] 
-                    : Colors.grey[700]
+                fontSize: 12,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[400]
+                    : Colors.grey[700],
               ),
             ),
 
@@ -207,10 +209,10 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
             Text(
               'Controls diversity via nucleus sampling.',
               style: TextStyle(
-                fontSize: 12, 
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.grey[400] 
-                    : Colors.grey[700]
+                fontSize: 12,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[400]
+                    : Colors.grey[700],
               ),
             ),
           ],
