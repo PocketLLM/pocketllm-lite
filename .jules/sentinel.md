@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Settings Import Mass Assignment
+**Vulnerability:** `StorageService.importData` blindly accepted all keys in the `settings` map, allowing attackers to overwrite restricted internal keys (like usage limits) via a malicious import file.
+**Learning:** Deserialization and import logic must always use strict whitelisting (Mass Assignment protection), never assuming the input data conforms to the export format.
+**Prevention:** Implement a strict allowlist for imported keys, sharing the same definition used for exports to ensure consistency.

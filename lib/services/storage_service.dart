@@ -582,36 +582,35 @@ class StorageService {
     return data;
   }
 
+  static const Set<String> _allowedSettingsKeys = {
+    AppConstants.ollamaBaseUrlKey,
+    AppConstants.themeModeKey,
+    AppConstants.autoSaveChatsKey,
+    AppConstants.hapticFeedbackKey,
+    AppConstants.defaultModelKey,
+    AppConstants.userMsgColorKey,
+    AppConstants.aiMsgColorKey,
+    AppConstants.bubbleRadiusKey,
+    AppConstants.fontSizeKey,
+    AppConstants.chatPaddingKey,
+    AppConstants.showAvatarsKey,
+    AppConstants.bubbleElevationKey,
+    AppConstants.msgOpacityKey,
+    AppConstants.customBgColorKey,
+    AppConstants.promptEnhancerModelKey,
+    AppConstants.pinnedChatsKey,
+    AppConstants.archivedChatsKey,
+    AppConstants.chatTagsKey,
+    AppConstants.starredMessagesKey,
+  };
+
   @visibleForTesting
   Map<String, dynamic> getExportableSettings() {
     final Map<String, dynamic> settings = {};
 
-    // Whitelist of keys to export
-    final exportKeys = {
-      AppConstants.ollamaBaseUrlKey,
-      AppConstants.themeModeKey,
-      AppConstants.autoSaveChatsKey,
-      AppConstants.hapticFeedbackKey,
-      AppConstants.defaultModelKey,
-      AppConstants.userMsgColorKey,
-      AppConstants.aiMsgColorKey,
-      AppConstants.bubbleRadiusKey,
-      AppConstants.fontSizeKey,
-      AppConstants.chatPaddingKey,
-      AppConstants.showAvatarsKey,
-      AppConstants.bubbleElevationKey,
-      AppConstants.msgOpacityKey,
-      AppConstants.customBgColorKey,
-      AppConstants.promptEnhancerModelKey,
-      AppConstants.pinnedChatsKey,
-      AppConstants.archivedChatsKey,
-      AppConstants.chatTagsKey,
-      AppConstants.starredMessagesKey,
-    };
-
     for (final key in _settingsBox.keys) {
       final String keyStr = key.toString();
-      if (exportKeys.contains(keyStr) ||
+      if (_allowedSettingsKeys.contains(keyStr) ||
           keyStr.startsWith(AppConstants.modelSettingsPrefixKey)) {
         settings[keyStr] = _settingsBox.get(key);
       }
@@ -815,11 +814,15 @@ class StorageService {
         data['settings'],
       );
       for (final entry in settings.entries) {
-        await saveSetting(entry.key, entry.value);
-        if (entry.key == AppConstants.starredMessagesKey) {
-          _cachedStarredMessages = null;
+        // Security: Only import whitelisted keys to prevent authorization bypass (e.g. usage limits)
+        if (_allowedSettingsKeys.contains(entry.key) ||
+            entry.key.startsWith(AppConstants.modelSettingsPrefixKey)) {
+          await saveSetting(entry.key, entry.value);
+          if (entry.key == AppConstants.starredMessagesKey) {
+            _cachedStarredMessages = null;
+          }
+          settingsImported++;
         }
-        settingsImported++;
       }
     }
 
