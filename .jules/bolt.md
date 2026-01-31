@@ -13,3 +13,7 @@
 ## 2024-05-25 - [Hive Box Rebuild Scope]
 **Learning:** Using `box.listenable()` on a Hive box that stores mixed data types (settings, tags, drafts) triggers rebuilds for all listeners on ANY change. For UI components dependent on a single key (like starred messages), this causes unnecessary re-renders when unrelated data changes.
 **Action:** Use `box.listenable(keys: ['specific_key'])` to scope rebuilds, and implement in-memory caching (e.g., `Set`) for expensive derived data to avoid repeated deserialization during builds.
+
+## 2024-10-28 - [Hoisting Invariant Widgets]
+**Learning:** Even when using `ValueListenableBuilder` to narrow rebuild scope, any widget constructed *inside* the builder callback is rebuilt when the listener notifies. For expensive widgets like `MarkdownBody`, this leads to unnecessary re-parsing and layout O(N) times when a shared state (like starred messages) changes.
+**Action:** Construct expensive, invariant widgets (content that doesn't depend on the listenable) *outside* the builder closure (e.g., in the parent `build` method) and pass the instance to the builder. This ensures Flutter reuses the existing element/render object, skipping the expensive update logic.
