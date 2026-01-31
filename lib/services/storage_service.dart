@@ -26,6 +26,29 @@ class StorageService {
   // Cache for starred messages (O(1) lookup)
   Set<ChatMessage>? _cachedStarredMessages;
 
+  // Whitelist of keys allowed for import/export
+  static final Set<String> allowedSettingsKeys = {
+    AppConstants.ollamaBaseUrlKey,
+    AppConstants.themeModeKey,
+    AppConstants.autoSaveChatsKey,
+    AppConstants.hapticFeedbackKey,
+    AppConstants.defaultModelKey,
+    AppConstants.userMsgColorKey,
+    AppConstants.aiMsgColorKey,
+    AppConstants.bubbleRadiusKey,
+    AppConstants.fontSizeKey,
+    AppConstants.chatPaddingKey,
+    AppConstants.showAvatarsKey,
+    AppConstants.bubbleElevationKey,
+    AppConstants.msgOpacityKey,
+    AppConstants.customBgColorKey,
+    AppConstants.promptEnhancerModelKey,
+    AppConstants.pinnedChatsKey,
+    AppConstants.archivedChatsKey,
+    AppConstants.chatTagsKey,
+    AppConstants.starredMessagesKey,
+  };
+
   Future<void> init() async {
     await Hive.initFlutter();
 
@@ -586,32 +609,9 @@ class StorageService {
   Map<String, dynamic> getExportableSettings() {
     final Map<String, dynamic> settings = {};
 
-    // Whitelist of keys to export
-    final exportKeys = {
-      AppConstants.ollamaBaseUrlKey,
-      AppConstants.themeModeKey,
-      AppConstants.autoSaveChatsKey,
-      AppConstants.hapticFeedbackKey,
-      AppConstants.defaultModelKey,
-      AppConstants.userMsgColorKey,
-      AppConstants.aiMsgColorKey,
-      AppConstants.bubbleRadiusKey,
-      AppConstants.fontSizeKey,
-      AppConstants.chatPaddingKey,
-      AppConstants.showAvatarsKey,
-      AppConstants.bubbleElevationKey,
-      AppConstants.msgOpacityKey,
-      AppConstants.customBgColorKey,
-      AppConstants.promptEnhancerModelKey,
-      AppConstants.pinnedChatsKey,
-      AppConstants.archivedChatsKey,
-      AppConstants.chatTagsKey,
-      AppConstants.starredMessagesKey,
-    };
-
     for (final key in _settingsBox.keys) {
       final String keyStr = key.toString();
-      if (exportKeys.contains(keyStr) ||
+      if (allowedSettingsKeys.contains(keyStr) ||
           keyStr.startsWith(AppConstants.modelSettingsPrefixKey)) {
         settings[keyStr] = _settingsBox.get(key);
       }
@@ -815,11 +815,18 @@ class StorageService {
         data['settings'],
       );
       for (final entry in settings.entries) {
-        await saveSetting(entry.key, entry.value);
-        if (entry.key == AppConstants.starredMessagesKey) {
-          _cachedStarredMessages = null;
+        final key = entry.key;
+        // Security: Only allow whitelisted keys or model settings
+        if (allowedSettingsKeys.contains(key) ||
+            key.startsWith(AppConstants.modelSettingsPrefixKey)) {
+          await saveSetting(key, entry.value);
+          if (key == AppConstants.starredMessagesKey) {
+            _cachedStarredMessages = null;
+          }
+          settingsImported++;
+        } else {
+          debugPrint('Security: Skipped import of restricted setting key: $key');
         }
-        settingsImported++;
       }
     }
 
