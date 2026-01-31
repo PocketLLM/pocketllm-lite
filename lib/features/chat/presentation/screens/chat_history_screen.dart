@@ -1061,9 +1061,16 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   }) {
     final isSelected = _selectedIds.contains(session.id);
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: _isSelectionMode
+    return GestureDetector(
+      onSecondaryTap: _isSelectionMode
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              _showSessionOptions(session);
+            },
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: _isSelectionMode
           ? Checkbox(
               value: isSelected,
               onChanged: (val) {
@@ -1163,6 +1170,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               HapticFeedback.mediumImpact();
               _showSessionOptions(session);
             },
+      ),
     );
   }
 
