@@ -14,3 +14,8 @@
 **Challenge:** Implementing visual analytics (bar charts) for usage stats without adding heavy external dependencies like `fl_chart` to keep the app lightweight.
 **Solution:** I implemented a custom `BarChartPainter` using Flutter's `CustomPaint` API. It handles dynamic scaling, zero-value placeholders, and theme-aware styling (using `Color.withValues`).
 **Reusable Pattern:** The `BarChartPainter` pattern separates the data model (`DailyActivity`) from the rendering logic, providing a lightweight template for other simple time-series visualizations.
+
+## 2026-05-26 - Client-Side File Attachment Processing
+**Challenge:** Enabling users to "chat with files" (code, logs, docs) without implementing complex backend RAG infrastructure (Vector Store, Embeddings) which is overkill for a local-first "Lite" app.
+**Solution:** Implemented a client-side attachment processor in `ChatInput`. It reads selected files (using `file_picker`), wraps their content in markdown blocks with filename headers, and appends them to the user's message before sending to Ollama.
+**Reusable Pattern:** "Prompt Injection for Attachments" - treating file content as formatted text blocks in the prompt. This keeps the architecture stateless and serverless (local) while providing powerful context capabilities.

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -27,6 +29,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final _focusNode = FocusNode();
   final _picker = ImagePicker();
   final List<Uint8List> _selectedImages = [];
+  final List<PlatformFile> _selectedFiles = [];
   Timer? _debounceTimer;
 
   @override
@@ -73,8 +76,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     });
   }
 
-  Future<void> _pickImage() async {
-    // Show bottom sheet to choose camera or gallery
+  Future<void> _pickFile() async {
     final storage = ref.read(storageServiceProvider);
     if (storage.getSetting(
       AppConstants.hapticFeedbackKey,
@@ -83,7 +85,45 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       HapticFeedback.selectionClick();
     }
 
-    final source = await showModalBottomSheet<ImageSource>(
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'txt', 'md', 'json', 'dart', 'py', 'js', 'html', 'css',
+          'c', 'cpp', 'h', 'xml', 'yaml', 'yml', 'sh', 'log', 'csv',
+          'java', 'kt', 'swift'
+        ],
+        allowMultiple: true,
+      );
+
+      if (result != null) {
+        setState(() {
+          _selectedFiles.addAll(result.files);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking file: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickAttachment() async {
+    // Show bottom sheet to choose attachment type
+    final storage = ref.read(storageServiceProvider);
+    if (storage.getSetting(
+      AppConstants.hapticFeedbackKey,
+      defaultValue: false,
+    )) {
+      HapticFeedback.selectionClick();
+    }
+
+    final selection = await showModalBottomSheet<String>(
       context: context,
       builder: (context) {
         final theme = Theme.of(context);
@@ -103,7 +143,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Attach Image',
+                'Add Attachment',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -112,12 +152,17 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               ListTile(
                 leading: const Icon(Icons.camera_alt),
                 title: const Text('Camera'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
+                onTap: () => Navigator.pop(context, 'camera'),
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Gallery'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
+                onTap: () => Navigator.pop(context, 'gallery'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.description),
+                title: const Text('File (Text/Code)'),
+                onTap: () => Navigator.pop(context, 'file'),
               ),
               const SizedBox(height: 16),
             ],
@@ -126,7 +171,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       },
     );
 
-    if (source != null) {
+    if (selection == 'file') {
+      await _pickFile();
+    } else if (selection == 'camera' || selection == 'gallery') {
+      final source = selection == 'camera'
+          ? ImageSource.camera
+          : ImageSource.gallery;
+
       final XFile? image = await _picker.pickImage(
         source: source,
         maxWidth: 1024,
@@ -143,7 +194,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _send() async {
     final text = _controller.text;
-    if (text.trim().isEmpty && _selectedImages.isEmpty) return;
+    if (text.trim().isEmpty && _selectedImages.isEmpty && _selectedFiles.isEmpty) return;
 
     if (text.length > AppConstants.maxInputLength) {
       if (mounted) {
@@ -204,6 +255,27 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       return;
     }
 
+    // Process files
+    StringBuffer processedText = StringBuffer(text);
+    if (_selectedFiles.isNotEmpty) {
+      if (processedText.isNotEmpty) processedText.write('\n\n');
+      for (final file in _selectedFiles) {
+        if (file.path != null) {
+          try {
+             final f = File(file.path!);
+             final content = await f.readAsString();
+             processedText.writeln('[File: ${file.name}]');
+             processedText.writeln('```${file.extension ?? ""}');
+             processedText.writeln(content);
+             processedText.writeln('```');
+             processedText.writeln('[End of File]\n');
+          } catch (e) {
+             debugPrint('Error reading file ${file.name}: $e');
+          }
+        }
+      }
+    }
+
     final storage = ref.read(storageServiceProvider);
     if (storage.getSetting(
       AppConstants.hapticFeedbackKey,
@@ -224,13 +296,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     ref
         .read(chatProvider.notifier)
         .sendMessage(
-          _controller.text,
+          processedText.toString(),
           images: imagesToSend.isNotEmpty ? imagesToSend : null,
         );
 
     _controller.clear();
     setState(() {
       _selectedImages.clear();
+      _selectedFiles.clear();
     });
   }
 
@@ -554,59 +627,137 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_selectedImages.isNotEmpty)
+            if (_selectedImages.isNotEmpty || _selectedFiles.isNotEmpty)
               Container(
                 height: 70,
                 padding: const EdgeInsets.only(bottom: 8, top: 8),
-                child: ListView.builder(
+                child: ListView(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _selectedImages.length,
-                  itemBuilder: (c, i) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            _selectedImages[i],
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                            // Optimize memory: Decode only to the size we need (60 * 3 for HiDPI)
-                            cacheWidth: 180,
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: IconButton(
-                            alignment: Alignment.topRight,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ),
-                            tooltip: 'Remove image',
-                            onPressed: () =>
-                                setState(() => _selectedImages.removeAt(i)),
-                            icon: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: const BoxDecoration(
-                                color: Colors.black54,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 14,
+                  children: [
+                    ..._selectedImages.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final bytes = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                bytes,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                cacheWidth: 180,
                               ),
                             ),
-                          ),
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: IconButton(
+                                alignment: Alignment.topRight,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 40,
+                                ),
+                                tooltip: 'Remove image',
+                                onPressed: () =>
+                                    setState(() => _selectedImages.removeAt(i)),
+                                icon: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      );
+                    }),
+                    ..._selectedFiles.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final file = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.description,
+                                    size: 24,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                                    child: Text(
+                                      file.extension ?? 'file',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: IconButton(
+                                alignment: Alignment.topRight,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 40,
+                                ),
+                                tooltip: 'Remove file',
+                                onPressed: () =>
+                                    setState(() => _selectedFiles.removeAt(i)),
+                                icon: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
                 ),
               ),
             AnimatedContainer(
@@ -687,18 +838,18 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Semantics(
-                      label: 'Add Image',
+                      label: 'Add Attachment',
                       button: true,
                       enabled: !isGenerating,
                       child: Tooltip(
-                        message: 'Add Image',
+                        message: 'Add Attachment',
                         child: Material(
                           color: (isDark ? Colors.grey[800] : Colors.grey[300])
                               ?.withValues(alpha: isGenerating ? 0.5 : 1.0),
                           shape: const CircleBorder(),
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
-                            onTap: isGenerating ? null : _pickImage,
+                            onTap: isGenerating ? null : _pickAttachment,
                             child: Padding(
                               padding: const EdgeInsets.all(6),
                               child: Icon(
@@ -809,7 +960,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   builder: (context, value, child) {
                     final canSend =
                         (value.text.trim().isNotEmpty ||
-                            _selectedImages.isNotEmpty) &&
+                            _selectedImages.isNotEmpty ||
+                            _selectedFiles.isNotEmpty) &&
                         !isGenerating;
 
                     return AnimatedContainer(
