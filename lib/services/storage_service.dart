@@ -10,6 +10,7 @@ import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
+import '../features/media/domain/models/media_item.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
 
@@ -867,6 +868,40 @@ class StorageService {
       title: json['title'],
       content: json['content'],
     );
+  }
+
+  // Media Gallery
+  List<MediaItem> getAllImages() {
+    final List<MediaItem> images = [];
+    final sessions = getChatSessions(); // This is already sorted by date descending
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          // Iterate images in the message
+          for (int i = 0; i < message.images!.length; i++) {
+            final base64Image = message.images![i];
+            // Construct a unique ID
+            // ${session.id}_${timestamp}_${hash}_${index}
+            final imageHash = base64Image.hashCode; // Simple hash of content
+            final id = '${session.id}_${message.timestamp.millisecondsSinceEpoch}_${imageHash}_$i';
+
+            images.add(MediaItem(
+              id: id,
+              base64Content: base64Image,
+              timestamp: message.timestamp,
+              sessionId: session.id,
+              sessionTitle: session.title,
+            ));
+          }
+        }
+      }
+    }
+
+    // Sort all images by timestamp descending
+    images.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+    return images;
   }
 
   // Statistics
