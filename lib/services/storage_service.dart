@@ -10,6 +10,7 @@ import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
+import '../features/media/domain/models/media_item.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
 
@@ -932,6 +933,34 @@ class StorageService {
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  // Media Gallery
+  List<MediaItem> getAllImages() {
+    final List<MediaItem> images = [];
+    final sessions = getChatSessions();
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (int i = 0; i < message.images!.length; i++) {
+            // Use composite key for ID since messages lack IDs
+            final imageId =
+                '${session.id}_${message.timestamp.millisecondsSinceEpoch}_$i';
+            images.add(MediaItem(
+              id: imageId,
+              base64: message.images![i],
+              chatId: session.id,
+              timestamp: message.timestamp,
+            ));
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp descending
+    images.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return images;
   }
 }
 
