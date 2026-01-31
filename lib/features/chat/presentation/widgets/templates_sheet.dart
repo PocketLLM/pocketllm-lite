@@ -228,14 +228,12 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  if (widget.isFullScreen) ...[
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () => _showEditDialog(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create New Template'),
-                    ),
-                  ]
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: () => _showEditDialog(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create New Template'),
+                  ),
                 ],
               ),
             )
