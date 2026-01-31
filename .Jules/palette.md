@@ -65,3 +65,7 @@
 ## 2026-01-21 - [Chat List Context]
 **Learning:** In chat history lists, displaying only the date forces users to recall conversations by time alone, which is difficult. Showing a snippet of the last message provides immediate context (semantic memory) and significantly speeds up list scanning.
 **Action:** Always include a text preview (truncated to 1 line) and use the *last message timestamp* (not creation date) in chat list items to maximize information density and relevance.
+
+## 2025-05-30 - [Copy Code Blocks]
+**Learning:** `flutter_markdown` renders fenced code blocks as `code` elements when syntax highlighting is disabled, but can be customized via `builders`. To improve developer UX, adding a "Copy Code" button to code blocks is essential. However, the `code` tag is also used for inline code. A heuristic (checking for `language-` class or newlines) is needed to distinguish block-level code from inline code to avoid wrapping simple inline snippets in heavy containers.
+**Action:** When customizing markdown code rendering, implement a robust heuristic in `MarkdownElementBuilder` to differentiate between block and inline code to preserve inline flow while enhancing block utility.

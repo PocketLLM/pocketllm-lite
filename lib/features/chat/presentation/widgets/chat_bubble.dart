@@ -10,9 +10,11 @@ import '../../../../core/utils/image_decoder.dart';
 import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/utils/url_validator.dart';
 import '../../domain/models/chat_message.dart';
+import '../../../../core/providers.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/draft_message_provider.dart';
+import 'code_block_builder.dart';
 import 'three_dot_loading_indicator.dart';
 
 // Helper class for formatting timestamps
@@ -300,6 +302,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                             data: message.content,
                             // ignore: deprecated_member_use
                             imageBuilder: MarkdownHandlers.imageBuilder,
+                            builders: {
+                              'pre': CodeBlockBuilder(context),
+                              'code': CodeBlockBuilder(context),
+                            },
                             onTapLink: (text, href, title) async {
                               if (href != null) {
                                 final uri = Uri.tryParse(href);
@@ -543,6 +549,10 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                         data: message.content,
                         // ignore: deprecated_member_use
                         imageBuilder: MarkdownHandlers.imageBuilder,
+                        builders: {
+                          'pre': CodeBlockBuilder(context),
+                          'code': CodeBlockBuilder(context),
+                        },
                         onTapLink: (text, href, title) async {
                           if (href != null) {
                             final uri = Uri.tryParse(href);
