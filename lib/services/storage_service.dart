@@ -10,6 +10,7 @@ import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
+import '../features/media/domain/models/media_item.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
 
@@ -80,6 +81,34 @@ class StorageService {
 
   ValueListenable<Box<ChatSession>> get chatBoxListenable =>
       _chatBox.listenable();
+
+  // Media Gallery
+  List<MediaItem> getAllImages() {
+    final allImages = <MediaItem>[];
+    final sessions = getChatSessions(); // Already sorted by date desc
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (int i = 0; i < message.images!.length; i++) {
+            final img = message.images![i];
+            // Unique ID: session_timestamp_hash_index
+            final id =
+                '${session.id}_${message.timestamp.millisecondsSinceEpoch}_${img.hashCode}_$i';
+            allImages.add(MediaItem(
+              id: id,
+              chatId: session.id,
+              base64Content: img,
+              timestamp: message.timestamp,
+            ));
+          }
+        }
+      }
+    }
+    // Sort by timestamp desc (newest first)
+    allImages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return allImages;
+  }
 
   // Chats
   List<ChatSession> getChatSessions() {
