@@ -13,6 +13,8 @@ import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
 
+import '../features/media/domain/media_item.dart';
+
 class StorageService {
   late Box<ChatSession> _chatBox;
   late Box<SystemPrompt> _systemPromptBox;
@@ -170,6 +172,32 @@ class StorageService {
 
   ValueListenable<Box> get activityLogBoxListenable =>
       _activityLogBox.listenable();
+
+  // Media Gallery
+  List<MediaItem> getAllImages() {
+    final sessions = getChatSessions();
+    final List<MediaItem> images = [];
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (final img in message.images!) {
+            images.add(
+              MediaItem(
+                base64Content: img,
+                chatId: session.id,
+                timestamp: message.timestamp,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp desc (newest first)
+    images.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return images;
+  }
 
   List<SystemPrompt> getSystemPrompts() {
     return _systemPromptBox.values.toList();
