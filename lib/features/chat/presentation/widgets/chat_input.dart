@@ -112,12 +112,18 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               ListTile(
                 leading: const Icon(Icons.camera_alt),
                 title: const Text('Camera'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pop(context, ImageSource.camera);
+                },
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Gallery'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pop(context, ImageSource.gallery);
+                },
               ),
               const SizedBox(height: 16),
             ],
@@ -661,7 +667,23 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     required currentLength,
                     required isFocused,
                     required maxLength,
-                  }) => null,
+                  }) {
+                    if (maxLength == null) return null;
+                    if (currentLength < maxLength * 0.8) return null;
+                    return Semantics(
+                      liveRegion: true,
+                      label: '$currentLength of $maxLength characters',
+                      child: Text(
+                        '$currentLength / $maxLength',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: currentLength >= maxLength
+                              ? Colors.red
+                              : Colors.orange,
+                        ),
+                      ),
+                    );
+                  },
                   decoration: InputDecoration(
                     hintText: _isEnhancing
                         ? 'Enhancing your prompt...'
