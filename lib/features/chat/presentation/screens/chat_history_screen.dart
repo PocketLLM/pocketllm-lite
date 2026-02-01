@@ -975,10 +975,13 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              'Chat Options',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+            Semantics(
+              header: true,
+              child: Text(
+                'Chat Options',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 8),
