@@ -102,10 +102,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
-                'Attach Image',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+              Semantics(
+                header: true,
+                child: Text(
+                  'Attach Image',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
