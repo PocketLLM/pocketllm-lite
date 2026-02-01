@@ -11,6 +11,8 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/providers.dart';
 import '../../../../services/storage_service.dart';
+import '../widgets/activity_chart.dart';
+import '../widgets/usage_stats_cards.dart';
 
 enum LogFilter { all, chats, prompts, settings, system }
 
@@ -32,36 +34,19 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
     super.dispose();
   }
 
-  List<Map<String, dynamic>> _filterLogs(List<Map<String, dynamic>> logs) {
-    return logs.where((log) {
-      final action = log['action'] as String? ?? '';
-      final details = log['details'] as String? ?? '';
-
-      // 1. Apply Search
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
-        if (!action.toLowerCase().contains(query) &&
-            !details.toLowerCase().contains(query)) {
-          return false;
-        }
-      }
-
-      // 2. Apply Category Filter
-      if (_selectedFilter == LogFilter.all) return true;
-
-      switch (_selectedFilter) {
-        case LogFilter.chats:
-          return action.contains('Chat') || action.contains('History');
-        case LogFilter.prompts:
-          return action.contains('System Prompt');
-        case LogFilter.settings:
-          return action.contains('Settings');
-        case LogFilter.system:
-          return action.contains('Data') || action.contains('Logs');
-        default:
-          return true;
-      }
-    }).toList();
+  String _mapFilterToString(LogFilter filter) {
+    switch (filter) {
+      case LogFilter.chats:
+        return 'chats';
+      case LogFilter.prompts:
+        return 'prompts';
+      case LogFilter.settings:
+        return 'settings';
+      case LogFilter.system:
+        return 'system';
+      default:
+        return 'all';
+    }
   }
 
   Future<void> _handleExport(StorageService storage) async {
@@ -146,10 +131,11 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
   Widget build(BuildContext context) {
     final storage = ref.watch(storageServiceProvider);
     final theme = Theme.of(context);
+    final stats = storage.getUsageStatistics();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Activity Audit Trail'),
+        title: const Text('Activity Dashboard'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -175,6 +161,27 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
       ),
       body: Column(
         children: [
+          // Dashboard Visualization
+          ExpansionTile(
+            title: Text(
+              'Overview',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            initiallyExpanded: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: ActivityChart(activity: stats.dailyActivity),
+              ),
+              const SizedBox(height: 16),
+              UsageStatsCards(stats: stats),
+              const SizedBox(height: 16),
+            ],
+          ),
+
           // Search and Filter Bar
           Container(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -240,8 +247,10 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
             child: ValueListenableBuilder<Box>(
               valueListenable: storage.activityLogBoxListenable,
               builder: (context, box, _) {
-                final allLogs = storage.getActivityLogs();
-                final filteredLogs = _filterLogs(allLogs);
+                final filteredLogs = storage.searchActivityLogs(
+                  query: _searchQuery,
+                  filter: _mapFilterToString(_selectedFilter),
+                );
 
                 if (filteredLogs.isEmpty) {
                   return Center(

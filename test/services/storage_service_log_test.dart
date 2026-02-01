@@ -84,5 +84,38 @@ void main() {
       expect(json, contains('"action": "Chat Created"'));
       expect(json, contains('"action": "Settings Changed"'));
     });
+
+    test('searchActivityLogs returns all logs when query and filter are empty', () {
+      final results = storage.searchActivityLogs();
+      expect(results.length, 2);
+    });
+
+    test('searchActivityLogs filters by query', () {
+      final results = storage.searchActivityLogs(query: 'theme');
+      expect(results.length, 1);
+      expect(results.first['action'], 'Settings Changed');
+    });
+
+    test('searchActivityLogs filters by category (chats)', () {
+      final results = storage.searchActivityLogs(filter: 'chats');
+      expect(results.length, 1);
+      expect(results.first['action'], 'Chat Created');
+    });
+
+    test('searchActivityLogs filters by category (settings)', () {
+      final results = storage.searchActivityLogs(filter: 'settings');
+      expect(results.length, 1);
+      expect(results.first['action'], 'Settings Changed');
+    });
+
+    test('searchActivityLogs filters by both query and category', () {
+      // Should find nothing if query matches but category doesn't
+      var results = storage.searchActivityLogs(query: 'theme', filter: 'chats');
+      expect(results.isEmpty, true);
+
+      // Should find if both match
+      results = storage.searchActivityLogs(query: 'theme', filter: 'settings');
+      expect(results.length, 1);
+    });
   });
 }
