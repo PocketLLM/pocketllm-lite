@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Settings Import Mass Assignment
+**Vulnerability:** The `StorageService.importData` method blindly iterated over all keys in the `settings` JSON object and saved them, allowing users to inject restricted keys like `token_balance` or `total_chats_created` to bypass usage limits.
+**Learning:** Import features often trust the input file too much. Just because a key isn't exported doesn't mean it can't be imported if the file is manually modified.
+**Prevention:** Always use a strict whitelist for imported keys, ensuring they match only the safe, exportable configuration settings.
