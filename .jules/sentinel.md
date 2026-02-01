@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2026-02-01 - Arbitrary Settings Overwrite via Import
+**Vulnerability:** The data import feature allowed overwriting any setting in the `settings_box` (including usage limits like `token_balance`) because it lacked a whitelist.
+**Learning:** Export whitelists are insufficient; import logic must also enforce strict whitelists to prevent malicious configuration files from modifying protected internal state.
+**Prevention:** Mirror export whitelists in import logic or use a single "Schema" definition that flags fields as read-only/internal vs. public/importable.
