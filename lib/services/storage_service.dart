@@ -21,6 +21,8 @@ class StorageService {
 
   // Cache for sorted chat sessions
   List<ChatSession>? _cachedSessions;
+  // Cache for unmodifiable view of sorted chat sessions
+  UnmodifiableListView<ChatSession>? _cachedSessionsView;
   // Cache for chat tags
   Map<String, List<String>>? _cachedTags;
   // Cache for starred messages (O(1) lookup)
@@ -56,8 +58,10 @@ class StorageService {
   void _onChatBoxEvent(BoxEvent event) {
     if (_cachedSessions == null) return;
 
+    bool changed = false;
     if (event.deleted) {
       _cachedSessions!.removeWhere((session) => session.id == event.key);
+      changed = true;
     } else if (event.value != null) {
       final ChatSession updatedSession = event.value as ChatSession;
       final index = _cachedSessions!
@@ -75,6 +79,11 @@ class StorageService {
         _cachedSessions!.add(updatedSession);
         _cachedSessions!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       }
+      changed = true;
+    }
+
+    if (changed) {
+      _cachedSessionsView = null;
     }
   }
 
@@ -84,13 +93,15 @@ class StorageService {
   // Chats
   List<ChatSession> getChatSessions() {
     if (_cachedSessions != null) {
-      return UnmodifiableListView(_cachedSessions!);
+      _cachedSessionsView ??= UnmodifiableListView(_cachedSessions!);
+      return _cachedSessionsView!;
     }
 
     _cachedSessions = _chatBox.values.toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _cachedSessionsView = UnmodifiableListView(_cachedSessions!);
 
-    return UnmodifiableListView(_cachedSessions!);
+    return _cachedSessionsView!;
   }
 
   Future<void> saveChatSession(ChatSession session, {bool log = true}) async {
@@ -114,6 +125,7 @@ class StorageService {
           _cachedSessions!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         }
       }
+      _cachedSessionsView = null;
     }
     await _chatBox.put(session.id, session);
 
@@ -126,6 +138,7 @@ class StorageService {
     // Optimistic update
     if (_cachedSessions != null) {
       _cachedSessions!.removeWhere((s) => s.id == id);
+      _cachedSessionsView = null;
     }
     await _chatBox.delete(id);
 
@@ -148,6 +161,7 @@ class StorageService {
 
   Future<void> clearAllChats() async {
     _cachedSessions = null;
+    _cachedSessionsView = null;
     _cachedTags = null;
     await _chatBox.clear();
     await _settingsBox.delete(AppConstants.pinnedChatsKey);
@@ -182,19 +196,29 @@ class StorageService {
     DateTime? fromDate,
     String? tag,
   }) {
-    List<ChatSession> results = getChatSessions();
+    // Optimize: Check if we have any filters. If not, return the cached view directly.
+    final bool hasTag = tag != null && tag.isNotEmpty;
+    final bool hasQuery = query.isNotEmpty;
+    final bool hasModel = model != null && model.isNotEmpty;
+    final bool hasDate = fromDate != null;
+
+    if (!hasTag && !hasQuery && !hasModel && !hasDate) {
+      return getChatSessions();
+    }
+
+    Iterable<ChatSession> results = getChatSessions();
 
     // 0. Filter by Tag
-    if (tag != null && tag.isNotEmpty) {
+    if (hasTag) {
       final tagsMap = _getChatTagsMap();
       results = results.where((s) {
         final sessionTags = tagsMap[s.id];
         return sessionTags != null && sessionTags.contains(tag);
-      }).toList();
+      });
     }
 
     // 1. Filter by Query (Title & Content)
-    if (query.isNotEmpty) {
+    if (hasQuery) {
       // Use RegExp with caseSensitive: false to avoid allocating lowercased strings
       // for potentially large message content, reducing memory churn during search.
       final queryRegex = RegExp(RegExp.escape(query), caseSensitive: false);
@@ -208,20 +232,21 @@ class StorageService {
         }
 
         return false;
-      }).toList();
+      });
     }
 
     // 2. Filter by Model
-    if (model != null && model.isNotEmpty) {
-      results = results.where((s) => s.model == model).toList();
+    if (hasModel) {
+      results = results.where((s) => s.model == model);
     }
 
     // 3. Filter by Date
-    if (fromDate != null) {
-      results = results.where((s) => s.createdAt.isAfter(fromDate)).toList();
+    if (hasDate) {
+      results = results.where((s) => s.createdAt.isAfter(fromDate!));
     }
 
-    return results;
+    // Convert to list only once at the end
+    return results.toList();
   }
 
   Set<String> getAvailableModels() {
