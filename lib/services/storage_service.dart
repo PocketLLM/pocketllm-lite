@@ -12,6 +12,7 @@ import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
+import '../features/media/domain/models/media_item.dart';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
@@ -468,6 +469,31 @@ class StorageService {
 
     _cachedStarredMessages = messages.map((m) => m.message).toSet();
     return messages;
+  }
+
+  // Media
+  List<MediaItem> getAllImages() {
+    final sessions = getChatSessions();
+    final images = <MediaItem>[];
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (final imagePath in message.images!) {
+            images.add(MediaItem(
+              chatId: session.id,
+              messageId: '${session.id}_${message.timestamp.millisecondsSinceEpoch}', // Using simple ID gen or just message hash if we had ID
+              imagePath: imagePath,
+              timestamp: message.timestamp,
+              chatTitle: session.title,
+            ));
+          }
+        }
+      }
+    }
+
+    images.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return images;
   }
 
   Future<void> saveStarredMessages(List<StarredMessage> messages) async {
