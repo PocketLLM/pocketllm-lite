@@ -17,6 +17,15 @@ class MockStorageService extends StorageService {
 
   @override
   Future<void> saveChatSession(ChatSession session, {bool log = true}) async {}
+
+  @override
+  String? getDraft(String key) => null;
+
+  @override
+  Future<void> saveDraft(String key, String content) async {}
+
+  @override
+  Future<void> deleteDraft(String key) async {}
 }
 
 void main() {
@@ -45,19 +54,27 @@ void main() {
     final TextField textField = tester.widget(textFieldFinder);
     expect(textField.maxLength, AppConstants.maxInputLength);
 
-    // Verify buildCounter is set (to hidden)
-    // We can't easily execute the buildCounter to check return value without context,
-    // but we can check it's not null.
+    // Verify buildCounter is set
     expect(textField.buildCounter, isNotNull);
 
-    // To be sure, we can call it if we want, but checking isNotNull is likely enough
-    // to verify the property was set.
-    final counter = textField.buildCounter!(
+    // Verify it is hidden for low character counts (<= 80%)
+    final hiddenCounter = textField.buildCounter!(
       tester.element(textFieldFinder),
-      currentLength: 0,
+      currentLength: 50,
       isFocused: false,
-      maxLength: 100
+      maxLength: 100,
     );
-    expect(counter, isNull);
+    expect(hiddenCounter, isNull);
+
+    // Verify it is visible for high character counts (> 80%)
+    final visibleCounter = textField.buildCounter!(
+      tester.element(textFieldFinder),
+      currentLength: 81,
+      isFocused: false,
+      maxLength: 100,
+    );
+    expect(visibleCounter, isNotNull);
+    expect(visibleCounter, isA<Semantics>());
+    expect((visibleCounter as Semantics).properties.liveRegion, isTrue);
   });
 }
