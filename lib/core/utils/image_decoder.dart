@@ -9,8 +9,11 @@ class IsolateImageDecoder {
   @visibleForTesting
   static set maxCacheSize(int value) => _maxCacheSize = value;
 
-  // Dart's Map is a LinkedHashMap by default, preserving insertion order.
-  static final Map<String, Uint8List> _cache = {};
+  // Cache uses hashCode (int) as key instead of full Base64 string to save memory.
+  // Storing 1MB string keys for 50 images would waste ~50MB RAM.
+  // Using hashCode reduces key storage to negligible size (~200 bytes).
+  // Collision risk is negligible for this use case (UI cache).
+  static final Map<int, Uint8List> _cache = {};
 
   /// Decodes a list of base64 strings into a list of Uint8List.
   ///
@@ -28,10 +31,12 @@ class IsolateImageDecoder {
 
     for (int i = 0; i < base64Images.length; i++) {
       final img = base64Images[i];
-      if (_cache.containsKey(img)) {
+      final key = img.hashCode;
+
+      if (_cache.containsKey(key)) {
         // Cache Hit: Re-insert to move to the end (Most Recently Used position)
-        final data = _cache.remove(img)!;
-        _cache[img] = data;
+        final data = _cache.remove(key)!;
+        _cache[key] = data;
         results[i] = data;
       } else {
         toDecode.add(img);
@@ -45,7 +50,8 @@ class IsolateImageDecoder {
       final decoded = await compute(_decodeImagesInternal, toDecode);
 
       for (int i = 0; i < decoded.length; i++) {
-        final key = toDecode[i];
+        final imgString = toDecode[i];
+        final key = imgString.hashCode;
         final value = decoded[i];
 
         // Add to cache
