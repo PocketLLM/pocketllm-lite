@@ -6,6 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/providers.dart';
 import '../../../../core/utils/image_decoder.dart';
 import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/utils/url_validator.dart';
@@ -121,6 +122,42 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
         });
       }
     }
+  }
+
+  void _showImageViewer(
+    BuildContext context,
+    Uint8List imageBytes,
+    String heroTag,
+  ) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black.withValues(alpha: 0.9),
+        pageBuilder:
+            (context, _, __) => Scaffold(
+              backgroundColor: Colors.transparent,
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                  tooltip: 'Close preview',
+                ),
+              ),
+              body: Center(
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Hero(
+                    tag: heroTag,
+                    child: Image.memory(imageBytes, fit: BoxFit.contain),
+                  ),
+                ),
+              ),
+            ),
+      ),
+    );
   }
 
   @override
@@ -272,21 +309,40 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                       children: [
                         if (_decodedImages != null &&
                             _decodedImages!.isNotEmpty)
-                          ..._decodedImages!.map(
-                            (bytes) => Padding(
+                          ..._decodedImages!.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final bytes = entry.value;
+                            final heroTag = 'img_${message.hashCode}_$index';
+
+                            return Padding(
                               padding: const EdgeInsets.only(bottom: 8.0),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.memory(
-                                  bytes,
-                                  height: 150,
-                                  fit: BoxFit.cover,
-                                  // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
-                                  cacheHeight: 450,
+                              child: Semantics(
+                                label: 'View full size image',
+                                button: true,
+                                child: GestureDetector(
+                                  onTap: () => _showImageViewer(
+                                    context,
+                                    bytes,
+                                    heroTag,
+                                  ),
+                                  child: Hero(
+                                    tag: heroTag,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.memory(
+                                        bytes,
+                                        height: 150,
+                                        fit: BoxFit.cover,
+                                        // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
+                                        cacheHeight: 450,
+                                        semanticLabel: 'Attached image',
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
+                            );
+                          }),
                         if (isUser)
                           Text(
                             message.content,
