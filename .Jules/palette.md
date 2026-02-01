@@ -65,3 +65,7 @@
 ## 2026-01-21 - [Chat List Context]
 **Learning:** In chat history lists, displaying only the date forces users to recall conversations by time alone, which is difficult. Showing a snippet of the last message provides immediate context (semantic memory) and significantly speeds up list scanning.
 **Action:** Always include a text preview (truncated to 1 line) and use the *last message timestamp* (not creation date) in chat list items to maximize information density and relevance.
+
+## 2024-05-29 - [Just-in-Time Feedback]
+**Learning:** Constant status indicators (like "0/50000 characters") create visual noise and are ignored by users until they matter. Showing feedback only when a threshold is crossed (e.g., >80% capacity) adheres to the "Visibility of System Status" heuristic while maintaining a cleaner interface. For screen readers, these conditional alerts must use `Semantics(liveRegion: true)` to ensure the user is notified immediately when the status appears.
+**Action:** Implement limit counters and similar status indicators conditionally, using live regions for accessibility when they become active.
