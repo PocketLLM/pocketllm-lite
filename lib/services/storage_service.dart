@@ -10,6 +10,7 @@ import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
+import '../features/media/domain/models/media_item.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
 
@@ -226,6 +227,37 @@ class StorageService {
 
   Set<String> getAvailableModels() {
     return getChatSessions().map((s) => s.model).toSet();
+  }
+
+  List<MediaItem> getAllImages() {
+    final images = <MediaItem>[];
+    final sessions = getChatSessions();
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+          for (int i = 0; i < message.images!.length; i++) {
+            final imageContent = message.images![i];
+            // Construct a unique ID
+            final id =
+                '${session.id}_${message.timestamp.millisecondsSinceEpoch}_$i';
+
+            images.add(MediaItem(
+              id: id,
+              chatId: session.id,
+              messageId: '', // Message doesn't have ID
+              base64Content: imageContent,
+              timestamp: message.timestamp,
+            ));
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp descending (newest first)
+    images.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+    return images;
   }
 
   Future<void> saveSystemPrompt(SystemPrompt prompt) async {
