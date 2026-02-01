@@ -11,7 +11,6 @@ import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
-import 'dart:typed_data';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
@@ -528,6 +527,48 @@ class StorageService {
     await _activityLogBox.add(log);
   }
 
+  List<Map<String, dynamic>> searchActivityLogs({
+    String query = '',
+    String filter = 'all',
+  }) {
+    final logs = getActivityLogs();
+
+    if (query.isEmpty && filter == 'all') {
+      return logs;
+    }
+
+    return logs.where((log) {
+      final action = log['action'] as String? ?? '';
+      final details = log['details'] as String? ?? '';
+
+      // 1. Apply Search
+      if (query.isNotEmpty) {
+        final q = query.toLowerCase();
+        if (!action.toLowerCase().contains(q) &&
+            !details.toLowerCase().contains(q)) {
+          return false;
+        }
+      }
+
+      // 2. Apply Category Filter
+      if (filter != 'all') {
+        switch (filter) {
+          case 'chats':
+            return action.contains('Chat') || action.contains('History');
+          case 'prompts':
+            return action.contains('System Prompt');
+          case 'settings':
+            return action.contains('Settings');
+          case 'system':
+            return action.contains('Data') || action.contains('Logs');
+          default:
+            return true;
+        }
+      }
+      return true;
+    }).toList();
+  }
+
   List<Map<String, dynamic>> getActivityLogs() {
     final logs = _activityLogBox.values.map((e) => Map<String, dynamic>.from(e)).toList();
     // Sort by timestamp desc
@@ -717,7 +758,7 @@ class StorageService {
     if (content.isEmpty) return '>\n';
     const prefix = '> ';
     // Split by newline and prepend blockquote prefix to each line
-    return content.split('\n').map((line) => '$prefix$line').join('\n') + '\n';
+    return '${content.split('\n').map((line) => '$prefix$line').join('\n')}\n';
   }
 
   String _escapeCsv(String field) {
