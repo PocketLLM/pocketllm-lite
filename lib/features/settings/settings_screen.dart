@@ -1381,6 +1381,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
               ListTile(
+                title: const Text('Media Gallery'),
+                subtitle: const Text('View all images from chats'),
+                leading: const Icon(Icons.photo_library_outlined),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/media-gallery');
+                },
+              ),
+              ListTile(
                 title: const Text('Usage Statistics'),
                 subtitle: const Text('View chat and token usage stats'),
                 leading: const Icon(Icons.bar_chart),

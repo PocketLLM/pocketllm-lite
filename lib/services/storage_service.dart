@@ -9,6 +9,7 @@ import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
+import 'package:pocketllm_lite/features/media/domain/models/media_item.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
@@ -226,6 +227,36 @@ class StorageService {
 
   Set<String> getAvailableModels() {
     return getChatSessions().map((s) => s.model).toSet();
+  }
+
+  // Media Gallery
+  List<MediaItem> getAllImages() {
+    final List<MediaItem> images = [];
+    final sessions = getChatSessions();
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.images != null && message.images!.isNotEmpty) {
+           for (final imgBase64 in message.images!) {
+             // Generate a stable ID based on content and context
+             final id = Object.hash(session.id, message.timestamp, imgBase64).toString();
+             images.add(MediaItem(
+               id: id,
+               base64: imgBase64,
+               timestamp: message.timestamp,
+               chatId: session.id,
+             ));
+           }
+        }
+      }
+    }
+    // Sort by timestamp desc (newest first)
+    images.sort((a, b) {
+      final cmp = b.timestamp.compareTo(a.timestamp);
+      if (cmp != 0) return cmp;
+      return b.id.compareTo(a.id); // Tie breaker
+    });
+    return images;
   }
 
   Future<void> saveSystemPrompt(SystemPrompt prompt) async {
