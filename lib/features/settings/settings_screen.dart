@@ -1391,6 +1391,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
               ListTile(
+                title: const Text('Media Gallery'),
+                subtitle: const Text('View all shared images'),
+                leading: const Icon(Icons.photo_library_outlined),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/media-gallery');
+                },
+              ),
+              ListTile(
                 title: Text(
                   'Clear All History',
                   style: TextStyle(color: theme.colorScheme.error),

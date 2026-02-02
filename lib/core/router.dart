@@ -11,6 +11,9 @@ import '../features/settings/presentation/screens/customization_screen.dart';
 import '../features/settings/presentation/screens/activity_log_screen.dart';
 import '../features/settings/presentation/screens/usage_statistics_screen.dart';
 import '../features/chat/presentation/screens/starred_messages_screen.dart';
+import '../features/media/presentation/screens/media_gallery_screen.dart';
+import '../features/media/presentation/screens/media_preview_screen.dart';
+import '../features/media/domain/models/media_item.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -53,6 +56,24 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'starred-messages',
             builder: (context, state) => const StarredMessagesScreen(),
+          ),
+          GoRoute(
+            path: 'media-gallery',
+            builder: (context, state) => const MediaGalleryScreen(),
+            routes: [
+              GoRoute(
+                path: 'preview',
+                builder: (context, state) {
+                  final extra = state.extra as Map<String, dynamic>;
+                  final images = extra['images'] as List<MediaItem>;
+                  final initialIndex = extra['initialIndex'] as int;
+                  return MediaPreviewScreen(
+                    images: images,
+                    initialIndex: initialIndex,
+                  );
+                },
+              ),
+            ],
           ),
         ],
       ),
