@@ -6,6 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/providers.dart';
 import '../../../../core/utils/image_decoder.dart';
 import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/utils/url_validator.dart';
@@ -205,6 +206,58 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       );
     }
 
+    // Construct the static content of the message (Images + Text/Markdown)
+    // outside of the ValueListenableBuilder to prevent expensive rebuilds
+    // when only the starred status changes.
+    final Widget messageContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_decodedImages != null && _decodedImages!.isNotEmpty)
+          ..._decodedImages!.map(
+            (bytes) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  bytes,
+                  height: 150,
+                  fit: BoxFit.cover,
+                  // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
+                  cacheHeight: 450,
+                ),
+              ),
+            ),
+          ),
+        if (isUser)
+          Text(
+            message.content,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: Colors.white,
+              fontSize: fontSize,
+            ),
+          )
+        else
+          MarkdownBody(
+            data: message.content,
+            // ignore: deprecated_member_use
+            imageBuilder: MarkdownHandlers.imageBuilder,
+            onTapLink: (text, href, title) async {
+              if (href != null) {
+                final uri = Uri.tryParse(href);
+                // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
+                if (uri != null &&
+                    UrlValidator.isSecureUrl(uri) &&
+                    await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              }
+            },
+            styleSheet: _getStyleSheet(theme, fontSize),
+          ),
+      ],
+    );
+
     return ValueListenableBuilder(
       valueListenable: storage.starredMessagesListenable,
       builder: (context, _, __) {
@@ -213,159 +266,118 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isUser && showAvatars) ...[
-            Semantics(
-              excludeSemantics: true,
-              child: CircleAvatar(
-                radius: 14,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.auto_awesome,
-                  size: 16,
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Semantics(
-              container: true,
-              hint: 'Double tap and hold for options',
-              onLongPress: () {
-                HapticFeedback.mediumImpact();
-                _showFocusedMenu(context, isUser, isStarred);
-              },
-              child: GestureDetector(
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  _showFocusedMenu(context, isUser, isStarred);
-                },
-                child: RepaintBoundary(
-                  child: Container(
-                    key: _bubbleKey,
-                    padding: EdgeInsets.all(padding),
-                    decoration: BoxDecoration(
-                      color: bubbleColor,
-                      borderRadius: BorderRadius.circular(radius).copyWith(
-                        bottomRight: isUser ? const Radius.circular(0) : null,
-                        bottomLeft: !isUser ? const Radius.circular(0) : null,
-                      ),
-                      boxShadow: hasElevation
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 2,
-                                offset: const Offset(0, 1),
-                              ),
-                            ]
-                          : null,
+            mainAxisAlignment:
+                isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!isUser && showAvatars) ...[
+                Semantics(
+                  excludeSemantics: true,
+                  child: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: theme.colorScheme.onPrimaryContainer,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_decodedImages != null &&
-                            _decodedImages!.isNotEmpty)
-                          ..._decodedImages!.map(
-                            (bytes) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.memory(
-                                  bytes,
-                                  height: 150,
-                                  fit: BoxFit.cover,
-                                  // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
-                                  cacheHeight: 450,
-                                ),
-                              ),
-                            ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Semantics(
+                  container: true,
+                  hint: 'Double tap and hold for options',
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    _showFocusedMenu(context, isUser, isStarred);
+                  },
+                  child: GestureDetector(
+                    onLongPress: () {
+                      HapticFeedback.mediumImpact();
+                      _showFocusedMenu(context, isUser, isStarred);
+                    },
+                    child: RepaintBoundary(
+                      child: Container(
+                        key: _bubbleKey,
+                        padding: EdgeInsets.all(padding),
+                        decoration: BoxDecoration(
+                          color: bubbleColor,
+                          borderRadius: BorderRadius.circular(radius).copyWith(
+                            bottomRight:
+                                isUser ? const Radius.circular(0) : null,
+                            bottomLeft:
+                                !isUser ? const Radius.circular(0) : null,
                           ),
-                        if (isUser)
-                          Text(
-                            message.content,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: Colors.white,
-                              fontSize: fontSize,
-                            ),
-                          )
-                        else
-                          MarkdownBody(
-                            data: message.content,
-                            // ignore: deprecated_member_use
-                            imageBuilder: MarkdownHandlers.imageBuilder,
-                            onTapLink: (text, href, title) async {
-                              if (href != null) {
-                                final uri = Uri.tryParse(href);
-                                // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
-                                if (uri != null &&
-                                    UrlValidator.isSecureUrl(uri) &&
-                                    await canLaunchUrl(uri)) {
-                                  await launchUrl(
-                                    uri,
-                                    mode: LaunchMode.externalApplication,
-                                  );
-                                }
-                              }
-                            },
-                            styleSheet: _getStyleSheet(theme, fontSize),
-                          ),
-                        // Timestamp display
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (isStarred) ...[
-                                const Icon(
-                                  Icons.star,
-                                  size: 12,
-                                  color: Colors.amber,
-                                ),
-                                const SizedBox(width: 4),
-                              ],
-                              Text(
-                                _formattedTimestamp,
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: fontSize * 0.7,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                          ),
+                          boxShadow:
+                              hasElevation
+                                  ? [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      blurRadius: 2,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ]
+                                  : null,
                         ),
-                      ],
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            messageContent,
+                            // Timestamp display
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isStarred) ...[
+                                    const Icon(
+                                      Icons.star,
+                                      size: 12,
+                                      color: Colors.amber,
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    _formattedTimestamp,
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: fontSize * 0.7,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-          if (isUser && showAvatars) ...[
-            const SizedBox(width: 8),
-            Semantics(
-              excludeSemantics: true,
-              child: CircleAvatar(
-                radius: 14,
-                backgroundColor: theme.colorScheme.secondaryContainer,
-                child: Icon(
-                  Icons.person,
-                  size: 16,
-                  color: theme.colorScheme.onSecondaryContainer,
+              if (isUser && showAvatars) ...[
+                const SizedBox(width: 8),
+                Semantics(
+                  excludeSemantics: true,
+                  child: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: theme.colorScheme.secondaryContainer,
+                    child: Icon(
+                      Icons.person,
+                      size: 16,
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
+              ],
+            ],
+          ),
+        );
       },
     );
   }
