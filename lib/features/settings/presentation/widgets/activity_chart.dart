@@ -107,7 +107,6 @@ class BarChartPainter extends CustomPainter {
       );
       final textPainter = TextPainter(
         text: textSpan,
-        textDirection: TextDirection.ltr,
       );
       textPainter.layout();
       textPainter.paint(
@@ -127,7 +126,6 @@ class BarChartPainter extends CustomPainter {
         );
         final countPainter = TextPainter(
           text: countSpan,
-          textDirection: TextDirection.ltr,
         );
         countPainter.layout();
         countPainter.paint(

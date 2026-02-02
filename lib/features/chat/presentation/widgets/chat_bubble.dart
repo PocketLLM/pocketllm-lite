@@ -13,6 +13,7 @@ import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/draft_message_provider.dart';
+import '../../../../core/providers.dart';
 import 'three_dot_loading_indicator.dart';
 
 // Helper class for formatting timestamps
