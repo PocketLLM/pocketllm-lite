@@ -661,7 +661,23 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     required currentLength,
                     required isFocused,
                     required maxLength,
-                  }) => null,
+                  }) {
+                    if (maxLength == null || currentLength < maxLength * 0.8) {
+                      return null;
+                    }
+                    return Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        '$currentLength/$maxLength',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: currentLength == maxLength
+                              ? Colors.red
+                              : Colors.orange,
+                        ),
+                      ),
+                    );
+                  },
                   decoration: InputDecoration(
                     hintText: _isEnhancing
                         ? 'Enhancing your prompt...'
@@ -743,14 +759,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Enhance Prompt Button - only show if enhancer model selected
+                    // Enhance Prompt Button
                     Consumer(
                       builder: (context, ref, child) {
                         final enhancerState = ref.watch(promptEnhancerProvider);
+                        // Show button even if not configured (to improve discovery)
                         final hasEnhancer =
                             enhancerState.selectedModelId != null;
-
-                        if (!hasEnhancer) return const SizedBox.shrink();
 
                         final isDisabled = isGenerating || _isEnhancing;
                         return Semantics(
@@ -758,7 +773,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           button: true,
                           enabled: !isDisabled,
                           child: Tooltip(
-                            message: 'Enhance Prompt',
+                            message: hasEnhancer
+                                ? 'Enhance Prompt'
+                                : 'Configure Enhancer',
                             child: Material(
                               color:
                                   (isDark ? Colors.grey[800] : Colors.grey[300])

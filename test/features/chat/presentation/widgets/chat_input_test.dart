@@ -17,6 +17,15 @@ class MockStorageService extends StorageService {
 
   @override
   Future<void> saveChatSession(ChatSession session, {bool log = true}) async {}
+
+  @override
+  String? getDraft(String sessionId) => null;
+
+  @override
+  Future<void> saveDraft(String sessionId, String draft) async {}
+
+  @override
+  Future<void> deleteDraft(String sessionId) async {}
 }
 
 void main() {
