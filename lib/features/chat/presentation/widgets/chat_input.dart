@@ -277,6 +277,25 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   Future<void> _enhancePrompt() async {
+    // Check model selection first so user can setup even with empty input
+    final enhancerState = ref.read(promptEnhancerProvider);
+    if (enhancerState.selectedModelId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Select a Prompt Enhancer model in Settings first.',
+          ),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
+        ),
+      );
+      return;
+    }
+
     if (_controller.text.trim().isEmpty) return;
 
     // Check connection status before enhancing using the auto-refreshing provider
@@ -299,24 +318,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           ),
         );
       }
-      return;
-    }
-
-    final enhancerState = ref.read(promptEnhancerProvider);
-    if (enhancerState.selectedModelId == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Select a Prompt Enhancer model in Settings first.',
-          ),
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: 'Settings',
-            onPressed: () => context.push('/settings'),
-          ),
-        ),
-      );
       return;
     }
 
@@ -641,10 +642,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     LogicalKeyboardKey.enter,
                     control: true,
                   ): _send,
-                  const SingleActivator(
-                    LogicalKeyboardKey.enter,
-                    meta: true,
-                  ): _send,
+                  const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                      _send,
                 },
                 child: TextField(
                   controller: _controller,
@@ -656,12 +655,30 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   minLines: 1,
                   style: theme.textTheme.bodyLarge,
                   maxLength: AppConstants.maxInputLength,
-                  buildCounter: (
-                    context, {
-                    required currentLength,
-                    required isFocused,
-                    required maxLength,
-                  }) => null,
+                  buildCounter:
+                      (
+                        context, {
+                        required currentLength,
+                        required isFocused,
+                        required maxLength,
+                      }) {
+                        if (maxLength == null) return null;
+                        if (currentLength > maxLength * 0.8) {
+                          return Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              '$currentLength/$maxLength',
+                              style: TextStyle(
+                                color: currentLength >= maxLength
+                                    ? Colors.red
+                                    : Colors.orange,
+                                fontSize: 12,
+                              ),
+                            ),
+                          );
+                        }
+                        return null;
+                      },
                   decoration: InputDecoration(
                     hintText: _isEnhancing
                         ? 'Enhancing your prompt...'
@@ -743,22 +760,24 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Enhance Prompt Button - only show if enhancer model selected
+                    // Enhance Prompt Button - always visible to improve discovery
                     Consumer(
                       builder: (context, ref, child) {
                         final enhancerState = ref.watch(promptEnhancerProvider);
                         final hasEnhancer =
                             enhancerState.selectedModelId != null;
 
-                        if (!hasEnhancer) return const SizedBox.shrink();
-
                         final isDisabled = isGenerating || _isEnhancing;
                         return Semantics(
-                          label: 'Enhance Prompt',
+                          label: hasEnhancer
+                              ? 'Enhance Prompt'
+                              : 'Enhance Prompt (Setup Required)',
                           button: true,
                           enabled: !isDisabled,
                           child: Tooltip(
-                            message: 'Enhance Prompt',
+                            message: hasEnhancer
+                                ? 'Enhance Prompt'
+                                : 'Enhance Prompt (Setup in Settings)',
                             child: Material(
                               color:
                                   (isDark ? Colors.grey[800] : Colors.grey[300])
@@ -845,7 +864,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   size: 20,
                                 ),
                         ),
-                        tooltip: isGenerating ? 'Generating...' : 'Send',
+                        tooltip: isGenerating
+                            ? 'Generating...'
+                            : 'Send (Ctrl+Enter)',
                       ),
                     );
                   },
