@@ -246,6 +246,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                   HapticFeedback.mediumImpact();
                   _showFocusedMenu(context, isUser, isStarred);
                 },
+                onSecondaryTap: () {
+                  HapticFeedback.selectionClick();
+                  _showFocusedMenu(context, isUser, isStarred);
+                },
                 child: RepaintBoundary(
                   child: Container(
                     key: _bubbleKey,

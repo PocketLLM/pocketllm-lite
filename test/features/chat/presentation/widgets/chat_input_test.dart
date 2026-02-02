@@ -17,6 +17,15 @@ class MockStorageService extends StorageService {
 
   @override
   Future<void> saveChatSession(ChatSession session, {bool log = true}) async {}
+
+  @override
+  String? getDraft(String chatId) => null;
+
+  @override
+  Future<void> saveDraft(String chatId, String draft) async {}
+
+  @override
+  Future<void> deleteDraft(String chatId) async {}
 }
 
 void main() {
@@ -59,5 +68,39 @@ void main() {
       maxLength: 100
     );
     expect(counter, isNull);
+  });
+
+  testWidgets('ChatInput send button has correct tooltip', (WidgetTester tester) async {
+    final mockStorage = MockStorageService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          storageServiceProvider.overrideWithValue(mockStorage),
+          usageLimitsProvider.overrideWith(UsageLimitsNotifier.new),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ChatInput(),
+          ),
+        ),
+      ),
+    );
+
+    // Find the Send IconButton
+    final sendButtonFinder = find.byKey(const ValueKey('send_icon'));
+    expect(sendButtonFinder, findsOneWidget);
+
+    // The IconButton is the parent of the icon.
+    // However, the tooltip is on the IconButton widget itself.
+    // Let's find the IconButton that contains this icon.
+    final iconButtonFinder = find.ancestor(
+      of: sendButtonFinder,
+      matching: find.byType(IconButton),
+    );
+    expect(iconButtonFinder, findsOneWidget);
+
+    final IconButton iconButton = tester.widget(iconButtonFinder);
+    expect(iconButton.tooltip, 'Send (Ctrl+Enter)');
   });
 }
