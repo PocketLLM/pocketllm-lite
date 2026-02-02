@@ -273,6 +273,16 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     );
   }
 
+  Future<void> _handleViewArchived() async {
+    HapticFeedback.lightImpact();
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ArchivedChatsScreen(),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final storage = ref.watch(storageServiceProvider);
@@ -358,16 +368,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   IconButton(
                     icon: const Icon(Icons.archive_outlined),
                     tooltip: 'Archived Chats',
-                    onPressed: () async {
-                      HapticFeedback.lightImpact();
-                      // Wait for return to refresh list (in case items unarchived)
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const ArchivedChatsScreen(),
-                        ),
-                      );
-                      if (mounted) setState(() {});
-                    },
+                    onPressed: _handleViewArchived,
                   ),
                   IconButton(
                     icon: const Icon(Icons.checklist),
@@ -558,15 +559,14 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                     return const _EmptyHistoryState(
                       icon: Icons.search_off,
                       title: 'No results found',
-                      subtitle: 'Try adjusting your filters or search term',
+                      subtitle: 'Try adjusting your search or filters',
                     );
                   }
 
                   return _EmptyHistoryState(
-                    icon: Icons.forum_outlined,
-                    title: 'No conversations yet',
-                    subtitle:
-                        'Start a new chat to begin exploring with your AI assistant.',
+                    icon: Icons.chat_bubble_outline,
+                    title: 'No chat history',
+                    subtitle: 'Start a new conversation to begin',
                     action: FilledButton.icon(
                       onPressed: _handleNewChat,
                       icon: const Icon(Icons.add),
@@ -616,18 +616,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                     pinnedSessions.isEmpty &&
                     recentSessions.isEmpty) {
                   return _EmptyHistoryState(
-                    icon: Icons.inbox_outlined,
+                    icon: Icons.inventory_2_outlined,
                     title: 'No active chats',
-                    subtitle: 'All your chats have been archived.',
-                    action: OutlinedButton.icon(
-                      onPressed: () async {
-                        await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const ArchivedChatsScreen(),
-                          ),
-                        );
-                        if (mounted) setState(() {});
-                      },
+                    subtitle: 'All your chats are archived',
+                    action: TextButton.icon(
+                      onPressed: _handleViewArchived,
                       icon: const Icon(Icons.archive_outlined),
                       label: const Text('View Archived'),
                     ),
@@ -1506,53 +1499,62 @@ class _EmptyHistoryState extends StatelessWidget {
     this.action,
   });
 
+  List<Widget> _buildChildren(ThemeData theme) {
+    final List<Widget> children = [
+      Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.5,
+          ),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          size: 48,
+          color: theme.colorScheme.primary,
+        ),
+      ),
+      const SizedBox(height: 24),
+      Text(
+        title,
+        style: theme.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: theme.colorScheme.onSurface,
+        ),
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 8),
+      Text(
+        subtitle,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    ];
+
+    if (action != null) {
+      children.add(const SizedBox(height: 32));
+      children.add(action!);
+    }
+
+    return children;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(
-                  alpha: 0.5,
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: 48,
-                color: theme.colorScheme.secondary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (action != null) ...[
-              const SizedBox(height: 24),
-              action!,
-            ],
-          ],
+          children: _buildChildren(theme),
         ),
       ),
     );
   }
 }
+
+
