@@ -582,12 +582,8 @@ class StorageService {
     return data;
   }
 
-  @visibleForTesting
-  Map<String, dynamic> getExportableSettings() {
-    final Map<String, dynamic> settings = {};
-
-    // Whitelist of keys to export
-    final exportKeys = {
+  bool _isSettingAllowed(String key) {
+    const allowedKeys = {
       AppConstants.ollamaBaseUrlKey,
       AppConstants.themeModeKey,
       AppConstants.autoSaveChatsKey,
@@ -609,10 +605,17 @@ class StorageService {
       AppConstants.starredMessagesKey,
     };
 
+    return allowedKeys.contains(key) ||
+        key.startsWith(AppConstants.modelSettingsPrefixKey);
+  }
+
+  @visibleForTesting
+  Map<String, dynamic> getExportableSettings() {
+    final Map<String, dynamic> settings = {};
+
     for (final key in _settingsBox.keys) {
       final String keyStr = key.toString();
-      if (exportKeys.contains(keyStr) ||
-          keyStr.startsWith(AppConstants.modelSettingsPrefixKey)) {
+      if (_isSettingAllowed(keyStr)) {
         settings[keyStr] = _settingsBox.get(key);
       }
     }
@@ -815,11 +818,14 @@ class StorageService {
         data['settings'],
       );
       for (final entry in settings.entries) {
-        await saveSetting(entry.key, entry.value);
-        if (entry.key == AppConstants.starredMessagesKey) {
-          _cachedStarredMessages = null;
+        // Security: Prevent injection of restricted keys (e.g., usage limits)
+        if (_isSettingAllowed(entry.key)) {
+          await saveSetting(entry.key, entry.value);
+          if (entry.key == AppConstants.starredMessagesKey) {
+            _cachedStarredMessages = null;
+          }
+          settingsImported++;
         }
-        settingsImported++;
       }
     }
 
