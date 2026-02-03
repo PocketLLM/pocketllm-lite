@@ -5,11 +5,13 @@ import '../../../../core/providers.dart';
 class TemplatesSheet extends ConsumerWidget {
   final Function(String) onSelect;
   final bool isFullScreen;
+  final Function(String)? onDelete;
 
   const TemplatesSheet({
     super.key,
     required this.onSelect,
     this.isFullScreen = false,
+    this.onDelete,
   });
 
   @override
@@ -22,10 +24,31 @@ class TemplatesSheet extends ConsumerWidget {
         final templates = storage.getMessageTemplates();
 
         if (templates.isEmpty) {
-          return const Center(
+          return Center(
             child: Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Text('No templates yet'),
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.bolt_outlined,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No templates yet',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  if (onDelete != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tap + to create one',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
             ),
           );
         }
@@ -43,6 +66,18 @@ class TemplatesSheet extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               onTap: () => onSelect(template['content'] ?? ''),
+              trailing: onDelete != null
+                  ? IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      tooltip: 'Delete template',
+                      onPressed: () {
+                        final id = template['id'];
+                        if (id != null) {
+                          onDelete!(id);
+                        }
+                      },
+                    )
+                  : null,
             );
           },
         );
