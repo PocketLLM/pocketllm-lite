@@ -10,9 +10,9 @@ import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
+import '../features/media/domain/models/media_item.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
-import 'dart:typed_data';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
@@ -234,6 +234,42 @@ class StorageService {
     }
 
     return results;
+  }
+
+  // Media
+  List<MediaItem> getAllImages({String? chatId}) {
+    final sessions = getChatSessions();
+    final mediaItems = <MediaItem>[];
+
+    for (final session in sessions) {
+      if (chatId != null && session.id != chatId) continue;
+      for (final message in session.messages) {
+        final images = message.images;
+        if (images == null || images.isEmpty) continue;
+        for (final image in images) {
+          mediaItems.add(
+            MediaItem(
+              chatId: session.id,
+              chatTitle: session.title,
+              timestamp: message.timestamp,
+              base64: image,
+            ),
+          );
+        }
+      }
+    }
+
+    // Sort by timestamp desc (newest first)
+    // Stable sort is preferred if timestamps are equal (not strictly needed but good practice)
+    // Dart's sort is stable for many implementations but `compareTo` is standard.
+    // If timestamps are identical, we could fall back to another key, but for now this is fine.
+    mediaItems.sort((a, b) {
+      final cmp = b.timestamp.compareTo(a.timestamp);
+      if (cmp != 0) return cmp;
+      return b.hashCode.compareTo(a.hashCode); // Deterministic tie-breaker
+    });
+
+    return mediaItems;
   }
 
   Set<String> getAvailableModels() {
