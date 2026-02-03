@@ -717,8 +717,8 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                   const SizedBox(width: 12),
                   _buildIconBtn(context, Icons.edit, 'Edit', () {
                     // Populate the input with the message content
-                    ref.read(draftMessageProvider.notifier).state = message.content;
-                    ref.read(editingMessageProvider.notifier).state = message;
+                    ref.read(draftMessageProvider.notifier).update((state) => message.content);
+                    ref.read(editingMessageProvider.notifier).setEditingMessage(message);
                     Navigator.pop(context);
                   }),
                 ] else ...[

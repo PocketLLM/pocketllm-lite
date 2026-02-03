@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -297,7 +296,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             _controller.text,
             attachments: _selectedFiles.isNotEmpty ? _selectedFiles : null,
           );
-      ref.read(editingMessageProvider.notifier).state = null;
+      ref.read(editingMessageProvider.notifier).clearEditingMessage();
     } else {
       ref.read(chatProvider.notifier).sendMessage(
             _controller.text,
@@ -570,7 +569,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         );
         _focusNode.requestFocus();
         // Reset the provider to avoid re-triggering or stale state
-        ref.read(draftMessageProvider.notifier).state = null;
+        ref.read(draftMessageProvider.notifier).update((state) => null);
       }
     });
 
@@ -678,7 +677,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     ),
                     TextButton(
                       onPressed: () {
-                        ref.read(editingMessageProvider.notifier).state = null;
+                        ref.read(editingMessageProvider.notifier).clearEditingMessage();
                         _controller.clear();
                         setState(() {
                           _selectedFiles.clear();
