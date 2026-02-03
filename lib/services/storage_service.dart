@@ -10,6 +10,7 @@ import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
+import '../features/files/domain/models/file_item.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
@@ -238,6 +239,32 @@ class StorageService {
 
   Set<String> getAvailableModels() {
     return getChatSessions().map((s) => s.model).toSet();
+  }
+
+  List<FileItem> getAllAttachments() {
+    final sessions = getChatSessions();
+    final items = <FileItem>[];
+
+    for (final session in sessions) {
+      for (final message in session.messages) {
+        if (message.attachments != null && message.attachments!.isNotEmpty) {
+          for (final attachment in message.attachments!) {
+            items.add(
+              FileItem(
+                chatId: session.id,
+                chatTitle: session.title,
+                timestamp: message.timestamp,
+                attachment: attachment,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp desc
+    items.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return items;
   }
 
   Future<void> saveSystemPrompt(SystemPrompt prompt) async {
