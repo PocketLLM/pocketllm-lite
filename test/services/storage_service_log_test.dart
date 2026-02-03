@@ -93,5 +93,29 @@ void main() {
         expect(json, contains('"action": "Settings Changed"'));
       },
     );
+
+    test('exportActivityLogsToCsv respects filtered logs', () {
+      final filteredLogs = [storage.activityLogs.first];
+      final csv = storage.exportActivityLogsToCsv(logs: filteredLogs);
+
+      expect(csv, contains('Chat Created'));
+      expect(csv, isNot(contains('Settings Changed')));
+    });
+
+    test('exportActivityLogsToJson respects filtered logs', () {
+      final filteredLogs = [storage.activityLogs.first];
+      final json = storage.exportActivityLogsToJson(logs: filteredLogs);
+
+      expect(json, contains('Chat Created'));
+      expect(json, isNot(contains('Settings Changed')));
+    });
+
+    test('exportActivityLogsToPdf logs activity', () async {
+      final bytes = await storage.exportActivityLogsToPdf();
+      expect(storage.logs.length, 1);
+      expect(storage.logs.first['action'], 'Data Export');
+      expect(storage.logs.first['details'], contains('activity logs as PDF'));
+      expect(bytes, isNotNull);
+    });
   });
 }

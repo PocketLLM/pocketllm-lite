@@ -828,14 +828,14 @@ class StorageService {
     return buffer.toString();
   }
 
-  String exportActivityLogsToCsv() {
+  String exportActivityLogsToCsv({List<Map<String, dynamic>>? logs}) {
     logActivity('Data Export', 'Exported activity logs as CSV');
     final buffer = StringBuffer();
     // Header
     buffer.writeln('Timestamp,Action,Details');
 
     // Rows
-    for (final log in getActivityLogs()) {
+    for (final log in logs ?? getActivityLogs()) {
       final timestamp = _escapeCsv(log['timestamp'] ?? '');
       final action = _escapeCsv(log['action'] ?? '');
       final details = _escapeCsv(log['details'] ?? '');
@@ -846,10 +846,18 @@ class StorageService {
     return buffer.toString();
   }
 
-  String exportActivityLogsToJson() {
+  String exportActivityLogsToJson({List<Map<String, dynamic>>? logs}) {
     logActivity('Data Export', 'Exported activity logs as JSON');
-    final logs = getActivityLogs();
-    return const JsonEncoder.withIndent('  ').convert(logs);
+    final logsToExport = logs ?? getActivityLogs();
+    return const JsonEncoder.withIndent('  ').convert(logsToExport);
+  }
+
+  Future<Uint8List> exportActivityLogsToPdf({
+    List<Map<String, dynamic>>? logs,
+  }) async {
+    logActivity('Data Export', 'Exported activity logs as PDF');
+    final logsToExport = logs ?? getActivityLogs();
+    return await PdfExportService().generateActivityLogPdf(logs: logsToExport);
   }
 
   Future<Uint8List> exportToPdf({List<String>? chatIds}) async {

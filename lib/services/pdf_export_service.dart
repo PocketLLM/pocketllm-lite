@@ -38,6 +38,84 @@ class PdfExportService {
     return await pdf.save();
   }
 
+  Future<Uint8List> generateActivityLogPdf({
+    required List<Map<String, dynamic>> logs,
+  }) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Activity Log',
+                    style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.Text(
+                    'Generated: ${DateTime.now().toString().split('.')[0]}',
+                    style: const pw.TextStyle(
+                      fontSize: 10,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Table.fromTextArray(
+              context: context,
+              headers: ['Timestamp', 'Action', 'Details'],
+              data:
+                  logs.map((log) {
+                    final timestamp =
+                        log['timestamp']?.toString().split('.')[0] ?? '';
+                    final action = log['action']?.toString() ?? '';
+                    final details = log['details']?.toString() ?? '';
+                    return [timestamp, action, details];
+                  }).toList(),
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColors.blueGrey800,
+              ),
+              rowDecoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                ),
+              ),
+              cellAlignment: pw.Alignment.centerLeft,
+              cellAlignments: {
+                0: pw.Alignment.centerLeft,
+                1: pw.Alignment.centerLeft,
+                2: pw.Alignment.centerLeft,
+              },
+              columnWidths: {
+                0: const pw.FixedColumnWidth(100), // Timestamp
+                1: const pw.FixedColumnWidth(120), // Action
+                2: const pw.FlexColumnWidth(), // Details
+              },
+              cellPadding: const pw.EdgeInsets.all(5),
+            ),
+          ];
+        },
+      ),
+    );
+
+    return await pdf.save();
+  }
+
   pw.Widget _buildHeader(ChatSession session) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,

@@ -97,6 +97,19 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
               ),
             ),
           ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'pdf'),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.picture_as_pdf_outlined, color: Colors.red),
+                  SizedBox(width: 12),
+                  Text('PDF (Document)'),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -109,19 +122,31 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
       File file;
       String subject;
 
+      // Calculate currently filtered logs
+      final allLogs = storage.getActivityLogs();
+      final filteredLogs = _filterLogs(allLogs);
+
       if (format == 'csv') {
-        final csvString = storage.exportActivityLogsToCsv();
+        final csvString = storage.exportActivityLogsToCsv(logs: filteredLogs);
         file = File('${directory.path}/pocketllm_logs_$timestamp.csv');
         await file.writeAsString(csvString);
         subject = 'Activity Logs (CSV)';
-      } else {
-        final jsonString = storage.exportActivityLogsToJson();
+      } else if (format == 'json') {
+        final jsonString = storage.exportActivityLogsToJson(logs: filteredLogs);
         file = File('${directory.path}/pocketllm_logs_$timestamp.json');
         await file.writeAsString(jsonString);
         subject = 'Activity Logs (JSON)';
+      } else {
+        final pdfBytes = await storage.exportActivityLogsToPdf(
+          logs: filteredLogs,
+        );
+        file = File('${directory.path}/pocketllm_logs_$timestamp.pdf');
+        await file.writeAsBytes(pdfBytes);
+        subject = 'Activity Logs (PDF)';
       }
 
       if (mounted) {
+        // ignore: deprecated_member_use
         await SharePlus.instance.share(
           ShareParams(
             files: [XFile(file.path)],
