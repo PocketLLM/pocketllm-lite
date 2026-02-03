@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -13,6 +14,9 @@ import '../providers/chat_provider.dart';
 import '../providers/prompt_enhancer_provider.dart';
 import '../providers/connection_status_provider.dart';
 import '../providers/draft_message_provider.dart';
+import '../providers/editing_message_provider.dart';
+import '../../domain/models/text_file_attachment.dart';
+import '../../domain/models/chat_message.dart';
 import 'templates_sheet.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
@@ -27,7 +31,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final _focusNode = FocusNode();
   final _picker = ImagePicker();
   final List<Uint8List> _selectedImages = [];
+  final List<TextFileAttachment> _selectedFiles = [];
   Timer? _debounceTimer;
+  bool _limitHapticTriggered = false;
 
   @override
   void initState() {
@@ -71,6 +77,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       final storage = ref.read(storageServiceProvider);
       storage.saveDraft(draftKey, _controller.text);
     });
+
+    final hasReachedLimit =
+        _controller.text.length >= AppConstants.maxInputLength;
+    if (hasReachedLimit && !_limitHapticTriggered) {
+      HapticFeedback.heavyImpact();
+      _limitHapticTriggered = true;
+    } else if (!hasReachedLimit) {
+      _limitHapticTriggered = false;
+    }
   }
 
   Future<void> _pickImage() async {
@@ -141,9 +156,61 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
   }
 
+  Future<void> _pickFile() async {
+    final storage = ref.read(storageServiceProvider);
+    if (storage.getSetting(
+      AppConstants.hapticFeedbackKey,
+      defaultValue: false,
+    )) {
+      HapticFeedback.selectionClick();
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['txt', 'md', 'json', 'csv', 'log'],
+      allowMultiple: false,
+      withData: true,
+    );
+
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    if (file.bytes == null) return;
+
+    final maxBytes = AppConstants.maxTextFileAttachmentBytes;
+    if (file.bytes!.lengthInBytes > maxBytes) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('File too large. Limit to 200KB.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    final content = String.fromCharCodes(file.bytes!);
+    setState(() {
+      _selectedFiles.add(
+        TextFileAttachment(
+          name: file.name,
+          content: content,
+          sizeBytes: file.bytes!.lengthInBytes,
+          mimeType: file.extension != null
+              ? 'text/${file.extension}'
+              : 'text/plain',
+        ),
+      );
+    });
+  }
+
   void _send() async {
     final text = _controller.text;
-    if (text.trim().isEmpty && _selectedImages.isEmpty) return;
+    if (text.trim().isEmpty &&
+        _selectedImages.isEmpty &&
+        _selectedFiles.isEmpty) {
+      return;
+    }
 
     if (text.length > AppConstants.maxInputLength) {
       if (mounted) {
@@ -221,16 +288,27 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final draftKey = sessionId ?? 'new_chat';
     await storage.deleteDraft(draftKey);
 
-    ref
-        .read(chatProvider.notifier)
-        .sendMessage(
-          _controller.text,
-          images: imagesToSend.isNotEmpty ? imagesToSend : null,
-        );
+    final editingMessage = ref.read(editingMessageProvider);
+
+    if (editingMessage != null) {
+      await ref.read(chatProvider.notifier).editMessage(
+            editingMessage,
+            _controller.text,
+            attachments: _selectedFiles.isNotEmpty ? _selectedFiles : null,
+          );
+      ref.read(editingMessageProvider.notifier).clearEditingMessage();
+    } else {
+      ref.read(chatProvider.notifier).sendMessage(
+            _controller.text,
+            images: imagesToSend.isNotEmpty ? imagesToSend : null,
+            attachments: _selectedFiles.isNotEmpty ? _selectedFiles : null,
+          );
+    }
 
     _controller.clear();
     setState(() {
       _selectedImages.clear();
+      _selectedFiles.clear();
     });
   }
 
@@ -491,7 +569,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         );
         _focusNode.requestFocus();
         // Reset the provider to avoid re-triggering or stale state
-        ref.read(draftMessageProvider.notifier).state = null;
+        ref.read(draftMessageProvider.notifier).update((state) => null);
+      }
+    });
+
+    ref.listen<ChatMessage?>(editingMessageProvider, (previous, next) {
+      if (next != null) {
+        _controller.text = next.content;
+        _controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: next.content.length),
+        );
+        setState(() {
+          _selectedFiles
+            ..clear()
+            ..addAll(next.attachments ?? []);
+        });
+        _focusNode.requestFocus();
       }
     });
 
@@ -525,6 +618,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
     final theme = Theme.of(context);
     final isGenerating = ref.watch(chatProvider.select((s) => s.isGenerating));
+    final editingMessage = ref.watch(editingMessageProvider);
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
@@ -554,6 +648,46 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (editingMessage != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer.withValues(
+                    alpha: 0.6,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.edit,
+                      size: 16,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Editing message',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        ref.read(editingMessageProvider.notifier).clearEditingMessage();
+                        _controller.clear();
+                        setState(() {
+                          _selectedFiles.clear();
+                        });
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                ),
+              ),
             if (_selectedImages.isNotEmpty)
               Container(
                 height: 70,
@@ -607,6 +741,69 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ],
                     ),
                   ),
+                ),
+              ),
+            if (_selectedFiles.isNotEmpty)
+              Container(
+                height: 60,
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedFiles.length,
+                  itemBuilder: (c, i) {
+                    final attachment = _selectedFiles[i];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Semantics(
+                        label: 'Attached file ${attachment.name}',
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: theme.colorScheme.outlineVariant,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.description, size: 16),
+                              const SizedBox(width: 8),
+                              ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 120),
+                                child: Text(
+                                  attachment.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelMedium,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                tooltip: 'Remove file',
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedFiles.removeAt(i);
+                                  });
+                                },
+                                icon: const Icon(Icons.close, size: 16),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             AnimatedContainer(
@@ -714,6 +911,34 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ),
                     ),
                     const SizedBox(width: 8),
+                    Semantics(
+                      label: 'Insert File',
+                      button: true,
+                      enabled: !isGenerating,
+                      child: Tooltip(
+                        message: 'Insert Text File',
+                        child: Material(
+                          color: (isDark ? Colors.grey[800] : Colors.grey[300])
+                              ?.withValues(alpha: isGenerating ? 0.5 : 1.0),
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: isGenerating ? null : _pickFile,
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.attach_file,
+                                size: 20,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: isGenerating ? 0.5 : 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     // Templates Button
                     Semantics(
                       label: 'Templates',
@@ -809,43 +1034,74 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   builder: (context, value, child) {
                     final canSend =
                         (value.text.trim().isNotEmpty ||
-                            _selectedImages.isNotEmpty) &&
+                            _selectedImages.isNotEmpty ||
+                            _selectedFiles.isNotEmpty) &&
                         !isGenerating;
+                    final charCount = value.text.length;
+                    final maxLength = AppConstants.maxInputLength;
+                    final remaining = maxLength - charCount;
+                    final counterColor = remaining <= 200
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onSurfaceVariant;
 
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        color: canSend
-                            ? theme.colorScheme.primary
-                            : Colors.grey,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        onPressed: canSend ? _send : null,
-                        icon: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          transitionBuilder: (child, animation) =>
-                              ScaleTransition(scale: animation, child: child),
-                          child: isGenerating
-                              ? SizedBox(
-                                  key: const ValueKey('spinner'),
-                                  width: 18,
-                                  height: 18,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(
-                                      Colors.white,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ExcludeSemantics(
+                            child: Text(
+                              '$charCount/$maxLength',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: counterColor,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: canSend
+                                  ? theme.colorScheme.primary
+                                  : Colors.grey,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              onPressed: canSend ? _send : null,
+                              icon: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                transitionBuilder: (child, animation) =>
+                                    ScaleTransition(
+                                      scale: animation,
+                                      child: child,
                                     ),
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.arrow_upward,
-                                  key: ValueKey('send_icon'),
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                        ),
-                        tooltip: isGenerating ? 'Generating...' : 'Send',
+                                child: isGenerating
+                                    ? SizedBox(
+                                        key: const ValueKey('spinner'),
+                                        width: 18,
+                                        height: 18,
+                                        child: const CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation(
+                                            Colors.white,
+                                          ),
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.arrow_upward,
+                                        key: ValueKey('send_icon'),
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                              ),
+                              tooltip: isGenerating
+                                  ? 'Generating...'
+                                  : 'Send (Ctrl/⌘ + Enter)',
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },

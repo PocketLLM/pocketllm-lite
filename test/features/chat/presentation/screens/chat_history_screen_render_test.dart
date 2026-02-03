@@ -8,7 +8,6 @@ import 'package:pocketllm_lite/core/providers.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_session.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
 import 'package:pocketllm_lite/services/usage_limits_provider.dart';
 
 // Create a mock StorageService

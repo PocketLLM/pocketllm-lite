@@ -18,10 +18,13 @@ A premium, privacy-first, offline AI chat application for Android/iOS, integrati
 
 *   **Offline AI**: Zero data latency. All chats processed locally via Ollama.
 *   **Multimedia Support**: Vision-capable chat (e.g., Llama 3.2 Vision, Llava).
+*   **Media Gallery**: Browse all shared images globally or per chat.
+*   **File Attachments**: Attach text/code files for context-aware answers.
 *   **Premium Customization**:
     *   **Live Preview**: Theme your chat bubbles, create presets, and adjust corner radius.
     *   **Dynamic Chat History**: Rename, bulk delete, and organize chats.
     *   **System Prompts**: 15+ rich presets (Productivity Coach, Fitness Trainer, etc.).
+*   **Tag Management**: Organize chats with tags and bulk tagging tools.
 *   **Interactive UI**: Haptic feedback, smooth animations, and a focused menu for messages.
 *   **Markdown Support**: Full rendering for code blocks, tables, and links.
 *   **Privacy Centric**: History stored locally using secure Hive database.
@@ -156,9 +159,12 @@ lib/
 │   ├── chat/           # Chat logic, UI, and bubbles
 │   │   ├── domain/     # Data models and business logic
 │   │   └── presentation/ # Screens, widgets, and providers
+│   ├── media/          # Media gallery features
 │   ├── history/        # Chat history management
 │   ├── onboarding/     # First-time user experience
+│   ├── profile/        # User profile customization
 │   ├── settings/       # App configuration and customization
+│   ├── tags/           # Tag management UI
 │   └── splash/         # Initial loading screen
 ├── services/           # OllamaService, StorageService
 └── main.dart           # Application entry point
@@ -169,7 +175,9 @@ lib/
 ### Chat Interface
 - Real-time streaming responses from Ollama models
 - Support for multimodal inputs (text and images)
+- Attach text files as context ("RAG-lite")
 - Interactive message bubbles with copy/share options
+- Message editing and regeneration workflows
 - Markdown rendering for rich text formatting
 - System prompt integration for specialized behaviors
 
@@ -178,6 +186,7 @@ lib/
 - Organize chats with custom names and tags
 - Bulk operations for managing multiple conversations
 - Search functionality to find specific conversations
+- Global media gallery for chat images
 
 ### Customization
 - Dynamic theme switching (light/dark mode)
@@ -185,6 +194,7 @@ lib/
 - Font size customization
 - Avatar visibility toggle
 - Background color options
+- Profile customization (display name and avatar color)
 
 ### Settings Management
 - Ollama endpoint configuration
@@ -197,6 +207,13 @@ lib/
 - AI-powered prompt improvement using any Ollama model
 - Fixed system prompt optimized for best enhancement results
 - 5 free enhancements per 24 hours (watch ad to unlock more)
+
+## 🧩 Media, Tags, and Attachments
+
+- **Media Gallery**: Open **Settings → Media Gallery** to browse every image shared across chats, or tap the gallery icon in a chat to view media for that conversation.
+- **Tag Management**: Use **Settings → Tag Management** to rename or delete tags globally.
+- **File Attachments**: Tap the paperclip in the chat input to attach text files (TXT/MD/JSON/CSV/LOG). Attachments are injected into the prompt locally for context.
+- **Attachment Limits**: Text attachments are limited to 200KB each to keep prompts fast and responsive.
 
 ## 💰 Monetization (AdMob)
 

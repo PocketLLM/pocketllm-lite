@@ -14,6 +14,7 @@ import 'widgets/chat_body.dart';
 import 'widgets/chat_input.dart';
 import 'dialogs/chat_settings_dialog.dart';
 import 'screens/chat_history_screen.dart';
+import '../../media/presentation/screens/media_gallery_screen.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -211,6 +212,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.photo_library_outlined),
+            tooltip: 'Media Gallery',
+            onPressed: () {
+              final sessionId = ref.read(chatProvider).currentSessionId;
+              final storage = ref.read(storageServiceProvider);
+              if (sessionId == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('No media yet for this chat.'),
+                  ),
+                );
+                return;
+              }
+              final session = storage.getChatSession(sessionId);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => MediaGalleryScreen(
+                    chatId: sessionId,
+                    chatTitle: session?.title ?? 'Chat',
+                  ),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'History',

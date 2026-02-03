@@ -25,6 +25,9 @@ class AppConstants {
   static const String messageTemplatesKey = 'message_templates';
   static const String chatDraftsKey = 'chat_drafts';
   static const String starredMessagesKey = 'starred_messages';
+  static const String profileNameKey = 'profile_name';
+  static const String profileBioKey = 'profile_bio';
+  static const String profileAvatarColorKey = 'profile_avatar_color';
 
   // Model Settings
   static const String modelSettingsPrefixKey = 'model_settings_';
@@ -93,4 +96,5 @@ class AppConstants {
   static const int maxInputLength = 50000;
   static const Duration apiConnectionTimeout = Duration(seconds: 10);
   static const Duration apiGenerationTimeout = Duration(seconds: 30);
+  static const int maxTextFileAttachmentBytes = 200 * 1024;
 }
