@@ -261,6 +261,86 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       );
     }
 
+    // Optimize: Pre-build expensive content (Images, Markdown) outside the ValueListenableBuilder.
+    // This prevents re-parsing Markdown or re-building images when only the starred status changes.
+    final messageContentWidget = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_decodedImages != null && _decodedImages!.isNotEmpty)
+          ..._decodedImages!.map(
+            (bytes) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: InkWell(
+                  onTap: () => _showImageViewer(bytes),
+                  child: Image.memory(
+                    bytes,
+                    height: 150,
+                    fit: BoxFit.cover,
+                    // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
+                    cacheHeight: 450,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (isUser)
+          Text(
+            message.content,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: Colors.white,
+              fontSize: fontSize,
+            ),
+          )
+        else
+          MarkdownBody(
+            data: message.content,
+            // ignore: deprecated_member_use
+            imageBuilder: MarkdownHandlers.imageBuilder,
+            onTapLink: (text, href, title) async {
+              if (href != null) {
+                final uri = Uri.tryParse(href);
+                // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
+                if (uri != null &&
+                    UrlValidator.isSecureUrl(uri) &&
+                    await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              }
+            },
+            styleSheet: _getStyleSheet(theme, fontSize),
+          ),
+        if (message.attachments != null && message.attachments!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: message.attachments!.map((attachment) {
+                return ActionChip(
+                  avatar: const Icon(
+                    Icons.description,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                  label: Text(
+                    attachment.name,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  backgroundColor: Colors.black.withValues(alpha: 0.2),
+                  onPressed: () => _showAttachmentViewer(
+                    attachment.name,
+                    attachment.content,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+      ],
+    );
+
     return ValueListenableBuilder(
       valueListenable: storage.starredMessagesListenable,
       builder: (context, _, __) {
@@ -330,88 +410,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (_decodedImages != null &&
-                                _decodedImages!.isNotEmpty)
-                              ..._decodedImages!.map(
-                                (bytes) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 8.0),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: InkWell(
-                                      onTap: () => _showImageViewer(bytes),
-                                      child: Image.memory(
-                                        bytes,
-                                        height: 150,
-                                        fit: BoxFit.cover,
-                                        // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
-                                        cacheHeight: 450,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            if (isUser)
-                              Text(
-                                message.content,
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: Colors.white,
-                                  fontSize: fontSize,
-                                ),
-                              )
-                            else
-                              MarkdownBody(
-                                data: message.content,
-                                // ignore: deprecated_member_use
-                                imageBuilder: MarkdownHandlers.imageBuilder,
-                                onTapLink: (text, href, title) async {
-                                  if (href != null) {
-                                    final uri = Uri.tryParse(href);
-                                    // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
-                                    if (uri != null &&
-                                        UrlValidator.isSecureUrl(uri) &&
-                                        await canLaunchUrl(uri)) {
-                                      await launchUrl(
-                                        uri,
-                                        mode: LaunchMode.externalApplication,
-                                      );
-                                    }
-                                  }
-                                },
-                                styleSheet: _getStyleSheet(theme, fontSize),
-                              ),
-                            if (message.attachments != null &&
-                                message.attachments!.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: message.attachments!.map((
-                                    attachment,
-                                  ) {
-                                    return ActionChip(
-                                      avatar: const Icon(
-                                        Icons.description,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                      label: Text(
-                                        attachment.name,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      backgroundColor: Colors.black.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      onPressed: () => _showAttachmentViewer(
-                                        attachment.name,
-                                        attachment.content,
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
+                            messageContentWidget,
                             // Timestamp display
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0),
