@@ -661,7 +661,31 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     required currentLength,
                     required isFocused,
                     required maxLength,
-                  }) => null,
+                  }) {
+                    if (maxLength == null) return null;
+                    final percentage = currentLength / maxLength;
+                    if (percentage < 0.8) return null;
+
+                    Color color;
+                    if (percentage < 0.9) {
+                      color = theme.textTheme.bodySmall?.color ?? Colors.grey;
+                    } else if (percentage < 1.0) {
+                      color = Colors.orange;
+                    } else {
+                      color = Colors.red;
+                    }
+
+                    return Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        '$currentLength/$maxLength',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  },
                   decoration: InputDecoration(
                     hintText: _isEnhancing
                         ? 'Enhancing your prompt...'
