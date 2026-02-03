@@ -30,7 +30,6 @@ class _TemplateManagementScreenState extends ConsumerState<TemplateManagementScr
         ),
       ),
       body: TemplatesSheet(
-        isFullScreen: true,
         // In management mode, selection is not primary, but we can allow copying or editing.
         // The sheet handles editing/deleting. Selection returns content.
         onSelect: (content) {

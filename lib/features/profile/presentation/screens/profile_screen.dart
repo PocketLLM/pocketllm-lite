@@ -123,7 +123,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Wrap(
             spacing: 8,
             children: _colorOptions.map((option) {
-              final isSelected = _avatarColor.value == option.value.value;
+              final isSelected = _avatarColor.toARGB32() == option.value.toARGB32();
               return ChoiceChip(
                 label: Text(option.key),
                 selected: isSelected,
