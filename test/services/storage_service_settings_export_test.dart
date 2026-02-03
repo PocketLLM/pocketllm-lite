@@ -25,7 +25,7 @@ class TestStorageService extends StorageService {
 
   @override
   Future<void> saveSetting(String key, dynamic value) async {
-     // Mock save
+    // Mock save
   }
 }
 
@@ -47,7 +47,7 @@ void main() {
       final result = service.exportData(
         includeChats: false,
         includePrompts: false,
-        includeSettings: true
+        includeSettings: true,
       );
 
       expect(result['settings'], isNotNull);
@@ -60,7 +60,7 @@ void main() {
       final result = service.exportData(
         includeChats: false,
         includePrompts: false,
-        includeSettings: false
+        includeSettings: false,
       );
 
       expect(result['settings'], isNull);

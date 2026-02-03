@@ -62,8 +62,9 @@ class StorageService {
       _cachedSessions!.removeWhere((session) => session.id == event.key);
     } else if (event.value != null) {
       final ChatSession updatedSession = event.value as ChatSession;
-      final index = _cachedSessions!
-          .indexWhere((session) => session.id == updatedSession.id);
+      final index = _cachedSessions!.indexWhere(
+        (session) => session.id == updatedSession.id,
+      );
 
       if (index != -1) {
         final oldSession = _cachedSessions![index];
@@ -100,8 +101,7 @@ class StorageService {
 
     // Optimistic update for immediate UI response
     if (_cachedSessions != null) {
-      final index =
-          _cachedSessions!.indexWhere((s) => s.id == session.id);
+      final index = _cachedSessions!.indexWhere((s) => s.id == session.id);
       if (index != -1) {
         _cachedSessions![index] = session;
         // Assume createdAt didn't change for optimization in save path
@@ -109,7 +109,9 @@ class StorageService {
         // If it's a new session, it's likely the newest, so insert at top
         if (_cachedSessions!.isEmpty ||
             session.createdAt.isAfter(_cachedSessions!.first.createdAt) ||
-            session.createdAt.isAtSameMomentAs(_cachedSessions!.first.createdAt)) {
+            session.createdAt.isAtSameMomentAs(
+              _cachedSessions!.first.createdAt,
+            )) {
           _cachedSessions!.insert(0, session);
         } else {
           _cachedSessions!.add(session);
@@ -120,7 +122,10 @@ class StorageService {
     await _chatBox.put(session.id, session);
 
     if (log && isNew) {
-      await logActivity('Chat Created', 'Created new chat (ID: ${session.id}) with model ${session.model}');
+      await logActivity(
+        'Chat Created',
+        'Created new chat (ID: ${session.id}) with model ${session.model}',
+      );
     }
   }
 
@@ -240,15 +245,24 @@ class StorageService {
     await _systemPromptBox.put(prompt.id, prompt);
 
     if (isNew) {
-      await logActivity('System Prompt Created', 'Created system prompt (ID: ${prompt.id})');
+      await logActivity(
+        'System Prompt Created',
+        'Created system prompt (ID: ${prompt.id})',
+      );
     } else {
-      await logActivity('System Prompt Updated', 'Updated system prompt (ID: ${prompt.id})');
+      await logActivity(
+        'System Prompt Updated',
+        'Updated system prompt (ID: ${prompt.id})',
+      );
     }
   }
 
   Future<void> deleteSystemPrompt(String id) async {
     await _systemPromptBox.delete(id);
-    await logActivity('System Prompt Deleted', 'Deleted system prompt (ID: $id)');
+    await logActivity(
+      'System Prompt Deleted',
+      'Deleted system prompt (ID: $id)',
+    );
   }
 
   // Settings
@@ -257,7 +271,7 @@ class StorageService {
     // Don't log every setting change to avoid noise, or log specific important ones?
     // logging Ollama URL change might be good.
     if (key == AppConstants.ollamaBaseUrlKey) {
-       await logActivity('Settings Changed', 'Updated Ollama Base URL');
+      await logActivity('Settings Changed', 'Updated Ollama Base URL');
     }
   }
 
@@ -341,10 +355,7 @@ class StorageService {
       archivedIds.removeAll(targetIds);
     }
 
-    await _settingsBox.put(
-      AppConstants.archivedChatsKey,
-      archivedIds.toList(),
-    );
+    await _settingsBox.put(AppConstants.archivedChatsKey, archivedIds.toList());
 
     await logActivity(
       archived ? 'Chats Archived' : 'Chats Unarchived',
@@ -469,10 +480,7 @@ class StorageService {
     }
 
     await _settingsBox.put(AppConstants.chatTagsKey, map);
-    await logActivity(
-      'Tag Renamed',
-      'Renamed tag "$cleanOld" to "$cleanNew"',
-    );
+    await logActivity('Tag Renamed', 'Renamed tag "$cleanOld" to "$cleanNew"');
   }
 
   Future<void> deleteTag(String tag) async {
@@ -509,7 +517,10 @@ class StorageService {
           map[chatId] = tags;
         }
         await _settingsBox.put(AppConstants.chatTagsKey, map);
-        await logActivity('Tag Removed', 'Removed tag "$tag" from chat $chatId');
+        await logActivity(
+          'Tag Removed',
+          'Removed tag "$tag" from chat $chatId',
+        );
       }
     }
   }
@@ -529,10 +540,16 @@ class StorageService {
 
     if (index != -1) {
       templates[index] = template;
-      await logActivity('Template Updated', 'Updated template "${template['title']}"');
+      await logActivity(
+        'Template Updated',
+        'Updated template "${template['title']}"',
+      );
     } else {
       templates.add(template);
-      await logActivity('Template Created', 'Created template "${template['title']}"');
+      await logActivity(
+        'Template Created',
+        'Created template "${template['title']}"',
+      );
     }
 
     await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
@@ -548,7 +565,10 @@ class StorageService {
     if (template.isNotEmpty) {
       templates.removeWhere((t) => t['id'] == id);
       await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
-      await logActivity('Template Deleted', 'Deleted template "${template['title']}"');
+      await logActivity(
+        'Template Deleted',
+        'Deleted template "${template['title']}"',
+      );
     }
   }
 
@@ -621,7 +641,10 @@ class StorageService {
       // Unstar
       starred.removeAt(index);
       await saveStarredMessages(starred);
-      await logActivity('Message Unstarred', 'Unstarred message in chat $chatId');
+      await logActivity(
+        'Message Unstarred',
+        'Unstarred message in chat $chatId',
+      );
     } else {
       // Star
       final newStar = StarredMessage(
@@ -650,7 +673,10 @@ class StorageService {
 
     if (starred.length != initialLength) {
       await saveStarredMessages(starred);
-      await logActivity('Message Unstarred', 'Unstarred message (ID: $starredMessageId)');
+      await logActivity(
+        'Message Unstarred',
+        'Unstarred message (ID: $starredMessageId)',
+      );
     }
   }
 
@@ -678,7 +704,9 @@ class StorageService {
   }
 
   List<Map<String, dynamic>> getActivityLogs() {
-    final logs = _activityLogBox.values.map((e) => Map<String, dynamic>.from(e)).toList();
+    final logs = _activityLogBox.values
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
     // Sort by timestamp desc
     logs.sort((a, b) {
       final tA = DateTime.parse(a['timestamp']);
@@ -720,8 +748,9 @@ class StorageService {
 
     if (includePrompts) {
       // Prompts are not filtered by chatIds
-      data['prompts'] =
-          getSystemPrompts().map((p) => _systemPromptToJson(p)).toList();
+      data['prompts'] = getSystemPrompts()
+          .map((p) => _systemPromptToJson(p))
+          .toList();
     }
 
     if (includeSettings) {
@@ -759,6 +788,7 @@ class StorageService {
       AppConstants.profileNameKey,
       AppConstants.profileBioKey,
       AppConstants.profileAvatarColorKey,
+      AppConstants.profileAvatarImageKey,
     };
 
     for (final key in _settingsBox.keys) {
@@ -889,7 +919,9 @@ class StorageService {
       escaped = "'$escaped";
     }
 
-    if (escaped.contains(',') || escaped.contains('"') || escaped.contains('\n')) {
+    if (escaped.contains(',') ||
+        escaped.contains('"') ||
+        escaped.contains('\n')) {
       return '"${escaped.replaceAll('"', '""')}"';
     }
     return escaped;
@@ -929,11 +961,7 @@ class StorageService {
   }
 
   Map<String, dynamic> _systemPromptToJson(SystemPrompt prompt) {
-    return {
-      'id': prompt.id,
-      'title': prompt.title,
-      'content': prompt.content,
-    };
+    return {'id': prompt.id, 'title': prompt.title, 'content': prompt.content};
   }
 
   bool _isAllowedSettingValue(String key, dynamic value) {
@@ -944,6 +972,7 @@ class StorageService {
       case AppConstants.promptEnhancerModelKey:
       case AppConstants.profileNameKey:
       case AppConstants.profileBioKey:
+      case AppConstants.profileAvatarImageKey:
         return value is String;
       case AppConstants.autoSaveChatsKey:
       case AppConstants.hapticFeedbackKey:
@@ -996,6 +1025,7 @@ class StorageService {
       AppConstants.profileNameKey,
       AppConstants.profileBioKey,
       AppConstants.profileAvatarColorKey,
+      AppConstants.profileAvatarImageKey,
     };
   }
 
@@ -1103,19 +1133,19 @@ class StorageService {
       role: json['role'],
       content: json['content'],
       timestamp: DateTime.parse(json['timestamp']),
-      images:
-          json['images'] != null ? List<String>.from(json['images']) : null,
+      images: json['images'] != null ? List<String>.from(json['images']) : null,
       attachments: attachments is List
           ? attachments
-              .map(
-                (item) => TextFileAttachment(
-                  name: item['name'],
-                  content: item['content'],
-                  sizeBytes: item['sizeBytes'] ?? item['content']?.length ?? 0,
-                  mimeType: item['mimeType'],
-                ),
-              )
-              .toList()
+                .map(
+                  (item) => TextFileAttachment(
+                    name: item['name'],
+                    content: item['content'],
+                    sizeBytes:
+                        item['sizeBytes'] ?? item['content']?.length ?? 0,
+                    mimeType: item['mimeType'],
+                  ),
+                )
+                .toList()
           : null,
     );
   }
@@ -1148,10 +1178,8 @@ class StorageService {
       }
     }
 
-    final totalTokensUsed = getSetting(
-      AppConstants.totalTokensUsedKey,
-      defaultValue: 0,
-    ) as int;
+    final totalTokensUsed =
+        getSetting(AppConstants.totalTokensUsedKey, defaultValue: 0) as int;
 
     // Calculate Daily Activity (Last 7 Days)
     final now = DateTime.now();

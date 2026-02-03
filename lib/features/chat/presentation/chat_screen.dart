@@ -33,7 +33,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     // Only watch selectedModel for the AppBar title to prevent unnecessary rebuilds of AppBar
     // when streaming content changes.
-    final selectedModel = ref.watch(chatProvider.select((s) => s.selectedModel));
+    final selectedModel = ref.watch(
+      chatProvider.select((s) => s.selectedModel),
+    );
     final modelsAsync = ref.watch(modelsProvider);
     final connectionStatusAsync = ref.watch(autoConnectionStatusProvider);
 
@@ -50,7 +52,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
@@ -69,9 +73,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             const SizedBox(width: 6),
                             Text(
                               'Not Connected',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
+                              style: Theme.of(context).textTheme.labelMedium
                                   ?.copyWith(
                                     color: Colors.red,
                                     fontWeight: FontWeight.bold,
@@ -102,7 +104,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                       return Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.withValues(alpha: 0.4),
                           borderRadius: BorderRadius.circular(20),
@@ -116,19 +120,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               size: 20,
                               color: Theme.of(context).iconTheme.color,
                             ),
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
-                                  color: Theme.of(context).brightness ==
+                                  color:
+                                      Theme.of(context).brightness ==
                                           Brightness.dark
                                       ? Colors.white
                                       : Colors.black,
                                 ),
                             dropdownColor:
                                 Theme.of(context).brightness == Brightness.dark
-                                    ? const Color(0xFF1E1E1E)
-                                    : Colors.white,
+                                ? const Color(0xFF1E1E1E)
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             elevation: 4,
                             selectedItemBuilder: (BuildContext context) {
@@ -139,15 +142,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     Icon(
                                       Icons.smart_toy_outlined,
                                       size: 16,
-                                      color: Theme.of(context).brightness ==
+                                      color:
+                                          Theme.of(context).brightness ==
                                               Brightness.dark
                                           ? Colors.white70
                                           : Colors.black87,
                                     ),
                                     const SizedBox(width: 8),
                                     ConstrainedBox(
-                                      constraints:
-                                          const BoxConstraints(maxWidth: 150),
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 150,
+                                      ),
                                       child: Text(
                                         m.name,
                                         overflow: TextOverflow.ellipsis,
@@ -155,7 +160,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                             .textTheme
                                             .bodyMedium
                                             ?.copyWith(
-                                                fontWeight: FontWeight.bold),
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                     ),
                                   ],
@@ -171,7 +177,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     Icon(
                                       Icons.smart_toy_outlined,
                                       size: 16,
-                                      color: Theme.of(context).brightness ==
+                                      color:
+                                          Theme.of(context).brightness ==
                                               Brightness.dark
                                           ? Colors.white70
                                           : Colors.black87,
@@ -180,9 +187,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     Text(
                                       m.name,
                                       overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium,
                                     ),
                                   ],
                                 ),
@@ -220,9 +227,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               final storage = ref.read(storageServiceProvider);
               if (sessionId == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('No media yet for this chat.'),
-                  ),
+                  const SnackBar(content: Text('No media yet for this chat.')),
                 );
                 return;
               }
@@ -241,7 +246,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: const Icon(Icons.history),
             tooltip: 'History',
             onPressed: () {
-              if (ref.read(storageServiceProvider).getSetting(
+              if (ref
+                  .read(storageServiceProvider)
+                  .getSetting(
                     AppConstants.hapticFeedbackKey,
                     defaultValue: true,
                   )) {
@@ -258,7 +265,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: const Icon(Icons.add_comment_outlined),
             tooltip: 'New Chat',
             onPressed: () async {
-              if (ref.read(storageServiceProvider).getSetting(
+              if (ref
+                  .read(storageServiceProvider)
+                  .getSetting(
                     AppConstants.hapticFeedbackKey,
                     defaultValue: true,
                   )) {
@@ -279,7 +288,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: const Icon(Icons.settings),
             tooltip: 'Settings',
             onPressed: () {
-              if (ref.read(storageServiceProvider).getSetting(
+              if (ref
+                  .read(storageServiceProvider)
+                  .getSetting(
                     AppConstants.hapticFeedbackKey,
                     defaultValue: true,
                   )) {
@@ -292,7 +303,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: const Icon(Icons.tune),
             tooltip: 'Chat Settings',
             onPressed: () {
-              if (ref.read(storageServiceProvider).getSetting(
+              if (ref
+                  .read(storageServiceProvider)
+                  .getSetting(
                     AppConstants.hapticFeedbackKey,
                     defaultValue: true,
                   )) {
@@ -426,7 +439,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
             ref.read(chatProvider.notifier).newChat();
 
-            if (ref.read(storageServiceProvider).getSetting(
+            if (ref
+                .read(storageServiceProvider)
+                .getSetting(
                   AppConstants.hapticFeedbackKey,
                   defaultValue: true,
                 )) {

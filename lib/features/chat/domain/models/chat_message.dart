@@ -32,9 +32,10 @@ class ChatMessage {
     required this.timestamp,
     List<String>? images,
     List<TextFileAttachment>? attachments,
-  })  : images = images != null ? List.unmodifiable(images) : null,
-        attachments =
-            attachments != null ? List.unmodifiable(attachments) : null;
+  }) : images = images != null ? List.unmodifiable(images) : null,
+       attachments = attachments != null
+           ? List.unmodifiable(attachments)
+           : null;
 
   ChatMessage copyWith({
     String? role,
