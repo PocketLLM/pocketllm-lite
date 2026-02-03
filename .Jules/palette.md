@@ -65,3 +65,7 @@
 ## 2026-01-21 - [Chat List Context]
 **Learning:** In chat history lists, displaying only the date forces users to recall conversations by time alone, which is difficult. Showing a snippet of the last message provides immediate context (semantic memory) and significantly speeds up list scanning.
 **Action:** Always include a text preview (truncated to 1 line) and use the *last message timestamp* (not creation date) in chat list items to maximize information density and relevance.
+
+## 2025-05-24 - [Discoverable Shortcuts]
+**Learning:** Hidden power-user features (like Ctrl+Enter to send) are often undiscovered. Adding the shortcut hint directly to the action button's tooltip (e.g., "Send (Ctrl+Enter)") is a non-intrusive way to teach users these shortcuts right when they are interacting with the relevant control.
+**Action:** Append keyboard shortcuts to tooltips of primary action buttons to improve feature discoverability without cluttering the UI.

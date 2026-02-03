@@ -845,7 +845,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   size: 20,
                                 ),
                         ),
-                        tooltip: isGenerating ? 'Generating...' : 'Send',
+                        tooltip: isGenerating ? 'Generating...' : 'Send (Ctrl+Enter)',
                       ),
                     );
                   },
