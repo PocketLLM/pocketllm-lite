@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../../core/providers.dart';
@@ -65,16 +66,32 @@ class MediaGalleryScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final item = mediaItems[index];
               final bytes = base64Decode(item.base64);
-              return GestureDetector(
-                onTap: () => _showViewer(context, bytes, item),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.memory(
-                    bytes,
-                    fit: BoxFit.cover,
-                    cacheWidth: 300,
+              final dateStr =
+                  DateFormat.yMMMd().add_jm().format(item.timestamp);
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      bytes,
+                      fit: BoxFit.cover,
+                      cacheWidth: 300,
+                    ),
                   ),
-                ),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _showViewer(context, bytes, item),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Semantics(
+                        label: 'Image from ${item.chatTitle}, sent on $dateStr',
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           );
@@ -112,7 +129,7 @@ class MediaGalleryScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item.timestamp.toLocal().toString(),
+                      DateFormat.yMMMd().add_jm().format(item.timestamp),
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
