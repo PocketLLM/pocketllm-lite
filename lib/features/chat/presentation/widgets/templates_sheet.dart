@@ -203,8 +203,10 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
             child: Center(child: CircularProgressIndicator()),
           )
         else if (_templates.isEmpty)
-           Padding(
-              padding: const EdgeInsets.all(32.0),
+          Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Semantics(
+              label: 'No templates yet. Create a new quick template.',
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -228,17 +230,16 @@ class _TemplatesSheetState extends ConsumerState<TemplatesSheet> {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  if (widget.isFullScreen) ...[
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () => _showEditDialog(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create New Template'),
-                    ),
-                  ]
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: () => _showEditDialog(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create New Template'),
+                  ),
                 ],
               ),
-            )
+            ),
+          )
           else
             Flexible(
               child: ListView.builder(

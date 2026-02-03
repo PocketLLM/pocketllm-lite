@@ -1371,6 +1371,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
               ListTile(
+                title: const Text('Media Gallery'),
+                subtitle: const Text('Browse all shared images'),
+                leading: const Icon(Icons.photo_library_outlined),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/media-gallery');
+                },
+              ),
+              ListTile(
+                title: const Text('Tag Management'),
+                subtitle: const Text('Organize and rename chat tags'),
+                leading: const Icon(Icons.label_outline),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/tags');
+                },
+              ),
+              ListTile(
                 title: const Text('Activity Log'),
                 subtitle: const Text('View app usage history'),
                 leading: const Icon(Icons.history),
@@ -1388,6 +1408,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () {
                   HapticFeedback.lightImpact();
                   context.go('/settings/statistics');
+                },
+              ),
+              ListTile(
+                title: const Text('Profile'),
+                subtitle: const Text('Customize your display name'),
+                leading: const Icon(Icons.person_outline),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/profile');
                 },
               ),
               ListTile(

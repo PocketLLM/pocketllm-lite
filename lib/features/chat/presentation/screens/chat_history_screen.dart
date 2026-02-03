@@ -332,6 +332,17 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               actions: [
                 if (_isSelectionMode) ...[
                   IconButton(
+                    icon: const Icon(Icons.label),
+                    tooltip: 'Tag selected chats',
+                    onPressed: _selectedIds.isEmpty ? null : _showBulkTagDialog,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.archive_outlined),
+                    tooltip: 'Archive selected chats',
+                    onPressed:
+                        _selectedIds.isEmpty ? null : _archiveSelectedChats,
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.download),
                     tooltip: 'Export selected chats',
                     onPressed: _selectedIds.isEmpty ? null : _exportSelected,
@@ -1484,6 +1495,99 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       );
     }
   }
+
+  Future<void> _archiveSelectedChats() async {
+    if (_selectedIds.isEmpty) return;
+    final storage = ref.read(storageServiceProvider);
+    await storage.setArchiveStatusForChats(_selectedIds, true);
+    if (!mounted) return;
+    setState(() {
+      _isSelectionMode = false;
+      _selectedIds.clear();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Selected chats archived')),
+    );
+  }
+
+  Future<void> _showBulkTagDialog() async {
+    if (_selectedIds.isEmpty) return;
+    final storage = ref.read(storageServiceProvider);
+    final tags = storage.getAllTags().toList()..sort();
+    final controller = TextEditingController();
+
+    final action = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tag Selected Chats'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Tag name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            if (tags.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Suggestions',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: tags
+                    .map(
+                      (tag) => ActionChip(
+                        label: Text(tag),
+                        onPressed: () => controller.text = tag,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'remove'),
+            child: const Text('Remove Tag'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'add'),
+            child: const Text('Add Tag'),
+          ),
+        ],
+      ),
+    );
+
+    final tagValue = controller.text.trim();
+    if (action == null || tagValue.isEmpty) return;
+
+    if (action == 'add') {
+      await storage.addTagToChats(_selectedIds, tagValue);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Tag "$tagValue" added to chats')),
+      );
+    } else if (action == 'remove') {
+      await storage.removeTagFromChats(_selectedIds, tagValue);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Tag "$tagValue" removed from chats')),
+      );
+    }
+  }
 }
 
 class _EmptyHistoryState extends StatelessWidget {
@@ -1556,5 +1660,3 @@ class _EmptyHistoryState extends StatelessWidget {
     );
   }
 }
-
-

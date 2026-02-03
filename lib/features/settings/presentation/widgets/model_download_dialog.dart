@@ -19,6 +19,14 @@ class _ModelDownloadDialogState extends ConsumerState<ModelDownloadDialog> {
   double _percentage = 0.0;
   String? _error;
   StreamSubscription<PullProgress>? _subscription;
+  final List<String> _popularModels = const [
+    'llama3',
+    'mistral',
+    'phi3',
+    'llava',
+    'qwen2',
+    'gemma',
+  ];
 
   @override
   void dispose() {
@@ -112,6 +120,23 @@ class _ModelDownloadDialogState extends ConsumerState<ModelDownloadDialog> {
               autofocus: true,
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _startDownload(),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: _popularModels
+                  .map(
+                    (model) => ActionChip(
+                      label: Text(model),
+                      onPressed: () {
+                        _controller.text = model;
+                        _controller.selection = TextSelection.fromPosition(
+                          TextPosition(offset: _controller.text.length),
+                        );
+                      },
+                    ),
+                  )
+                  .toList(),
             ),
             const SizedBox(height: 8),
             Text(

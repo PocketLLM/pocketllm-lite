@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/providers.dart';
 import '../../domain/models/chat_message.dart';
 import '../../domain/models/chat_session.dart';
+import '../../domain/models/text_file_attachment.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../services/usage_limits_provider.dart';
 
@@ -150,7 +151,37 @@ class ChatNotifier extends Notifier<ChatState> {
     return (words * 1.3).ceil();
   }
 
-  Future<void> sendMessage(String text, {List<String>? images}) async {
+  String _buildAttachmentContext(
+    String content,
+    List<TextFileAttachment> attachments,
+  ) {
+    if (attachments.isEmpty) return content;
+    final buffer = StringBuffer(content.trim());
+    buffer.writeln('\n\n---');
+    buffer.writeln('Attached files:');
+    for (final attachment in attachments) {
+      buffer.writeln('Filename: ${attachment.name}');
+      buffer.writeln('```');
+      buffer.writeln(attachment.content);
+      buffer.writeln('```');
+    }
+    return buffer.toString();
+  }
+
+  String _buildMessageContent(ChatMessage message) {
+    if (message.role != 'user') return message.content;
+    final attachments = message.attachments;
+    if (attachments == null || attachments.isEmpty) {
+      return message.content;
+    }
+    return _buildAttachmentContext(message.content, attachments);
+  }
+
+  Future<void> sendMessage(
+    String text, {
+    List<String>? images,
+    List<TextFileAttachment>? attachments,
+  }) async {
     if (state.isGenerating) return;
 
     final userMsg = ChatMessage(
@@ -158,17 +189,78 @@ class ChatNotifier extends Notifier<ChatState> {
       content: text,
       timestamp: DateTime.now(),
       images: images,
+      attachments: attachments,
     );
 
+    final nextMessages = [...state.messages, userMsg];
+    final inputForTokens = attachments == null || attachments.isEmpty
+        ? text
+        : _buildAttachmentContext(text, attachments);
+    await _generateAssistantResponse(nextMessages, userInput: inputForTokens);
+  }
+
+  void deleteMessage(ChatMessage message) {
+    final updatedMessages = state.messages.where((m) => m != message).toList();
+    state = state.copyWith(messages: updatedMessages);
+    _saveSession();
+  }
+
+  Future<void> editMessage(ChatMessage message, String newContent,
+      {List<TextFileAttachment>? attachments}) async {
+    if (state.isGenerating) return;
+
+    final index = state.messages.indexOf(message);
+    if (index == -1) {
+      await sendMessage(newContent, attachments: attachments);
+      return;
+    }
+
+    final updated = message.copyWith(
+      content: newContent,
+      attachments: attachments,
+      timestamp: DateTime.now(),
+    );
+
+    final updatedMessages = [
+      ...state.messages.take(index),
+      updated,
+    ];
+
+    final inputForTokens = attachments == null || attachments.isEmpty
+        ? newContent
+        : _buildAttachmentContext(newContent, attachments);
+    await _generateAssistantResponse(updatedMessages, userInput: inputForTokens);
+  }
+
+  Future<void> regenerateMessage(ChatMessage assistantMessage) async {
+    if (state.isGenerating) return;
+
+    final index = state.messages.indexOf(assistantMessage);
+    if (index == -1 || index == 0) return;
+
+    final updatedMessages = state.messages.take(index).toList();
+    await _generateAssistantResponse(updatedMessages);
+  }
+
+  Future<void> _generateAssistantResponse(
+    List<ChatMessage> baseMessages, {
+    String? userInput,
+  }) async {
     state = state.copyWith(
-      messages: [...state.messages, userMsg],
+      messages: baseMessages,
       isGenerating: true,
+      streamingContent: '',
     );
 
     final ollama = ref.read(ollamaServiceProvider);
-
-    final history = state.messages
-        .map((m) => {"role": m.role, "content": m.content, "images": m.images})
+    final history = baseMessages
+        .map(
+          (m) => {
+            "role": m.role,
+            "content": _buildMessageContent(m),
+            "images": m.images,
+          },
+        )
         .toList();
 
     try {
@@ -189,7 +281,7 @@ class ChatNotifier extends Notifier<ChatState> {
           .read(storageServiceProvider)
           .getSetting(AppConstants.hapticFeedbackKey, defaultValue: true);
 
-      String assistantContent = '';
+      final buffer = StringBuffer();
       DateTime? lastHapticTime;
       DateTime? lastUiUpdateTime;
 
@@ -203,19 +295,19 @@ class ChatNotifier extends Notifier<ChatState> {
             lastHapticTime = now;
           }
         }
-        assistantContent += chunk;
+        buffer.write(chunk);
 
         // Optimize: Throttle UI updates to ~20 FPS (50ms) to prevent excessive
         // rebuilds and Markdown re-parsing on every token.
         if (lastUiUpdateTime == null ||
             now.difference(lastUiUpdateTime) >
                 const Duration(milliseconds: 50)) {
-          state = state.copyWith(streamingContent: assistantContent);
+          state = state.copyWith(streamingContent: buffer.toString());
           lastUiUpdateTime = now;
         }
       }
 
-      // Ensure the final state reflects the complete content
+      final assistantContent = buffer.toString();
       if (state.streamingContent != assistantContent) {
         state = state.copyWith(streamingContent: assistantContent);
       }
@@ -227,27 +319,22 @@ class ChatNotifier extends Notifier<ChatState> {
       );
 
       state = state.copyWith(
-        messages: [...state.messages, assistantMessage],
+        messages: [...baseMessages, assistantMessage],
         streamingContent: '',
       );
 
-      final userTokens = _estimateTokens(text);
-      final aiTokens = _estimateTokens(assistantContent);
-      final totalTokens = userTokens + aiTokens;
-
-      await ref.read(usageLimitsProvider.notifier).consumeTokens(totalTokens);
+      if (userInput != null) {
+        final userTokens = _estimateTokens(userInput);
+        final aiTokens = _estimateTokens(assistantContent);
+        final totalTokens = userTokens + aiTokens;
+        await ref.read(usageLimitsProvider.notifier).consumeTokens(totalTokens);
+      }
     } catch (e) {
       // Handle potential errors, e.g., show a message to the user
     } finally {
       state = state.copyWith(isGenerating: false, streamingContent: '');
       _saveSession();
     }
-  }
-
-  void deleteMessage(ChatMessage message) {
-    final updatedMessages = state.messages.where((m) => m != message).toList();
-    state = state.copyWith(messages: updatedMessages);
-    _saveSession();
   }
 
   Future<void> _saveSession() async {

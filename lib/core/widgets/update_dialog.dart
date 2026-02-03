@@ -4,6 +4,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/update_service.dart';
+import '../utils/markdown_handlers.dart';
 
 /// Dialog to show update information and download progress
 class UpdateDialog extends StatefulWidget {
@@ -300,6 +301,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                                 p: theme.textTheme.bodyMedium,
                                 listBullet: theme.textTheme.bodyMedium,
                               ),
+                          imageBuilder: MarkdownHandlers.imageBuilder,
                         ),
                       ),
                     ],

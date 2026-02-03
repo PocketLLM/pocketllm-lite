@@ -13,6 +13,7 @@ import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/draft_message_provider.dart';
+import '../providers/editing_message_provider.dart';
 import '../../../../core/providers.dart';
 import 'three_dot_loading_indicator.dart';
 
@@ -122,6 +123,56 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
         });
       }
     }
+  }
+
+  void _showImageViewer(Uint8List bytes) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: InteractiveViewer(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.memory(bytes, fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAttachmentViewer(String title, String content) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            content,
+            style: const TextStyle(fontFamily: 'monospace'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: content));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('File content copied'),
+                  duration: Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: const Text('Copy'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -278,12 +329,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                               padding: const EdgeInsets.only(bottom: 8.0),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.memory(
-                                  bytes,
-                                  height: 150,
-                                  fit: BoxFit.cover,
-                                  // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
-                                  cacheHeight: 450,
+                                child: InkWell(
+                                  onTap: () => _showImageViewer(bytes),
+                                  child: Image.memory(
+                                    bytes,
+                                    height: 150,
+                                    fit: BoxFit.cover,
+                                    // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
+                                    cacheHeight: 450,
+                                  ),
                                 ),
                               ),
                             ),
@@ -316,6 +370,36 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                               }
                             },
                             styleSheet: _getStyleSheet(theme, fontSize),
+                          ),
+                        if (message.attachments != null &&
+                            message.attachments!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: message.attachments!.map((attachment) {
+                                return ActionChip(
+                                  avatar: const Icon(
+                                    Icons.description,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                  label: Text(
+                                    attachment.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  backgroundColor:
+                                      Colors.black.withValues(alpha: 0.2),
+                                  onPressed: () => _showAttachmentViewer(
+                                    attachment.name,
+                                    attachment.content,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
                           ),
                         // Timestamp display
                         Padding(
@@ -634,6 +718,13 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                   _buildIconBtn(context, Icons.edit, 'Edit', () {
                     // Populate the input with the message content
                     ref.read(draftMessageProvider.notifier).state = message.content;
+                    ref.read(editingMessageProvider.notifier).state = message;
+                    Navigator.pop(context);
+                  }),
+                ] else ...[
+                  const SizedBox(width: 12),
+                  _buildIconBtn(context, Icons.refresh, 'Regenerate', () {
+                    ref.read(chatProvider.notifier).regenerateMessage(message);
                     Navigator.pop(context);
                   }),
                 ],
