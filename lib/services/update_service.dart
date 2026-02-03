@@ -12,6 +12,7 @@ class AppRelease {
   final String name;
   final String body;
   final String? apkDownloadUrl;
+  final String? checksumUrl;
   final DateTime publishedAt;
 
   AppRelease({
@@ -20,18 +21,25 @@ class AppRelease {
     required this.name,
     required this.body,
     this.apkDownloadUrl,
+    this.checksumUrl,
     required this.publishedAt,
   });
 
   factory AppRelease.fromJson(Map<String, dynamic> json) {
     String? apkUrl;
+    String? shaUrl;
     final assets = json['assets'] as List<dynamic>?;
     if (assets != null && assets.isNotEmpty) {
       for (final asset in assets) {
         final name = asset['name'] as String?;
-        if (name != null && name.endsWith('.apk')) {
-          apkUrl = asset['browser_download_url'] as String?;
-          break;
+        if (name != null) {
+          if (name.endsWith('.apk')) {
+            apkUrl = asset['browser_download_url'] as String?;
+          } else if (name.endsWith('.sha256') ||
+              name.endsWith('.sha256sum') ||
+              name == 'checksums.txt') {
+            shaUrl = asset['browser_download_url'] as String?;
+          }
         }
       }
     }
@@ -46,6 +54,7 @@ class AppRelease {
       name: json['name'] as String? ?? tagName,
       body: json['body'] as String? ?? '',
       apkDownloadUrl: apkUrl,
+      checksumUrl: shaUrl,
       publishedAt: DateTime.parse(json['published_at'] as String),
     );
   }
@@ -101,6 +110,11 @@ class UpdateService {
   static final UpdateService _instance = UpdateService._internal();
   factory UpdateService() => _instance;
   UpdateService._internal();
+
+  http.Client _client = http.Client();
+
+  @visibleForTesting
+  set client(http.Client client) => _client = client;
 
   /// Check if auto-update is enabled
   Future<bool> isAutoUpdateEnabled() async {
@@ -161,7 +175,7 @@ class UpdateService {
       }
 
       // Fetch latest release from GitHub
-      final response = await http
+      final response = await _client
           .get(
             Uri.parse(_releasesApiUrl),
             headers: {'Accept': 'application/vnd.github.v3+json'},
@@ -216,18 +230,65 @@ class UpdateService {
     }
   }
 
+  /// Fetch and parse the checksum from the given URL
+  @visibleForTesting
+  Future<String?> fetchChecksum(String url) async {
+    try {
+      final response = await _client
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final content = response.body.trim();
+        // Case 1: Just the hash (e.g. "a1b2...")
+        if (RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(content)) {
+          return content;
+        }
+
+        // Case 2: "hash filename" format
+        // Split by lines in case there are multiple entries
+        final lines = content.split('\n');
+        for (final line in lines) {
+          final parts = line.trim().split(RegExp(r'\s+'));
+          if (parts.isNotEmpty) {
+            final hash = parts.first;
+            if (RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(hash)) {
+              return hash;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching checksum: $e');
+      }
+    }
+    return null;
+  }
+
   /// Download and install the APK update
   /// Returns a stream of download progress (0.0 to 1.0)
-  Stream<OtaEvent> downloadAndInstallUpdate(String downloadUrl) {
+  Stream<OtaEvent> downloadAndInstallUpdate(
+    String downloadUrl, {
+    String? checksumUrl,
+  }) async* {
     if (kDebugMode) {
       print('Starting download from: $downloadUrl');
     }
 
-    return OtaUpdate().execute(
+    String? checksum;
+    if (checksumUrl != null) {
+      checksum = await fetchChecksum(checksumUrl);
+      if (checksum != null && kDebugMode) {
+        // ignore: avoid_print
+        print('Using checksum: $checksum');
+      }
+    }
+
+    yield* OtaUpdate().execute(
       downloadUrl,
       destinationFilename: 'pocketllm_lite_update.apk',
-      sha256checksum:
-          null, // GitHub doesn't provide SHA256, but this is optional
+      sha256checksum: checksum,
     );
   }
 
