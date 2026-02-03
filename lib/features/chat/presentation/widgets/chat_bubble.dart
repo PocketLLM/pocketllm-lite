@@ -17,6 +17,7 @@ import '../providers/chat_provider.dart';
 import '../providers/draft_message_provider.dart';
 import '../providers/editing_message_provider.dart';
 import '../../../../core/providers.dart';
+import 'starred_message_builder.dart';
 import 'three_dot_loading_indicator.dart';
 
 // Helper class for formatting timestamps
@@ -261,11 +262,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       );
     }
 
-    return ValueListenableBuilder(
-      valueListenable: storage.starredMessagesListenable,
-      builder: (context, _, __) {
-        final isStarred = storage.isMessageStarred(message);
-
+    return StarredMessageBuilder(
+      message: message,
+      builder: (context, isStarred) {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
