@@ -11,7 +11,7 @@ class OllamaService {
   final http.Client _client;
 
   OllamaService({String? baseUrl, http.Client? client})
-    : _baseUrl = baseUrl ?? AppConstants.defaultOllamaBaseUrl,
+    : _baseUrl = _sanitizeUrl(baseUrl ?? AppConstants.defaultOllamaBaseUrl),
       _client = client ?? http.Client() {
     // Security: Validate URL scheme to prevent non-HTTP protocols
     if (!UrlValidator.isHttpUrlString(_baseUrl)) {
@@ -21,13 +21,30 @@ class OllamaService {
     }
   }
 
+  /// Sanitizes the URL by trimming whitespace and removing trailing slashes.
+  static String _sanitizeUrl(String url) {
+    var clean = url.trim();
+    while (clean.endsWith('/')) {
+      clean = clean.substring(0, clean.length - 1);
+    }
+    return clean;
+  }
+
+  /// Redacts sensitive information (like credentials) from error messages.
+  String _redactError(dynamic e) {
+    final str = e.toString();
+    // Redact user:pass@ in URLs (e.g. http://user:pass@host:port)
+    return str.replaceAll(RegExp(r'://([^@]+)@'), '://***@');
+  }
+
   void updateBaseUrl(String url) {
-    if (!UrlValidator.isHttpUrlString(url)) {
+    final cleanUrl = _sanitizeUrl(url);
+    if (!UrlValidator.isHttpUrlString(cleanUrl)) {
       throw ArgumentError(
         'Invalid Ollama URL. Must start with http:// or https://',
       );
     }
-    _baseUrl = url;
+    _baseUrl = cleanUrl;
   }
 
   Future<bool> checkConnection() async {
@@ -57,7 +74,7 @@ class OllamaService {
       }
     } catch (e) {
       throw Exception(
-        'Failed to connect to Ollama. Ensure it is running in Termux.',
+        'Failed to connect to Ollama. Ensure it is running in Termux. Error: ${_redactError(e)}',
       );
     }
   }
@@ -134,7 +151,7 @@ class OllamaService {
         );
       }
     } catch (e) {
-      throw Exception('Network error: $e');
+      throw Exception('Network error: ${_redactError(e)}');
     }
   }
 
@@ -167,15 +184,19 @@ class OllamaService {
         throw Exception('Failed to pull model: ${streamedResponse.statusCode}');
       }
     } catch (e) {
-      throw Exception('Network error during pull: $e');
+      throw Exception('Network error during pull: ${_redactError(e)}');
     }
   }
 
   Future<void> deleteModel(String modelName) async {
     final url = Uri.parse('$_baseUrl/api/delete');
-    await _client
-        .delete(url, body: jsonEncode({"name": modelName}))
-        .timeout(AppConstants.apiConnectionTimeout);
+    try {
+      await _client
+          .delete(url, body: jsonEncode({"name": modelName}))
+          .timeout(AppConstants.apiConnectionTimeout);
+    } catch (e) {
+      throw Exception('Failed to delete model: ${_redactError(e)}');
+    }
   }
 
   /// Non-streaming prompt enhancement using /api/chat
@@ -222,7 +243,7 @@ class OllamaService {
         throw Exception('API error: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Enhancement failed: $e');
+      throw Exception('Enhancement failed: ${_redactError(e)}');
     }
   }
 }

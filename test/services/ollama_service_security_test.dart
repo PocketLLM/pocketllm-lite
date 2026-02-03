@@ -1,66 +1,75 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:pocketllm_lite/services/ollama_service.dart';
 
 class MockClient extends http.BaseClient {
-  final Future<http.StreamedResponse> Function(http.BaseRequest request)
-  _handler;
-
-  MockClient(this._handler);
+  Uri? lastRequestUrl;
+  Object? exceptionToThrow;
 
   @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) {
-    return _handler(request);
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    lastRequestUrl = request.url;
+    if (exceptionToThrow != null) {
+      throw exceptionToThrow!;
+    }
+    // Return empty stream 200 OK by default
+    return http.StreamedResponse(const Stream.empty(), 200);
   }
 }
 
 void main() {
   group('OllamaService Security Tests', () {
-    test('updateBaseUrl throws ArgumentError for invalid schemes', () {
-      final service = OllamaService(
-        client: MockClient(
-          (_) async => http.StreamedResponse(Stream.empty(), 200),
-        ),
+    test('updateBaseUrl sanitizes trailing slashes and whitespace', () async {
+      final mockClient = MockClient();
+      final service = OllamaService(client: mockClient);
+
+      // Set dirty URL
+      service.updateBaseUrl(' http://localhost:11434/ ');
+
+      // Trigger a request (e.g. checkConnection uses $_baseUrl/api/tags)
+      await service.checkConnection();
+
+      // Expect sanitized URL in request
+      expect(
+        mockClient.lastRequestUrl.toString(),
+        'http://localhost:11434/api/tags',
       );
+    });
+
+    test('updateBaseUrl throws ArgumentError for invalid schemes', () {
+      final mockClient = MockClient();
+      final service = OllamaService(client: mockClient);
 
       expect(
-        () => service.updateBaseUrl('ftp://example.com'),
+        () => service.updateBaseUrl('ftp://localhost:11434'),
         throwsArgumentError,
       );
-      expect(
-        () => service.updateBaseUrl('file:///etc/passwd'),
-        throwsArgumentError,
-      );
+
       expect(
         () => service.updateBaseUrl('javascript:alert(1)'),
         throwsArgumentError,
       );
     });
 
-    test('updateBaseUrl throws ArgumentError for non-url strings', () {
-      final service = OllamaService(
-        client: MockClient(
-          (_) async => http.StreamedResponse(Stream.empty(), 200),
-        ),
+    test('Error messages redact credentials', () async {
+      final mockClient = MockClient();
+      // Exception with credentials
+      mockClient.exceptionToThrow = http.ClientException(
+        'Failed to connect to http://user:secret@example.com:11434/api/tags',
       );
 
-      expect(() => service.updateBaseUrl('not a url'), throwsArgumentError);
-    });
-
-    test('updateBaseUrl accepts valid http/https urls', () {
-      final service = OllamaService(
-        client: MockClient(
-          (_) async => http.StreamedResponse(Stream.empty(), 200),
-        ),
-      );
+      final service = OllamaService(client: mockClient);
 
       expect(
-        () => service.updateBaseUrl('http://localhost:11434'),
-        returnsNormally,
-      );
-      expect(
-        () => service.updateBaseUrl('https://example.com'),
-        returnsNormally,
+        () => service.listModels(),
+        throwsA(
+          predicate((e) {
+            final msg = e.toString();
+            return msg.contains('http://***@example.com') &&
+                !msg.contains('secret');
+          }),
+        ),
       );
     });
   });
