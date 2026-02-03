@@ -81,9 +81,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
     final tags = counts.keys.toList()..sort();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tag Management'),
-      ),
+      appBar: AppBar(title: const Text('Tag Management')),
       body: tags.isEmpty
           ? Center(
               child: Text(
@@ -110,14 +108,8 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                       }
                     },
                     itemBuilder: (context) => const [
-                      PopupMenuItem(
-                        value: 'rename',
-                        child: Text('Rename'),
-                      ),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Text('Delete'),
-                      ),
+                      PopupMenuItem(value: 'rename', child: Text('Rename')),
+                      PopupMenuItem(value: 'delete', child: Text('Delete')),
                     ],
                   ),
                 );

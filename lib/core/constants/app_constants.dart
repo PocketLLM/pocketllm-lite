@@ -28,6 +28,7 @@ class AppConstants {
   static const String profileNameKey = 'profile_name';
   static const String profileBioKey = 'profile_bio';
   static const String profileAvatarColorKey = 'profile_avatar_color';
+  static const String profileAvatarImageKey = 'profile_avatar_image';
 
   // Model Settings
   static const String modelSettingsPrefixKey = 'model_settings_';
@@ -64,10 +65,11 @@ class AppConstants {
     'ADMOB_DELETION_ID',
     defaultValue: 'ca-app-pub-3940256099942544/5224354917',
   );
-  static const String promptEnhancementRewardedAdUnitId = String.fromEnvironment(
-    'ADMOB_ENHANCEMENT_ID',
-    defaultValue: 'ca-app-pub-3940256099942544/5224354917',
-  );
+  static const String promptEnhancementRewardedAdUnitId =
+      String.fromEnvironment(
+        'ADMOB_ENHANCEMENT_ID',
+        defaultValue: 'ca-app-pub-3940256099942544/5224354917',
+      );
   static const String chatCreationRewardedAdUnitId = String.fromEnvironment(
     'ADMOB_CHAT_CREATION_ID',
     defaultValue: 'ca-app-pub-3940256099942544/5224354917',
