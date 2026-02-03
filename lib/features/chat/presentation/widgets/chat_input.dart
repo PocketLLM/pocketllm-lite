@@ -291,14 +291,18 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final editingMessage = ref.read(editingMessageProvider);
 
     if (editingMessage != null) {
-      await ref.read(chatProvider.notifier).editMessage(
+      await ref
+          .read(chatProvider.notifier)
+          .editMessage(
             editingMessage,
             _controller.text,
             attachments: _selectedFiles.isNotEmpty ? _selectedFiles : null,
           );
       ref.read(editingMessageProvider.notifier).clearEditingMessage();
     } else {
-      ref.read(chatProvider.notifier).sendMessage(
+      ref
+          .read(chatProvider.notifier)
+          .sendMessage(
             _controller.text,
             images: imagesToSend.isNotEmpty ? imagesToSend : null,
             attachments: _selectedFiles.isNotEmpty ? _selectedFiles : null,
@@ -651,8 +655,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             if (editingMessage != null)
               Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primaryContainer.withValues(
                     alpha: 0.6,
@@ -677,7 +683,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     ),
                     TextButton(
                       onPressed: () {
-                        ref.read(editingMessageProvider.notifier).clearEditingMessage();
+                        ref
+                            .read(editingMessageProvider.notifier)
+                            .clearEditingMessage();
                         _controller.clear();
                         setState(() {
                           _selectedFiles.clear();
@@ -775,8 +783,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               const Icon(Icons.description, size: 16),
                               const SizedBox(width: 8),
                               ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 120),
+                                constraints: const BoxConstraints(
+                                  maxWidth: 120,
+                                ),
                                 child: Text(
                                   attachment.name,
                                   overflow: TextOverflow.ellipsis,
@@ -838,10 +847,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     LogicalKeyboardKey.enter,
                     control: true,
                   ): _send,
-                  const SingleActivator(
-                    LogicalKeyboardKey.enter,
-                    meta: true,
-                  ): _send,
+                  const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                      _send,
                 },
                 child: TextField(
                   controller: _controller,
@@ -853,12 +860,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   minLines: 1,
                   style: theme.textTheme.bodyLarge,
                   maxLength: AppConstants.maxInputLength,
-                  buildCounter: (
-                    context, {
-                    required currentLength,
-                    required isFocused,
-                    required maxLength,
-                  }) => null,
+                  buildCounter:
+                      (
+                        context, {
+                        required currentLength,
+                        required isFocused,
+                        required maxLength,
+                      }) => null,
                   decoration: InputDecoration(
                     hintText: _isEnhancing
                         ? 'Enhancing your prompt...'

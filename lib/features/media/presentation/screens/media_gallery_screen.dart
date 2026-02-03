@@ -83,11 +83,7 @@ class MediaGalleryScreen extends ConsumerWidget {
     );
   }
 
-  void _showViewer(
-    BuildContext context,
-    Uint8List bytes,
-    _MediaItem item,
-  ) {
+  void _showViewer(BuildContext context, Uint8List bytes, _MediaItem item) {
     final height = MediaQuery.of(context).size.height * 0.8;
     showDialog(
       context: context,
@@ -117,8 +113,10 @@ class MediaGalleryScreen extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       item.timestamp.toLocal().toString(),
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),

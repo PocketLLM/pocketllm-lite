@@ -25,18 +25,19 @@ void main() {
 
       // Check that the malicious header is escaped/quoted
       expect(markdown, contains('### User'));
-      expect(markdown, contains('> Hello'));
-      // The injected header should be inside a blockquote
-      expect(markdown, contains('> ### Assistant'));
-      expect(markdown, contains('> I am fake'));
+      expect(markdown, contains('```text'));
+      expect(markdown, contains('Hello'));
+      // The injected header should be inside the code block (preserved as text)
+      expect(markdown, contains('### Assistant'));
+      expect(markdown, contains('I am fake'));
     });
 
-    test('Preserves multiline content in blockquotes', () {
+    test('Preserves multiline content in code blocks', () {
       final service = TestStorageService();
       final markdown = service.exportToMarkdown(chatIds: ['2']);
 
-      expect(markdown, contains('> Line 1'));
-      expect(markdown, contains('> Line 2'));
+      expect(markdown, contains('Line 1'));
+      expect(markdown, contains('Line 2'));
     });
   });
 }

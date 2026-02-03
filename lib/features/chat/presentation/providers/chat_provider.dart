@@ -205,8 +205,11 @@ class ChatNotifier extends Notifier<ChatState> {
     _saveSession();
   }
 
-  Future<void> editMessage(ChatMessage message, String newContent,
-      {List<TextFileAttachment>? attachments}) async {
+  Future<void> editMessage(
+    ChatMessage message,
+    String newContent, {
+    List<TextFileAttachment>? attachments,
+  }) async {
     if (state.isGenerating) return;
 
     final index = state.messages.indexOf(message);
@@ -221,15 +224,15 @@ class ChatNotifier extends Notifier<ChatState> {
       timestamp: DateTime.now(),
     );
 
-    final updatedMessages = [
-      ...state.messages.take(index),
-      updated,
-    ];
+    final updatedMessages = [...state.messages.take(index), updated];
 
     final inputForTokens = attachments == null || attachments.isEmpty
         ? newContent
         : _buildAttachmentContext(newContent, attachments);
-    await _generateAssistantResponse(updatedMessages, userInput: inputForTokens);
+    await _generateAssistantResponse(
+      updatedMessages,
+      userInput: inputForTokens,
+    );
   }
 
   Future<void> regenerateMessage(ChatMessage assistantMessage) async {
