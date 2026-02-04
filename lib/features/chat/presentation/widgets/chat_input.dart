@@ -976,22 +976,25 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Enhance Prompt Button - only show if enhancer model selected
+                    // Enhance Prompt Button - always show to improve discovery
                     Consumer(
                       builder: (context, ref, child) {
                         final enhancerState = ref.watch(promptEnhancerProvider);
                         final hasEnhancer =
                             enhancerState.selectedModelId != null;
 
-                        if (!hasEnhancer) return const SizedBox.shrink();
-
+                        // If not configured, we still show the button to drive users to settings
                         final isDisabled = isGenerating || _isEnhancing;
                         return Semantics(
-                          label: 'Enhance Prompt',
+                          label: hasEnhancer
+                              ? 'Enhance Prompt'
+                              : 'Setup Prompt Enhancer',
                           button: true,
                           enabled: !isDisabled,
                           child: Tooltip(
-                            message: 'Enhance Prompt',
+                            message: hasEnhancer
+                                ? 'Enhance Prompt'
+                                : 'Setup Prompt Enhancer',
                             child: Material(
                               color:
                                   (isDark ? Colors.grey[800] : Colors.grey[300])
