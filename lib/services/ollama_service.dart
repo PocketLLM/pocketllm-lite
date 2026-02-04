@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
 import '../core/utils/url_validator.dart';
 import '../features/chat/domain/models/ollama_model.dart';
+import '../features/chat/domain/models/ollama_model_details.dart';
 import '../features/chat/domain/models/pull_progress.dart';
 
 class OllamaService {
@@ -59,6 +60,23 @@ class OllamaService {
       throw Exception(
         'Failed to connect to Ollama. Ensure it is running in Termux.',
       );
+    }
+  }
+
+  Future<OllamaModelDetails> showModelInfo(String modelName) async {
+    final url = Uri.parse('$_baseUrl/api/show');
+    try {
+      final response = await _client
+          .post(url, body: jsonEncode({"name": modelName}))
+          .timeout(AppConstants.apiConnectionTimeout);
+
+      if (response.statusCode == 200) {
+        return OllamaModelDetails.fromJson(jsonDecode(response.body));
+      } else {
+        throw Exception('Failed to load model details: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Network error: $e');
     }
   }
 

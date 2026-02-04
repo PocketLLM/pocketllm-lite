@@ -143,5 +143,51 @@ void main() {
       final stream = service.generateChatStream('llama3', history);
       await stream.join();
     });
+
+    test('showModelInfo returns details on 200', () async {
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/api/show' && request.method == 'POST') {
+          return http.StreamedResponse(
+            Stream.value(
+              utf8.encode(jsonEncode({
+                'license': 'MIT',
+                'modelfile': 'FROM llama3',
+                'parameters': 'stop "user:"',
+                'template': '{{ .System }}',
+                'details': {
+                  'format': 'gguf',
+                  'family': 'llama',
+                  'families': ['llama'],
+                  'parameter_size': '7B',
+                  'quantization_level': 'Q4_0'
+                }
+              })),
+            ),
+            200,
+          );
+        }
+        return http.StreamedResponse(Stream.empty(), 404);
+      });
+
+      final service = OllamaService(client: mockClient);
+      final details = await service.showModelInfo('llama3');
+
+      expect(details.license, 'MIT');
+      expect(details.modelfile, 'FROM llama3');
+      expect(details.details.format, 'gguf');
+      expect(details.details.parameterSize, '7B');
+    });
+
+    test('showModelInfo throws exception on error', () async {
+      final mockClient = MockClient((request) async {
+        return http.StreamedResponse(Stream.empty(), 500);
+      });
+
+      final service = OllamaService(client: mockClient);
+      expect(
+        () => service.showModelInfo('llama3'),
+        throwsA(isA<Exception>()),
+      );
+    });
   });
 }
