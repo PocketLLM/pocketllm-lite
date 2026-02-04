@@ -7,12 +7,12 @@ import 'package:uuid/uuid.dart';
 import '../core/constants/app_constants.dart';
 import '../features/chat/domain/models/chat_session.dart';
 import '../features/chat/domain/models/chat_message.dart';
+import '../features/chat/domain/models/message_template.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
-import 'dart:typed_data';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
@@ -526,50 +526,58 @@ class StorageService {
   }
 
   // Message Templates
-  List<Map<String, String>> getMessageTemplates() {
+  List<MessageTemplate> getMessageTemplates() {
     final templates = _settingsBox.get(
       AppConstants.messageTemplatesKey,
       defaultValue: <dynamic>[],
     );
-    return (templates as List).map((e) => Map<String, String>.from(e)).toList();
+    return (templates as List).map((e) {
+      final map = Map<String, dynamic>.from(e);
+      return MessageTemplate.fromJson(map);
+    }).toList();
   }
 
-  Future<void> saveMessageTemplate(Map<String, String> template) async {
+  Future<void> saveMessageTemplate(MessageTemplate template) async {
     final templates = getMessageTemplates();
-    final index = templates.indexWhere((t) => t['id'] == template['id']);
+    final index = templates.indexWhere((t) => t.id == template.id);
 
     if (index != -1) {
       templates[index] = template;
       await logActivity(
         'Template Updated',
-        'Updated template "${template['title']}"',
+        'Updated template "${template.title}"',
       );
     } else {
       templates.add(template);
       await logActivity(
         'Template Created',
-        'Created template "${template['title']}"',
+        'Created template "${template.title}"',
       );
     }
 
-    await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
+    await saveTemplatesToBox(templates);
   }
 
   Future<void> deleteMessageTemplate(String id) async {
     final templates = getMessageTemplates();
-    final template = templates.firstWhere(
-      (t) => t['id'] == id,
-      orElse: () => {},
-    );
+    final index = templates.indexWhere((t) => t.id == id);
 
-    if (template.isNotEmpty) {
-      templates.removeWhere((t) => t['id'] == id);
-      await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
+    if (index != -1) {
+      final template = templates[index];
+      templates.removeAt(index);
+      await saveTemplatesToBox(templates);
+
       await logActivity(
         'Template Deleted',
-        'Deleted template "${template['title']}"',
+        'Deleted template "${template.title}"',
       );
     }
+  }
+
+  @visibleForTesting
+  Future<void> saveTemplatesToBox(List<MessageTemplate> templates) async {
+    final rawList = templates.map((t) => t.toJson()).toList();
+    await _settingsBox.put(AppConstants.messageTemplatesKey, rawList);
   }
 
   // Chat Drafts

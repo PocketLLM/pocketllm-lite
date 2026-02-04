@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers.dart';
+import '../../domain/models/message_template.dart';
 
 class TemplatesSheet extends ConsumerWidget {
   final Function(String) onSelect;
+  final Function(MessageTemplate)? onEdit;
+  final Function(MessageTemplate)? onDelete;
   final bool isFullScreen;
 
   const TemplatesSheet({
     super.key,
     required this.onSelect,
+    this.onEdit,
+    this.onDelete,
     this.isFullScreen = false,
   });
 
@@ -36,13 +41,28 @@ class TemplatesSheet extends ConsumerWidget {
           itemBuilder: (context, index) {
             final template = templates[index];
             return ListTile(
-              title: Text(template['title'] ?? 'Untitled'),
+              title: Text(template.title),
               subtitle: Text(
-                template['content'] ?? '',
+                template.content,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              onTap: () => onSelect(template['content'] ?? ''),
+              onTap: () => onSelect(template.content),
+              trailing: (onEdit != null && onDelete != null)
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => onEdit!(template),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => onDelete!(template),
+                        ),
+                      ],
+                    )
+                  : null,
             );
           },
         );
