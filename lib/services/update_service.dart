@@ -12,6 +12,7 @@ class AppRelease {
   final String name;
   final String body;
   final String? apkDownloadUrl;
+  final String? checksumUrl;
   final DateTime publishedAt;
 
   AppRelease({
@@ -20,18 +21,26 @@ class AppRelease {
     required this.name,
     required this.body,
     this.apkDownloadUrl,
+    this.checksumUrl,
     required this.publishedAt,
   });
 
   factory AppRelease.fromJson(Map<String, dynamic> json) {
     String? apkUrl;
+    String? checksumUrl;
     final assets = json['assets'] as List<dynamic>?;
     if (assets != null && assets.isNotEmpty) {
       for (final asset in assets) {
         final name = asset['name'] as String?;
-        if (name != null && name.endsWith('.apk')) {
-          apkUrl = asset['browser_download_url'] as String?;
-          break;
+        final url = asset['browser_download_url'] as String?;
+        if (name != null && url != null) {
+          if (name.endsWith('.apk')) {
+            apkUrl = url;
+          } else if (name.endsWith('.sha256') ||
+              name.endsWith('.sha256sum') ||
+              name == 'checksums.txt') {
+            checksumUrl = url;
+          }
         }
       }
     }
@@ -46,6 +55,7 @@ class AppRelease {
       name: json['name'] as String? ?? tagName,
       body: json['body'] as String? ?? '',
       apkDownloadUrl: apkUrl,
+      checksumUrl: checksumUrl,
       publishedAt: DateTime.parse(json['published_at'] as String),
     );
   }
@@ -101,6 +111,11 @@ class UpdateService {
   static final UpdateService _instance = UpdateService._internal();
   factory UpdateService() => _instance;
   UpdateService._internal();
+
+  http.Client _client = http.Client();
+
+  @visibleForTesting
+  set client(http.Client client) => _client = client;
 
   /// Check if auto-update is enabled
   Future<bool> isAutoUpdateEnabled() async {
@@ -161,7 +176,7 @@ class UpdateService {
       }
 
       // Fetch latest release from GitHub
-      final response = await http
+      final response = await _client
           .get(
             Uri.parse(_releasesApiUrl),
             headers: {'Accept': 'application/vnd.github.v3+json'},
@@ -216,18 +231,82 @@ class UpdateService {
     }
   }
 
+  /// Fetch and parse the SHA256 checksum from a URL
+  @visibleForTesting
+  Future<String?> fetchChecksum(String url) async {
+    try {
+      if (kDebugMode) {
+        print('Fetching checksum from: $url');
+      }
+      final response = await _client.get(Uri.parse(url)).timeout(
+            const Duration(seconds: 10),
+          );
+
+      if (response.statusCode != 200) {
+        if (kDebugMode) {
+          print('Failed to fetch checksum: ${response.statusCode}');
+        }
+        return null;
+      }
+
+      final content = response.body;
+      final lines = const LineSplitter().convert(content);
+
+      // Regex for 64-character hex string (SHA256)
+      final RegExp hex64 = RegExp(r'[a-fA-F0-9]{64}');
+
+      for (final line in lines) {
+        final trimmed = line.trim();
+        if (trimmed.isEmpty) continue;
+
+        final match = hex64.firstMatch(trimmed);
+        if (match != null) {
+          // If single line or contains .apk, assume it's the correct hash
+          // (This handles "hash  file.apk" and "SHA256 (file.apk) = hash")
+          if (lines.length == 1 || trimmed.contains('.apk')) {
+            return match.group(0);
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching checksum: $e');
+      }
+      return null;
+    }
+  }
+
   /// Download and install the APK update
   /// Returns a stream of download progress (0.0 to 1.0)
-  Stream<OtaEvent> downloadAndInstallUpdate(String downloadUrl) {
+  Stream<OtaEvent> downloadAndInstallUpdate(
+    String downloadUrl, {
+    String? checksumUrl,
+  }) async* {
     if (kDebugMode) {
       print('Starting download from: $downloadUrl');
     }
 
-    return OtaUpdate().execute(
+    String? checksum;
+    if (checksumUrl != null) {
+      checksum = await fetchChecksum(checksumUrl);
+      if (checksum == null) {
+        if (kDebugMode) {
+          print('Failed to fetch checksum');
+        }
+        // Yield a generic error if checksum fetch fails
+        yield OtaEvent(OtaStatus.INTERNAL_ERROR, 'Failed to fetch checksum');
+        return;
+      }
+      if (kDebugMode) {
+        print('Using checksum: $checksum');
+      }
+    }
+
+    yield* OtaUpdate().execute(
       downloadUrl,
       destinationFilename: 'pocketllm_lite_update.apk',
-      sha256checksum:
-          null, // GitHub doesn't provide SHA256, but this is optional
+      sha256checksum: checksum,
     );
   }
 
