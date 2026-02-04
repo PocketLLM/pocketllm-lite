@@ -1003,7 +1003,8 @@ class StorageService {
 
   Set<String> _getImportableSettingsKeys() {
     return {
-      AppConstants.ollamaBaseUrlKey,
+      // Security: Do not allow importing the Ollama URL to prevent malicious overwrites.
+      // AppConstants.ollamaBaseUrlKey,
       AppConstants.themeModeKey,
       AppConstants.autoSaveChatsKey,
       AppConstants.hapticFeedbackKey,

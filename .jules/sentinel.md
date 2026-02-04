@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Settings Import Configuration Injection
+**Vulnerability:** The data import feature allowed overwriting the critical `ollama_base_url` setting, enabling attackers to redirect sensitive LLM traffic to a malicious server via a crafted backup file.
+**Learning:** Whitelists for import features must be strictly reviewed. Configuration keys that control data destination or security policies should never be importable from untrusted user files.
+**Prevention:** Explicitly exclude critical infrastructure settings (URLs, API keys) from import/restore logic to enforce manual user configuration.
