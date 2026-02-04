@@ -65,3 +65,7 @@
 ## 2026-01-21 - [Chat List Context]
 **Learning:** In chat history lists, displaying only the date forces users to recall conversations by time alone, which is difficult. Showing a snippet of the last message provides immediate context (semantic memory) and significantly speeds up list scanning.
 **Action:** Always include a text preview (truncated to 1 line) and use the *last message timestamp* (not creation date) in chat list items to maximize information density and relevance.
+
+## 2024-05-30 - [Feature Discoverability]
+**Learning:** Hiding features that require configuration (like "Enhance Prompt") makes them undiscoverable, leaving users unaware of their existence. It's better to show the feature (even if disabled or requiring setup) and provide a clear path to resolution (e.g., "Settings") upon interaction.
+**Action:** Do not hide buttons for unconfigured features. Instead, keep them visible and use the interaction to guide the user through the necessary setup steps (via SnackBars or Dialogs).

@@ -67,4 +67,26 @@ void main() {
     );
     expect(counter, isNull);
   });
+
+  testWidgets('Enhance Prompt button is visible even when no model is selected', (
+    WidgetTester tester,
+  ) async {
+    final mockStorage = MockStorageService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          storageServiceProvider.overrideWithValue(mockStorage),
+          usageLimitsProvider.overrideWith(UsageLimitsNotifier.new),
+        ],
+        child: const MaterialApp(home: Scaffold(body: ChatInput())),
+      ),
+    );
+
+    // Initial pump
+    await tester.pump();
+
+    // Verify that the Enhance Prompt button (Icons.auto_awesome) is present.
+    expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
+  });
 }

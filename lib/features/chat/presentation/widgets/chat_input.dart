@@ -359,9 +359,38 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   Future<void> _enhancePrompt() async {
-    if (_controller.text.trim().isEmpty) return;
+    // 1. Check if model is selected (Static check)
+    final enhancerState = ref.read(promptEnhancerProvider);
+    if (enhancerState.selectedModelId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Select a Prompt Enhancer model in Settings first.',
+          ),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
+        ),
+      );
+      return;
+    }
 
-    // Check connection status before enhancing using the auto-refreshing provider
+    // 2. Check if text is empty
+    if (_controller.text.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter some text to enhance.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // 3. Check connection status before enhancing using the auto-refreshing provider
     final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
     await connectionChecker.refresh(); // Force a refresh before checking
     final connectionState = await ref.read(autoConnectionStatusProvider.future);
@@ -381,24 +410,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           ),
         );
       }
-      return;
-    }
-
-    final enhancerState = ref.read(promptEnhancerProvider);
-    if (enhancerState.selectedModelId == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Select a Prompt Enhancer model in Settings first.',
-          ),
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: 'Settings',
-            onPressed: () => context.push('/settings'),
-          ),
-        ),
-      );
       return;
     }
 
@@ -976,15 +987,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Enhance Prompt Button - only show if enhancer model selected
+                    // Enhance Prompt Button - always visible for discoverability
                     Consumer(
                       builder: (context, ref, child) {
-                        final enhancerState = ref.watch(promptEnhancerProvider);
-                        final hasEnhancer =
-                            enhancerState.selectedModelId != null;
-
-                        if (!hasEnhancer) return const SizedBox.shrink();
-
+                        ref.watch(promptEnhancerProvider);
                         final isDisabled = isGenerating || _isEnhancing;
                         return Semantics(
                           label: 'Enhance Prompt',
