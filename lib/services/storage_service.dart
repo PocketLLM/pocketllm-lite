@@ -12,7 +12,6 @@ import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
-import 'dart:typed_data';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
@@ -526,7 +525,8 @@ class StorageService {
   }
 
   // Message Templates
-  List<Map<String, String>> getMessageTemplates() {
+  @visibleForTesting
+  List<Map<String, String>> readTemplatesFromBox() {
     final templates = _settingsBox.get(
       AppConstants.messageTemplatesKey,
       defaultValue: <dynamic>[],
@@ -534,8 +534,23 @@ class StorageService {
     return (templates as List).map((e) => Map<String, String>.from(e)).toList();
   }
 
+  @visibleForTesting
+  Future<void> writeTemplatesToBox(List<Map<String, String>> templates) async {
+    await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
+  }
+
+  List<Map<String, String>> getMessageTemplates() {
+    return readTemplatesFromBox();
+  }
+
   Future<void> saveMessageTemplate(Map<String, String> template) async {
-    final templates = getMessageTemplates();
+    final templates = readTemplatesFromBox();
+
+    // Ensure ID exists
+    if (template['id'] == null || template['id']!.isEmpty) {
+      template['id'] = const Uuid().v4();
+    }
+
     final index = templates.indexWhere((t) => t['id'] == template['id']);
 
     if (index != -1) {
@@ -552,11 +567,11 @@ class StorageService {
       );
     }
 
-    await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
+    await writeTemplatesToBox(templates);
   }
 
   Future<void> deleteMessageTemplate(String id) async {
-    final templates = getMessageTemplates();
+    final templates = readTemplatesFromBox();
     final template = templates.firstWhere(
       (t) => t['id'] == id,
       orElse: () => {},
@@ -564,7 +579,7 @@ class StorageService {
 
     if (template.isNotEmpty) {
       templates.removeWhere((t) => t['id'] == id);
-      await _settingsBox.put(AppConstants.messageTemplatesKey, templates);
+      await writeTemplatesToBox(templates);
       await logActivity(
         'Template Deleted',
         'Deleted template "${template['title']}"',

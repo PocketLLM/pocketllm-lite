@@ -14,3 +14,8 @@
 **Challenge:** Implementing visual analytics (bar charts) for usage stats without adding heavy external dependencies like `fl_chart` to keep the app lightweight.
 **Solution:** I implemented a custom `BarChartPainter` using Flutter's `CustomPaint` API. It handles dynamic scaling, zero-value placeholders, and theme-aware styling (using `Color.withValues`).
 **Reusable Pattern:** The `BarChartPainter` pattern separates the data model (`DailyActivity`) from the rendering logic, providing a lightweight template for other simple time-series visualizations.
+
+## 2026-05-26 - Testable Hive Services
+**Challenge:** Unit testing CRUD logic (like template management) in `StorageService` is impossible because it directly accesses private `late Box` fields that require Hive initialization.
+**Solution:** I introduced protected helper methods (`readTemplatesFromBox`, `writeTemplatesToBox`) annotated with `@visibleForTesting`. The service uses these internally, while the test subclass overrides them to use in-memory lists.
+**Reusable Pattern:** For any Hive-based service, abstract direct Box access into protected methods to enable pure unit testing of business logic (like ID generation or validation) without mocking Hive or running integration tests.
