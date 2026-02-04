@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Implicit Cleartext Blocking
+**Vulnerability:** Release builds blocked all cleartext traffic (including localhost) by default on Android 9+, likely breaking connectivity to the local Ollama instance for users not using debug builds.
+**Learning:** Relying on debug builds for testing can mask production security policies. Android's default cleartext policy differs between debug and release.
+**Prevention:** Explicitly define `network_security_config.xml` to whitelist necessary local domains (`localhost`, `127.0.0.1`) while denying all other cleartext traffic.
