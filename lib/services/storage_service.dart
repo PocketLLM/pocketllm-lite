@@ -10,9 +10,9 @@ import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
+import '../features/files/domain/models/file_item.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
-import 'dart:typed_data';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
@@ -1156,6 +1156,71 @@ class StorageService {
       title: json['title'],
       content: json['content'],
     );
+  }
+
+  // Attachments (File Gallery)
+  List<FileItem> getAllAttachments({String? chatId}) {
+    final attachments = <FileItem>[];
+    final sessions = getChatSessions();
+
+    for (final session in sessions) {
+      if (chatId != null && session.id != chatId) continue;
+      for (final message in session.messages) {
+        if (message.attachments != null && message.attachments!.isNotEmpty) {
+          for (final attachment in message.attachments!) {
+            attachments.add(
+              FileItem(
+                chatId: session.id,
+                chatTitle: session.title,
+                message: message,
+                attachment: attachment,
+              ),
+            );
+          }
+        }
+      }
+    }
+    // Sort by message timestamp descending (newest first)
+    attachments.sort(
+      (a, b) => b.message.timestamp.compareTo(a.message.timestamp),
+    );
+    return attachments;
+  }
+
+  Future<void> deleteAttachment(
+    String chatId,
+    ChatMessage message,
+    TextFileAttachment attachment,
+  ) async {
+    final session = getChatSession(chatId);
+    if (session == null) return;
+
+    final messageIndex = session.messages.indexWhere((m) => m == message);
+
+    if (messageIndex != -1) {
+      final targetMessage = session.messages[messageIndex];
+      if (targetMessage.attachments == null) return;
+
+      final newAttachments = List<TextFileAttachment>.from(
+        targetMessage.attachments!,
+      );
+      newAttachments.remove(attachment);
+
+      final updatedMessage = targetMessage.copyWith(
+        attachments: newAttachments,
+      );
+
+      final newMessages = List<ChatMessage>.from(session.messages);
+      newMessages[messageIndex] = updatedMessage;
+
+      final updatedSession = session.copyWith(messages: newMessages);
+      await saveChatSession(updatedSession, log: false);
+
+      await logActivity(
+        'Attachment Deleted',
+        'Deleted attachment "${attachment.name}" from chat ${session.title}',
+      );
+    }
   }
 
   // Statistics
