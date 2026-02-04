@@ -5,7 +5,6 @@ import 'package:ota_update/ota_update.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/update_service.dart';
 
-
 /// Dialog to show update information and download progress
 class UpdateDialog extends StatefulWidget {
   final AppRelease release;
@@ -301,7 +300,6 @@ class _UpdateDialogState extends State<UpdateDialog>
                                 p: theme.textTheme.bodyMedium,
                                 listBullet: theme.textTheme.bodyMedium,
                               ),
-
                         ),
                       ),
                     ],

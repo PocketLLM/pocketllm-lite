@@ -1057,15 +1057,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          ExcludeSemantics(
-                            child: Text(
-                              '$charCount/$maxLength',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: counterColor,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
+                          Text(
+                            '$charCount/$maxLength',
+                            semanticsLabel:
+                                '$charCount of $maxLength characters used',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: counterColor,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 12),
