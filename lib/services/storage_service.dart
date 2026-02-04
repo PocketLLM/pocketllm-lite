@@ -10,6 +10,7 @@ import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
+import '../features/files/domain/models/file_item.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
@@ -690,6 +691,62 @@ class StorageService {
         'Removed starred messages for deleted chat $chatId',
       );
     }
+  }
+
+  // File Attachments
+  List<FileItem> getAllAttachments() {
+    final attachments = <FileItem>[];
+    for (final session in getChatSessions()) {
+      for (final message in session.messages) {
+        if (message.attachments != null && message.attachments!.isNotEmpty) {
+          for (final attachment in message.attachments!) {
+            attachments.add(
+              FileItem(
+                chatId: session.id,
+                chatTitle: session.title,
+                timestamp: message.timestamp,
+                message: message,
+                attachment: attachment,
+              ),
+            );
+          }
+        }
+      }
+    }
+    // Sort by date desc
+    attachments.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return attachments;
+  }
+
+  Future<void> deleteAttachment(FileItem item) async {
+    final session = getChatSession(item.chatId);
+    if (session == null) return;
+
+    final updatedMessages =
+        session.messages.map((m) {
+          if (m == item.message) {
+            final filtered =
+                m.attachments?.where((a) => a != item.attachment).toList();
+            // Reconstruct message
+            return ChatMessage(
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp,
+              images: m.images,
+              attachments: filtered,
+            );
+          }
+          return m;
+        }).toList();
+
+    final updatedSession = session.copyWith(messages: updatedMessages);
+    // Don't log session update to avoid noise, we log attachment deletion
+    await saveChatSession(updatedSession, log: false);
+
+    await logActivity(
+      'Attachment Deleted',
+      'Deleted attachment "${item.attachment.name}" from chat ${item.chatId}',
+    );
   }
 
   // Activity Log
