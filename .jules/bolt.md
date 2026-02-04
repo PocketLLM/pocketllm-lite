@@ -13,3 +13,7 @@
 ## 2024-05-25 - [Hive Box Rebuild Scope]
 **Learning:** Using `box.listenable()` on a Hive box that stores mixed data types (settings, tags, drafts) triggers rebuilds for all listeners on ANY change. For UI components dependent on a single key (like starred messages), this causes unnecessary re-renders when unrelated data changes.
 **Action:** Use `box.listenable(keys: ['specific_key'])` to scope rebuilds, and implement in-memory caching (e.g., `Set`) for expensive derived data to avoid repeated deserialization during builds.
+
+## 2024-05-26 - [Efficient Starred Message Updates]
+**Learning:** Using `ValueListenableBuilder` to listen to a Hive Box (or a specific key within it) triggers a rebuild for *all* widgets listening to that source whenever *any* value changes. For list items (like `ChatBubble`) that only care about the status of a specific item (e.g., "is this message starred?"), this causes O(N) rebuilds of the entire list when a single item is updated.
+**Action:** Implement a specialized `StarredMessageBuilder` widget that listens to the box but only triggers a rebuild (via `setState`) if the status of the *specific* message has changed. Also, ensure the `ValueListenable` itself is cached in the service to prevent listener churn.

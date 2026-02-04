@@ -26,6 +26,8 @@ class StorageService {
   Map<String, List<String>>? _cachedTags;
   // Cache for starred messages (O(1) lookup)
   Set<ChatMessage>? _cachedStarredMessages;
+  // Cache for starred messages listenable
+  ValueListenable<Box>? _starredMessagesListenable;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -177,8 +179,12 @@ class StorageService {
 
   ValueListenable<Box> get settingsBoxListenable => _settingsBox.listenable();
 
-  ValueListenable<Box> get starredMessagesListenable =>
-      _settingsBox.listenable(keys: [AppConstants.starredMessagesKey]);
+  ValueListenable<Box> get starredMessagesListenable {
+    _starredMessagesListenable ??= _settingsBox.listenable(
+      keys: [AppConstants.starredMessagesKey],
+    );
+    return _starredMessagesListenable!;
+  }
 
   ValueListenable<Box> get activityLogBoxListenable =>
       _activityLogBox.listenable();
