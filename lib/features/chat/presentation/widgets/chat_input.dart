@@ -1048,27 +1048,40 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     final charCount = value.text.length;
                     final maxLength = AppConstants.maxInputLength;
                     final remaining = maxLength - charCount;
+
+                    // Logic to show/hide the character counter
+                    final usageRatio = charCount / maxLength;
+                    final showCounter = usageRatio > 0.8; // Show after 80% usage
+
                     final counterColor = remaining <= 200
                         ? theme.colorScheme.error
-                        : theme.colorScheme.onSurfaceVariant;
+                        : (usageRatio > 0.9
+                            ? Colors.orange
+                            : theme.colorScheme.onSurfaceVariant);
 
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          ExcludeSemantics(
-                            child: Text(
-                              '$charCount/$maxLength',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: counterColor,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
+                          if (showCounter) ...[
+                            Semantics(
+                              label: '$charCount of $maxLength characters used',
+                              excludeSemantics: true,
+                              child: Text(
+                                '$charCount/$maxLength',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: counterColor,
+                                  fontWeight:
+                                      remaining <= 200 ? FontWeight.bold : null,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
+                            const SizedBox(width: 12),
+                          ],
                           Container(
                             decoration: BoxDecoration(
                               color: canSend
