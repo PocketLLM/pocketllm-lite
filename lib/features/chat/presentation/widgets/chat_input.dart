@@ -1047,6 +1047,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         !isGenerating;
                     final charCount = value.text.length;
                     final maxLength = AppConstants.maxInputLength;
+                    final percentage = charCount / maxLength;
+                    final showCounter = percentage > 0.8;
                     final remaining = maxLength - charCount;
                     final counterColor = remaining <= 200
                         ? theme.colorScheme.error
@@ -1057,18 +1059,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          ExcludeSemantics(
-                            child: Text(
-                              '$charCount/$maxLength',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: counterColor,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
+                          if (showCounter) ...[
+                            Semantics(
+                              label: '$remaining characters remaining',
+                              container: true,
+                              child: Text(
+                                '$charCount/$maxLength',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: counterColor,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
+                            const SizedBox(width: 12),
+                          ],
                           Container(
                             decoration: BoxDecoration(
                               color: canSend

@@ -67,4 +67,49 @@ void main() {
     );
     expect(counter, isNull);
   });
+
+  testWidgets(
+    'ChatInput shows character counter only when approaching limit (>80%)',
+    (WidgetTester tester) async {
+      final mockStorage = MockStorageService();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            storageServiceProvider.overrideWithValue(mockStorage),
+            usageLimitsProvider.overrideWith(UsageLimitsNotifier.new),
+          ],
+          child: const MaterialApp(home: Scaffold(body: ChatInput())),
+        ),
+      );
+
+      final textFieldFinder = find.byType(TextField);
+
+      // 1. Short text: Counter should be hidden
+      await tester.enterText(textFieldFinder, 'Short message');
+      // Wait for debounce timer and animations to settle
+      await tester.pump(const Duration(milliseconds: 600));
+
+      // The counter text format is "current/max"
+      // e.g. "13/50000"
+      expect(
+        find.text('13/${AppConstants.maxInputLength}'),
+        findsNothing,
+        reason: 'Counter should be hidden for short text',
+      );
+
+      // 2. Long text (> 80% of 50,000 is 40,000)
+      // We'll use 40,001 characters
+      final longText = 'a' * 40001;
+      await tester.enterText(textFieldFinder, longText);
+      // Wait for debounce timer and animations to settle
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(
+        find.text('${longText.length}/${AppConstants.maxInputLength}'),
+        findsOneWidget,
+        reason: 'Counter should be visible when > 80%',
+      );
+    },
+  );
 }
