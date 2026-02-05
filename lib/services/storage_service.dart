@@ -11,6 +11,7 @@ import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
 import '../core/constants/system_prompt_presets.dart';
+import '../features/files/domain/models/file_item.dart';
 import 'pdf_export_service.dart';
 import 'dart:typed_data';
 
@@ -169,6 +170,74 @@ class StorageService {
 
   ChatSession? getChatSession(String id) {
     return _chatBox.get(id);
+  }
+
+  // Files
+  List<FileItem> getAllAttachments() {
+    final items = <FileItem>[];
+    for (final session in getChatSessions()) {
+      for (final message in session.messages) {
+        if (message.attachments != null) {
+          for (final attachment in message.attachments!) {
+            items.add(
+              FileItem(
+                attachment: attachment,
+                chatId: session.id,
+                chatTitle: session.title,
+                message: message,
+              ),
+            );
+          }
+        }
+      }
+    }
+    // Sort by timestamp desc (newest first)
+    items.sort((a, b) => b.message.timestamp.compareTo(a.message.timestamp));
+    return items;
+  }
+
+  Future<void> deleteAttachment(
+    String chatId,
+    ChatMessage message,
+    TextFileAttachment attachment,
+  ) async {
+    final session = getChatSession(chatId);
+    if (session == null) return;
+
+    final newMessages = List<ChatMessage>.from(session.messages);
+    final msgIndex = newMessages.indexOf(message);
+    if (msgIndex == -1) return; // Message not found
+
+    // Create copy of message with attachment removed
+    final currentAttachments =
+        message.attachments != null
+            ? List<TextFileAttachment>.from(message.attachments!)
+            : <TextFileAttachment>[];
+
+    currentAttachments.removeWhere((a) => a == attachment);
+
+    final updatedAttachments =
+        currentAttachments.isEmpty ? null : currentAttachments;
+
+    // Use constructor instead of copyWith because copyWith ignores null values
+    final updatedMessage = ChatMessage(
+      role: message.role,
+      content: message.content,
+      timestamp: message.timestamp,
+      images: message.images,
+      attachments: updatedAttachments,
+    );
+
+    // Update session
+    newMessages[msgIndex] = updatedMessage;
+    final updatedSession = session.copyWith(messages: newMessages);
+
+    // We must call saveChatSession to persist changes to Hive
+    await saveChatSession(updatedSession, log: false);
+    await logActivity(
+      'Attachment Deleted',
+      'Deleted attachment "${attachment.name}" from chat $chatId',
+    );
   }
 
   // System Prompts
