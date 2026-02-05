@@ -58,6 +58,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   MarkdownStyleSheet? _cachedStyleSheet;
   ThemeData? _cachedTheme;
   double? _cachedFontSize;
+  Color? _cachedTextColor;
 
   @override
   void initState() {
@@ -66,24 +67,30 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     _formattedTimestamp = TimestampFormatter.format(widget.message.timestamp);
   }
 
-  MarkdownStyleSheet _getStyleSheet(ThemeData theme, double fontSize) {
+  MarkdownStyleSheet _getStyleSheet(
+    ThemeData theme,
+    double fontSize,
+    Color textColor,
+  ) {
     // Use identical for theme to avoid expensive equality checks.
     // During streaming, the theme instance typically remains the same.
     if (_cachedStyleSheet != null &&
         identical(_cachedTheme, theme) &&
-        _cachedFontSize == fontSize) {
+        _cachedFontSize == fontSize &&
+        _cachedTextColor == textColor) {
       return _cachedStyleSheet!;
     }
 
     _cachedTheme = theme;
     _cachedFontSize = fontSize;
+    _cachedTextColor = textColor;
     _cachedStyleSheet = MarkdownStyleSheet.fromTheme(theme).copyWith(
       p: theme.textTheme.bodyMedium?.copyWith(
-        color: Colors.white,
+        color: textColor,
         fontSize: fontSize,
       ),
       code: theme.textTheme.bodyMedium?.copyWith(
-        backgroundColor: Colors.black26,
+        backgroundColor: textColor.withValues(alpha: 0.1),
         fontSize: fontSize * 0.9,
       ),
     );
@@ -208,6 +215,12 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
             appearance.userMsgColor,
           ).withValues(alpha: appearance.msgOpacity)
         : Color(appearance.aiMsgColor).withValues(alpha: appearance.msgOpacity);
+
+    // Calculate contrast colors based on bubble luminance
+    final luminance = bubbleColor.computeLuminance();
+    final contentColor = luminance > 0.5 ? Colors.black87 : Colors.white;
+    final secondaryColor = luminance > 0.5 ? Colors.black54 : Colors.white70;
+
     final radius = appearance.bubbleRadius;
     final fontSize = appearance.fontSize;
     final padding = appearance.chatPadding;
@@ -251,8 +264,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                       ]
                     : null,
               ),
-              child: const ThreeDotLoadingIndicator(
-                color: Colors.white,
+              child: ThreeDotLoadingIndicator(
+                color: contentColor,
                 size: 6.0,
               ),
             ),
@@ -354,7 +367,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                               Text(
                                 message.content,
                                 style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: Colors.white,
+                                  color: contentColor,
                                   fontSize: fontSize,
                                 ),
                               )
@@ -377,7 +390,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                     }
                                   }
                                 },
-                                styleSheet: _getStyleSheet(theme, fontSize),
+                                styleSheet: _getStyleSheet(
+                                  theme,
+                                  fontSize,
+                                  contentColor,
+                                ),
                               ),
                             if (message.attachments != null &&
                                 message.attachments!.isNotEmpty)
@@ -390,19 +407,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                     attachment,
                                   ) {
                                     return ActionChip(
-                                      avatar: const Icon(
+                                      avatar: Icon(
                                         Icons.description,
                                         size: 16,
-                                        color: Colors.white,
+                                        color: contentColor,
                                       ),
                                       label: Text(
                                         attachment.name,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
+                                        style: TextStyle(color: contentColor),
                                       ),
-                                      backgroundColor: Colors.black.withValues(
-                                        alpha: 0.2,
+                                      backgroundColor: contentColor.withValues(
+                                        alpha: 0.1,
                                       ),
                                       onPressed: () => _showAttachmentViewer(
                                         attachment.name,
@@ -429,7 +444,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                   Text(
                                     _formattedTimestamp,
                                     style: TextStyle(
-                                      color: Colors.white70,
+                                      color: secondaryColor,
                                       fontSize: fontSize * 0.7,
                                       fontStyle: FontStyle.italic,
                                     ),
@@ -562,6 +577,12 @@ class _FocusedMenuOverlay extends ConsumerWidget {
             appearance.userMsgColor,
           ).withValues(alpha: appearance.msgOpacity)
         : Color(appearance.aiMsgColor).withValues(alpha: appearance.msgOpacity);
+
+    // Calculate contrast colors based on bubble luminance
+    final luminance = bubbleColor.computeLuminance();
+    final contentColor = luminance > 0.5 ? Colors.black87 : Colors.white;
+    final secondaryColor = luminance > 0.5 ? Colors.black54 : Colors.white70;
+
     final radius = appearance.bubbleRadius;
     final fontSize = appearance.fontSize;
     final padding = appearance.chatPadding;
@@ -624,10 +645,10 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                     // Same content rendering ... simplified for overlay (no images for brevity if desired, or duplicate)
                     if (message.images != null)
                       ...message.images!.map(
-                        (str) => const SizedBox(
+                        (str) => SizedBox(
                           height: 100,
                           child: Center(
-                            child: Icon(Icons.image, color: Colors.white),
+                            child: Icon(Icons.image, color: contentColor),
                           ),
                         ),
                       ),
@@ -636,7 +657,7 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                       Text(
                         message.content,
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color: Colors.white,
+                          color: contentColor,
                           fontSize: fontSize,
                         ),
                       )
@@ -661,11 +682,13 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                         styleSheet: MarkdownStyleSheet.fromTheme(theme)
                             .copyWith(
                               p: theme.textTheme.bodyMedium?.copyWith(
-                                color: Colors.white,
+                                color: contentColor,
                                 fontSize: fontSize,
                               ),
                               code: theme.textTheme.bodyMedium?.copyWith(
-                                backgroundColor: Colors.black26,
+                                backgroundColor: contentColor.withValues(
+                                  alpha: 0.1,
+                                ),
                                 fontSize: fontSize * 0.9,
                               ),
                             ),
@@ -676,7 +699,7 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                       child: Text(
                         TimestampFormatter.format(message.timestamp),
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: secondaryColor,
                           fontSize: fontSize * 0.7,
                           fontStyle: FontStyle.italic,
                         ),

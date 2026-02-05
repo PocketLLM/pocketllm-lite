@@ -65,3 +65,7 @@
 ## 2026-01-21 - [Chat List Context]
 **Learning:** In chat history lists, displaying only the date forces users to recall conversations by time alone, which is difficult. Showing a snippet of the last message provides immediate context (semantic memory) and significantly speeds up list scanning.
 **Action:** Always include a text preview (truncated to 1 line) and use the *last message timestamp* (not creation date) in chat list items to maximize information density and relevance.
+
+## 2025-05-30 - [Dynamic Contrast in User-Themable UI]
+**Learning:** Hardcoding text colors (e.g., White) in customizable components like chat bubbles fails accessibility standards when users or presets choose light background colors. Relying on "defaults" is insufficient for themable UIs.
+**Action:** Always calculate text color dynamically based on the background color's luminance (`bg.computeLuminance() > 0.5 ? darkText : lightText`) to ensure WCAG-compliant contrast ratios regardless of user customization.
