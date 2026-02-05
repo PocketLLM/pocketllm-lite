@@ -1048,6 +1048,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     final charCount = value.text.length;
                     final maxLength = AppConstants.maxInputLength;
                     final remaining = maxLength - charCount;
+                    final showCounter = charCount > maxLength * 0.8;
                     final counterColor = remaining <= 200
                         ? theme.colorScheme.error
                         : theme.colorScheme.onSurfaceVariant;
@@ -1057,18 +1058,30 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          ExcludeSemantics(
-                            child: Text(
-                              '$charCount/$maxLength',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: counterColor,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: showCounter
+                                ? Padding(
+                                    padding: const EdgeInsets.only(right: 12),
+                                    child: Semantics(
+                                      label:
+                                          '$charCount of $maxLength characters used',
+                                      child: ExcludeSemantics(
+                                        child: Text(
+                                          '$charCount/$maxLength',
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                                color: counterColor,
+                                                fontFeatures: const [
+                                                  FontFeature.tabularFigures(),
+                                                ],
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
-                          const SizedBox(width: 12),
                           Container(
                             decoration: BoxDecoration(
                               color: canSend
