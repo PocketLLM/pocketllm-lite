@@ -91,7 +91,10 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
       next,
     ) {
       if (next > (prev ?? 0)) {
-        _throttledScrollToBottom();
+        // Only scroll if we are already at the bottom to avoid hijacking the user's view
+        if (!_showScrollToBottom) {
+          _throttledScrollToBottom();
+        }
       }
     });
 
