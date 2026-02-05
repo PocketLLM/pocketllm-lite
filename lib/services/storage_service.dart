@@ -12,7 +12,6 @@ import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
-import 'dart:typed_data';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
@@ -850,6 +849,12 @@ class StorageService {
     logActivity('Data Export', 'Exported activity logs as JSON');
     final logs = getActivityLogs();
     return const JsonEncoder.withIndent('  ').convert(logs);
+  }
+
+  Future<Uint8List> exportActivityLogsToPdf() async {
+    logActivity('Data Export', 'Exported activity logs as PDF');
+    final logs = getActivityLogs();
+    return await PdfExportService().generateActivityLogsPdf(logs: logs);
   }
 
   Future<Uint8List> exportToPdf({List<String>? chatIds}) async {

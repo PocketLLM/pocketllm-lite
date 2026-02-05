@@ -27,4 +27,26 @@ void main() {
     // Basic check for PDF header signature
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
   });
+
+  test('PdfExportService generates activity logs PDF', () async {
+    final service = PdfExportService();
+    final logs = [
+      {
+        'timestamp': DateTime.now().toIso8601String(),
+        'action': 'Test Action',
+        'details': 'Test Details',
+      },
+      {
+        'timestamp':
+            DateTime.now().add(const Duration(minutes: 5)).toIso8601String(),
+        'action': 'Another Action',
+        'details': 'More Details',
+      },
+    ];
+
+    final bytes = await service.generateActivityLogsPdf(logs: logs);
+    expect(bytes, isNotNull);
+    expect(bytes.isNotEmpty, true);
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+  });
 }

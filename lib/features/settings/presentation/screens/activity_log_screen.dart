@@ -97,6 +97,19 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
               ),
             ),
           ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'pdf'),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.picture_as_pdf, color: Colors.red),
+                  SizedBox(width: 12),
+                  Text('PDF (Document)'),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -114,6 +127,11 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
         file = File('${directory.path}/pocketllm_logs_$timestamp.csv');
         await file.writeAsString(csvString);
         subject = 'Activity Logs (CSV)';
+      } else if (format == 'pdf') {
+        final pdfBytes = await storage.exportActivityLogsToPdf();
+        file = File('${directory.path}/pocketllm_logs_$timestamp.pdf');
+        await file.writeAsBytes(pdfBytes);
+        subject = 'Activity Logs (PDF)';
       } else {
         final jsonString = storage.exportActivityLogsToJson();
         file = File('${directory.path}/pocketllm_logs_$timestamp.json');

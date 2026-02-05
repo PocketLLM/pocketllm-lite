@@ -118,4 +118,89 @@ class PdfExportService {
       ),
     );
   }
+
+  Future<Uint8List> generateActivityLogsPdf({
+    required List<Map<String, dynamic>> logs,
+  }) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Text(
+                'Activity Logs',
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.Paragraph(
+              text: 'Generated on: ${DateTime.now().toIso8601String()}',
+              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2), // Timestamp
+                1: const pw.FlexColumnWidth(2), // Action
+                2: const pw.FlexColumnWidth(4), // Details
+              },
+              children: [
+                // Header Row
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+                  children: [
+                    _buildTableCell('Timestamp', isHeader: true),
+                    _buildTableCell('Action', isHeader: true),
+                    _buildTableCell('Details', isHeader: true),
+                  ],
+                ),
+                // Data Rows
+                ...logs.map((log) {
+                  final timestamp = log['timestamp'] as String? ?? '';
+                  String formattedTime = timestamp;
+                  try {
+                    final dt = DateTime.parse(timestamp);
+                    // Simple formatting: YYYY-MM-DD HH:mm:ss
+                    formattedTime =
+                        '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}:${dt.second.toString().padLeft(2, '0')}';
+                  } catch (_) {}
+
+                  return pw.TableRow(
+                    children: [
+                      _buildTableCell(formattedTime),
+                      _buildTableCell(log['action'] as String? ?? ''),
+                      _buildTableCell(log['details'] as String? ?? ''),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ];
+        },
+      ),
+    );
+
+    return await pdf.save();
+  }
+
+  pw.Widget _buildTableCell(String text, {bool isHeader = false}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(5),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: 9,
+          fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+        ),
+      ),
+    );
+  }
 }
