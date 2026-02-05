@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Missing OTA Integrity Check
+**Vulnerability:** OTA updates downloaded from GitHub Releases lacked checksum verification, exposing users to potential Man-in-the-Middle (MITM) attacks or corrupted APKs.
+**Learning:** Even when using HTTPS (GitHub), relying solely on transport security for software updates is insufficient. Checksums provide end-to-end integrity verification.
+**Prevention:** Always verify downloaded update artifacts against a signed or trusted checksum file (like `sha256sum.txt`) before installation.
