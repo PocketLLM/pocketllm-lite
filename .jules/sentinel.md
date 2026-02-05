@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Missing OTA Update Integrity Check
+**Vulnerability:** The OTA update mechanism downloaded and installed APKs without verifying their checksum, allowing potential installation of compromised binaries if the download source or connection is intercepted.
+**Learning:** `ota_update` package supports checksum verification but it must be manually implemented by fetching and parsing the hash from a separate file (e.g., `.sha256`) before installation.
+**Prevention:** Always fetch and verify cryptographic signatures or checksums for out-of-band updates before executing installation logic.
