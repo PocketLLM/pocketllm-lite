@@ -728,7 +728,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               minWidth: 40,
                               minHeight: 40,
                             ),
-                            tooltip: 'Remove image',
+                            tooltip:
+                                'Remove image ${i + 1} of ${_selectedImages.length}',
                             onPressed: () =>
                                 setState(() => _selectedImages.removeAt(i)),
                             icon: Container(
