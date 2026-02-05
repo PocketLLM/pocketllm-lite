@@ -1,10 +1,79 @@
 import 'dart:typed_data';
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../features/chat/domain/models/chat_session.dart';
 
 class PdfExportService {
+  Future<Uint8List> generateActivityLogPdf({
+    required List<Map<String, dynamic>> logs,
+  }) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Activity Log Audit Trail',
+                    style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.Text(
+                    DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now()),
+                    style: const pw.TextStyle(
+                      fontSize: 12,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Table.fromTextArray(
+              headers: ['Timestamp', 'Action', 'Details'],
+              data: logs.map((log) {
+                final timestamp = DateTime.parse(log['timestamp']);
+                return [
+                  DateFormat('yyyy-MM-dd HH:mm:ss').format(timestamp),
+                  log['action'] ?? '',
+                  log['details'] ?? '',
+                ];
+              }).toList(),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColors.grey200,
+              ),
+              rowDecoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                ),
+              ),
+              cellAlignments: {
+                0: pw.Alignment.centerLeft,
+                1: pw.Alignment.centerLeft,
+                2: pw.Alignment.centerLeft,
+              },
+              cellPadding: const pw.EdgeInsets.all(5),
+            ),
+          ];
+        },
+      ),
+    );
+
+    return await pdf.save();
+  }
+
   Future<Uint8List> generateChatPdf({
     required List<ChatSession> sessions,
   }) async {
