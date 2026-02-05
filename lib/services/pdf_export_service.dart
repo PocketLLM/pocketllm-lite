@@ -118,4 +118,76 @@ class PdfExportService {
       ),
     );
   }
+
+  Future<Uint8List> generateActivityLogPdf({
+    required List<Map<String, dynamic>> logs,
+  }) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            _buildLogHeader(),
+            pw.SizedBox(height: 20),
+            _buildLogTable(logs),
+          ];
+        },
+      ),
+    );
+
+    return await pdf.save();
+  }
+
+  pw.Widget _buildLogHeader() {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Activity Audit Trail',
+          style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Text(
+          'Generated on: ${DateTime.now().toIso8601String().split('T')[0]}',
+          style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _buildLogTable(List<Map<String, dynamic>> logs) {
+    return pw.Table.fromTextArray(
+      headers: ['Timestamp', 'Action', 'Details'],
+      data:
+          logs.map((log) {
+            return [
+              log['timestamp']
+                      ?.toString()
+                      .split('T')
+                      .join(' ')
+                      .split('.')
+                      .first ??
+                  '',
+              log['action']?.toString() ?? '',
+              log['details']?.toString() ?? '',
+            ];
+          }).toList(),
+      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+      headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+      cellHeight: 30,
+      cellAlignments: {
+        0: pw.Alignment.centerLeft,
+        1: pw.Alignment.centerLeft,
+        2: pw.Alignment.centerLeft,
+      },
+      columnWidths: {
+        0: const pw.FlexColumnWidth(2),
+        1: const pw.FlexColumnWidth(2),
+        2: const pw.FlexColumnWidth(4),
+      },
+    );
+  }
 }
