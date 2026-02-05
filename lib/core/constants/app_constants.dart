@@ -99,4 +99,9 @@ class AppConstants {
   static const Duration apiConnectionTimeout = Duration(seconds: 10);
   static const Duration apiGenerationTimeout = Duration(seconds: 30);
   static const int maxTextFileAttachmentBytes = 200 * 1024;
+
+  // Advanced Model Settings Defaults
+  static const int defaultNumCtx = 2048;
+  static const double defaultRepeatPenalty = 1.1;
+  static const int defaultTopK = 40;
 }

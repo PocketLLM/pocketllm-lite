@@ -17,21 +17,27 @@ class ModelSettingsDialog extends ConsumerStatefulWidget {
 
 class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
   late TextEditingController _systemPromptController;
+  late TextEditingController _seedController;
   double _temperature = 0.7;
   double _topP = 0.9;
-  int _topK = 40;
+  int _topK = AppConstants.defaultTopK;
+  int _numCtx = AppConstants.defaultNumCtx;
+  double _repeatPenalty = AppConstants.defaultRepeatPenalty;
+  int? _seed;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _systemPromptController = TextEditingController();
+    _seedController = TextEditingController();
     _loadSettings();
   }
 
   @override
   void dispose() {
     _systemPromptController.dispose();
+    _seedController.dispose();
     super.dispose();
   }
 
@@ -46,7 +52,11 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
           _systemPromptController.text = settings['systemPrompt'] ?? '';
           _temperature = (settings['temperature'] as num?)?.toDouble() ?? 0.7;
           _topP = (settings['topP'] as num?)?.toDouble() ?? 0.9;
-          _topK = (settings['topK'] as num?)?.toInt() ?? 40;
+          _topK = (settings['topK'] as num?)?.toInt() ?? AppConstants.defaultTopK;
+          _numCtx = (settings['numCtx'] as num?)?.toInt() ?? AppConstants.defaultNumCtx;
+          _repeatPenalty = (settings['repeatPenalty'] as num?)?.toDouble() ?? AppConstants.defaultRepeatPenalty;
+          _seed = (settings['seed'] as num?)?.toInt();
+          _seedController.text = _seed?.toString() ?? '';
           _isLoading = false;
         });
       }
@@ -64,6 +74,9 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
       'temperature': _temperature,
       'topP': _topP,
       'topK': _topK,
+      'numCtx': _numCtx,
+      'repeatPenalty': _repeatPenalty,
+      'seed': _seed,
     };
 
     await storage.saveSetting(key, settings);
@@ -235,6 +248,75 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
                 const Text(
                   'Limits the next token selection to K most likely tokens.',
                   style: TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+
+                // Context Window
+                const Text('Context Window'),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<int>(
+                  value: _numCtx,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  items: [2048, 4096, 8192, 16384, 32768].map((size) {
+                    return DropdownMenuItem(
+                      value: size,
+                      child: Text(size.toString()),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => _numCtx = val);
+                  },
+                ),
+                const Text(
+                  'Tokens to process at once.',
+                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+
+                // Repeat Penalty
+                Row(
+                  children: [
+                    const Text('Repeat Penalty'),
+                    const Spacer(),
+                    Text(_repeatPenalty.toStringAsFixed(1)),
+                  ],
+                ),
+                Slider(
+                  value: _repeatPenalty,
+                  min: 0.0,
+                  max: 2.0,
+                  divisions: 20,
+                  label: _repeatPenalty.toStringAsFixed(1),
+                  onChanged: (val) => setState(() => _repeatPenalty = val),
+                ),
+                const Text(
+                  'Penalizes repetitive text. Default: 1.1',
+                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+
+                // Seed
+                const Text('Seed (Optional)'),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: _seedController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                    hintText: 'Random',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  onChanged: (val) {
+                    if (val.isEmpty) {
+                      _seed = null;
+                    } else {
+                      _seed = int.tryParse(val);
+                    }
+                  },
                 ),
               ],
             ),

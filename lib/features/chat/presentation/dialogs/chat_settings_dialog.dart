@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
 import '../providers/chat_provider.dart';
 
@@ -13,7 +15,14 @@ class ChatSettingsDialog extends ConsumerStatefulWidget {
 class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
   double _temp = 0.7;
   double _topP = 0.9;
+  int _topK = AppConstants.defaultTopK;
+  int _numCtx = AppConstants.defaultNumCtx;
+  double _repeatPenalty = AppConstants.defaultRepeatPenalty;
+  int? _seed;
   String? _selectedSystemPromptId;
+
+  // Controller for Seed
+  late TextEditingController _seedController;
 
   @override
   void initState() {
@@ -21,6 +30,11 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
     final state = ref.read(chatProvider);
     _temp = state.temperature;
     _topP = state.topP;
+    _topK = state.topK;
+    _numCtx = state.numCtx;
+    _repeatPenalty = state.repeatPenalty;
+    _seed = state.seed;
+    _seedController = TextEditingController(text: _seed?.toString() ?? '');
 
     // We don't store prompt ID in chat state, just string content.
     // So we can't easily pre-select the dropbox unless we search content match.
@@ -28,8 +42,18 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
   }
 
   @override
+  void dispose() {
+    _seedController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final storage = ref.watch(storageServiceProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black;
+    final subTextColor = isDark ? Colors.grey[400] : Colors.grey[700];
 
     return AlertDialog(
       title: const Text('Chat Settings'),
@@ -210,9 +234,117 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               'Controls diversity via nucleus sampling.',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey[400]
-                    : Colors.grey[700],
+                color: subTextColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                title: const Text(
+                  'Advanced Parameters',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                tilePadding: EdgeInsets.zero,
+                children: [
+                  // Context Window (num_ctx)
+                  const SizedBox(height: 8),
+                  const Text('Context Window Size', style: TextStyle(fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 4),
+                  DropdownButtonFormField<int>(
+                    value: _numCtx,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    items: [2048, 4096, 8192, 16384, 32768].map((size) {
+                      return DropdownMenuItem(
+                        value: size,
+                        child: Text(size.toString()),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setState(() => _numCtx = val);
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tokens to process at once. Higher uses more RAM.',
+                    style: TextStyle(fontSize: 11, color: subTextColor),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Top K
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Top K', style: TextStyle(fontWeight: FontWeight.w500)),
+                      Text(_topK.toString(), style: TextStyle(color: textColor)),
+                    ],
+                  ),
+                  Slider(
+                    value: _topK.toDouble(),
+                    min: 1,
+                    max: 100,
+                    divisions: 99,
+                    label: _topK.toString(),
+                    onChanged: (val) => setState(() => _topK = val.toInt()),
+                  ),
+                  Text(
+                    'Limits selection to K most likely tokens.',
+                    style: TextStyle(fontSize: 11, color: subTextColor),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Repeat Penalty
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Repeat Penalty', style: TextStyle(fontWeight: FontWeight.w500)),
+                      Text(_repeatPenalty.toStringAsFixed(1), style: TextStyle(color: textColor)),
+                    ],
+                  ),
+                  Slider(
+                    value: _repeatPenalty,
+                    min: 0.0,
+                    max: 2.0,
+                    divisions: 20,
+                    label: _repeatPenalty.toStringAsFixed(1),
+                    onChanged: (val) => setState(() => _repeatPenalty = val),
+                  ),
+                  Text(
+                    'Penalizes repetitive text. Default: 1.1',
+                    style: TextStyle(fontSize: 11, color: subTextColor),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Seed
+                  const Text('Seed (Optional)', style: TextStyle(fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: _seedController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      hintText: 'Random',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    onChanged: (val) {
+                      if (val.isEmpty) {
+                        _seed = null;
+                      } else {
+                        _seed = int.tryParse(val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Set for reproducible outputs.',
+                    style: TextStyle(fontSize: 11, color: subTextColor),
+                  ),
+                ],
               ),
             ),
           ],
@@ -249,6 +381,10 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                 .updateSettings(
                   temperature: _temp,
                   topP: _topP,
+                  topK: _topK,
+                  numCtx: _numCtx,
+                  repeatPenalty: _repeatPenalty,
+                  seed: _seed,
                   systemPrompt: promptContent,
                 );
 

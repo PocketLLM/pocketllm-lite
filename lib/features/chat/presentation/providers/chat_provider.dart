@@ -17,6 +17,9 @@ class ChatState {
   final double temperature;
   final double topP;
   final int topK;
+  final int numCtx;
+  final double repeatPenalty;
+  final int? seed;
   final String streamingContent;
 
   ChatState({
@@ -27,7 +30,10 @@ class ChatState {
     this.systemPrompt,
     this.temperature = 0.7,
     this.topP = 0.9,
-    this.topK = 40,
+    this.topK = AppConstants.defaultTopK,
+    this.numCtx = AppConstants.defaultNumCtx,
+    this.repeatPenalty = AppConstants.defaultRepeatPenalty,
+    this.seed,
     this.streamingContent = '',
   });
 
@@ -40,6 +46,9 @@ class ChatState {
     double? temperature,
     double? topP,
     int? topK,
+    int? numCtx,
+    double? repeatPenalty,
+    int? seed,
     String? streamingContent,
   }) {
     return ChatState(
@@ -51,6 +60,9 @@ class ChatState {
       temperature: temperature ?? this.temperature,
       topP: topP ?? this.topP,
       topK: topK ?? this.topK,
+      numCtx: numCtx ?? this.numCtx,
+      repeatPenalty: repeatPenalty ?? this.repeatPenalty,
+      seed: seed ?? this.seed,
       streamingContent: streamingContent ?? this.streamingContent,
     );
   }
@@ -77,7 +89,10 @@ class ChatNotifier extends Notifier<ChatState> {
           systemPrompt: settings['systemPrompt'],
           temperature: (settings['temperature'] as num?)?.toDouble() ?? 0.7,
           topP: (settings['topP'] as num?)?.toDouble() ?? 0.9,
-          topK: (settings['topK'] as num?)?.toInt() ?? 40,
+          topK: (settings['topK'] as num?)?.toInt() ?? AppConstants.defaultTopK,
+          numCtx: (settings['numCtx'] as num?)?.toInt() ?? AppConstants.defaultNumCtx,
+          repeatPenalty: (settings['repeatPenalty'] as num?)?.toDouble() ?? AppConstants.defaultRepeatPenalty,
+          seed: (settings['seed'] as num?)?.toInt(),
         );
         return;
       }
@@ -90,12 +105,18 @@ class ChatNotifier extends Notifier<ChatState> {
     double? temperature,
     double? topP,
     int? topK,
+    int? numCtx,
+    double? repeatPenalty,
+    int? seed,
   }) {
     state = state.copyWith(
       systemPrompt: systemPrompt,
       temperature: temperature,
       topP: topP,
       topK: topK,
+      numCtx: numCtx,
+      repeatPenalty: repeatPenalty,
+      seed: seed,
     );
   }
 
@@ -107,7 +128,10 @@ class ChatNotifier extends Notifier<ChatState> {
       systemPrompt: session.systemPrompt,
       temperature: session.temperature ?? 0.7,
       topP: session.topP ?? 0.9,
-      topK: session.topK ?? 40,
+      topK: session.topK ?? AppConstants.defaultTopK,
+      numCtx: session.numCtx ?? AppConstants.defaultNumCtx,
+      repeatPenalty: session.repeatPenalty ?? AppConstants.defaultRepeatPenalty,
+      seed: session.seed,
     );
   }
 
@@ -124,13 +148,19 @@ class ChatNotifier extends Notifier<ChatState> {
     String? sysPrompt;
     double temp = 0.7;
     double topP = 0.9;
-    int topK = 40;
+    int topK = AppConstants.defaultTopK;
+    int numCtx = AppConstants.defaultNumCtx;
+    double repeatPenalty = AppConstants.defaultRepeatPenalty;
+    int? seed;
 
     if (settings != null && settings is Map) {
       sysPrompt = settings['systemPrompt'];
       temp = (settings['temperature'] as num?)?.toDouble() ?? 0.7;
       topP = (settings['topP'] as num?)?.toDouble() ?? 0.9;
-      topK = (settings['topK'] as num?)?.toInt() ?? 40;
+      topK = (settings['topK'] as num?)?.toInt() ?? AppConstants.defaultTopK;
+      numCtx = (settings['numCtx'] as num?)?.toInt() ?? AppConstants.defaultNumCtx;
+      repeatPenalty = (settings['repeatPenalty'] as num?)?.toDouble() ?? AppConstants.defaultRepeatPenalty;
+      seed = (settings['seed'] as num?)?.toInt();
     }
 
     state = ChatState(
@@ -141,6 +171,9 @@ class ChatNotifier extends Notifier<ChatState> {
       temperature: temp,
       topP: topP,
       topK: topK,
+      numCtx: numCtx,
+      repeatPenalty: repeatPenalty,
+      seed: seed,
       streamingContent: '',
     );
   }
@@ -271,6 +304,9 @@ class ChatNotifier extends Notifier<ChatState> {
         "temperature": state.temperature,
         "top_p": state.topP,
         "top_k": state.topK,
+        "num_ctx": state.numCtx,
+        "repeat_penalty": state.repeatPenalty,
+        if (state.seed != null) "seed": state.seed,
       };
 
       final stream = ollama.generateChatStream(
@@ -367,6 +403,9 @@ class ChatNotifier extends Notifier<ChatState> {
       temperature: state.temperature,
       topP: state.topP,
       topK: state.topK,
+      numCtx: state.numCtx,
+      repeatPenalty: state.repeatPenalty,
+      seed: state.seed,
     );
 
     await storage.saveChatSession(session);

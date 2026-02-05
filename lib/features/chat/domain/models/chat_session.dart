@@ -32,6 +32,15 @@ class ChatSession {
   @HiveField(8)
   final int? topK;
 
+  @HiveField(9)
+  final int? numCtx;
+
+  @HiveField(10)
+  final double? repeatPenalty;
+
+  @HiveField(11)
+  final int? seed;
+
   ChatSession({
     required this.id,
     required this.title,
@@ -42,6 +51,9 @@ class ChatSession {
     this.temperature,
     this.topP,
     this.topK,
+    this.numCtx,
+    this.repeatPenalty,
+    this.seed,
   });
 
   ChatSession copyWith({
@@ -54,6 +66,9 @@ class ChatSession {
     double? temperature,
     double? topP,
     int? topK,
+    int? numCtx,
+    double? repeatPenalty,
+    int? seed,
   }) {
     return ChatSession(
       id: id ?? this.id,
@@ -65,6 +80,9 @@ class ChatSession {
       temperature: temperature ?? this.temperature,
       topP: topP ?? this.topP,
       topK: topK ?? this.topK,
+      numCtx: numCtx ?? this.numCtx,
+      repeatPenalty: repeatPenalty ?? this.repeatPenalty,
+      seed: seed ?? this.seed,
     );
   }
 }

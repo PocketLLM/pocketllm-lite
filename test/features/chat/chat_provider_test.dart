@@ -112,12 +112,20 @@ void main() {
     notifier.updateSettings(
       temperature: 0.8,
       topP: 0.5,
+      topK: 50,
+      numCtx: 4096,
+      repeatPenalty: 1.2,
+      seed: 12345,
       systemPrompt: 'Be concise',
     );
 
     final state = container.read(chatProvider);
     expect(state.temperature, 0.8);
     expect(state.topP, 0.5);
+    expect(state.topK, 50);
+    expect(state.numCtx, 4096);
+    expect(state.repeatPenalty, 1.2);
+    expect(state.seed, 12345);
     expect(state.systemPrompt, 'Be concise');
   });
 }
