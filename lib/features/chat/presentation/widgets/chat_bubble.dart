@@ -261,48 +261,49 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       );
     }
 
-    return ValueListenableBuilder(
-      valueListenable: storage.starredMessagesListenable,
-      builder: (context, _, __) {
-        final isStarred = storage.isMessageStarred(message);
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (!isUser && showAvatars) ...[
-                Semantics(
-                  excludeSemantics: true,
-                  child: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Icon(
-                      Icons.auto_awesome,
-                      size: 16,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isUser && showAvatars) ...[
+            Semantics(
+              excludeSemantics: true,
+              child: CircleAvatar(
+                radius: 14,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 16,
+                  color: theme.colorScheme.onPrimaryContainer,
                 ),
-                const SizedBox(width: 8),
-              ],
-              Flexible(
-                child: Semantics(
-                  container: true,
-                  hint: 'Double tap and hold for options',
-                  onLongPress: () {
-                    HapticFeedback.mediumImpact();
-                    _showFocusedMenu(context, isUser, isStarred);
-                  },
-                  child: GestureDetector(
-                    onLongPress: () {
-                      HapticFeedback.mediumImpact();
-                      _showFocusedMenu(context, isUser, isStarred);
-                    },
-                    child: RepaintBoundary(
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Semantics(
+              container: true,
+              hint: 'Double tap and hold for options',
+              onLongPress: () {
+                HapticFeedback.mediumImpact();
+                final isStarred = ref
+                    .read(storageServiceProvider)
+                    .isMessageStarred(message);
+                _showFocusedMenu(context, isUser, isStarred);
+              },
+              child: GestureDetector(
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  final isStarred = ref
+                      .read(storageServiceProvider)
+                      .isMessageStarred(message);
+                  _showFocusedMenu(context, isUser, isStarred);
+                },
+                child: RepaintBoundary(
                       child: Container(
                         key: _bubbleKey,
                         padding: EdgeInsets.all(padding),
@@ -415,26 +416,34 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                             // Timestamp display
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (isStarred) ...[
-                                    const Icon(
-                                      Icons.star,
-                                      size: 12,
-                                      color: Colors.amber,
-                                    ),
-                                    const SizedBox(width: 4),
-                                  ],
-                                  Text(
-                                    _formattedTimestamp,
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: fontSize * 0.7,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
+                              child: ValueListenableBuilder(
+                                valueListenable:
+                                    storage.starredMessagesListenable,
+                                builder: (context, _, __) {
+                                  final isStarred =
+                                      storage.isMessageStarred(message);
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isStarred) ...[
+                                        const Icon(
+                                          Icons.star,
+                                          size: 12,
+                                          color: Colors.amber,
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ],
+                                      Text(
+                                        _formattedTimestamp,
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: fontSize * 0.7,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                           ],
@@ -467,8 +476,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
             ],
           ),
         );
-      },
-    );
   }
 
   void _showFocusedMenu(BuildContext context, bool isUser, bool isStarred) {
