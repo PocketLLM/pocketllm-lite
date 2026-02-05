@@ -214,8 +214,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final hasElevation = appearance.bubbleElevation;
     final showAvatars = appearance.showAvatars;
 
-    final storage = ref.watch(storageServiceProvider);
-
     // Show loading indicator for empty assistant messages (AI is generating)
     if (!isUser && message.content.isEmpty) {
       return Padding(
@@ -261,47 +259,47 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       );
     }
 
-    return ValueListenableBuilder(
-      valueListenable: storage.starredMessagesListenable,
-      builder: (context, _, __) {
-        final isStarred = storage.isMessageStarred(message);
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (!isUser && showAvatars) ...[
-                Semantics(
-                  excludeSemantics: true,
-                  child: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Icon(
-                      Icons.auto_awesome,
-                      size: 16,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        mainAxisAlignment:
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isUser && showAvatars) ...[
+            Semantics(
+              excludeSemantics: true,
+              child: CircleAvatar(
+                radius: 14,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 16,
+                  color: theme.colorScheme.onPrimaryContainer,
                 ),
-                const SizedBox(width: 8),
-              ],
-              Flexible(
-                child: Semantics(
-                  container: true,
-                  hint: 'Double tap and hold for options',
-                  onLongPress: () {
-                    HapticFeedback.mediumImpact();
-                    _showFocusedMenu(context, isUser, isStarred);
-                  },
-                  child: GestureDetector(
-                    onLongPress: () {
-                      HapticFeedback.mediumImpact();
-                      _showFocusedMenu(context, isUser, isStarred);
-                    },
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Semantics(
+              container: true,
+              hint: 'Double tap and hold for options',
+              onLongPress: () {
+                HapticFeedback.mediumImpact();
+                final isStarred =
+                    ref.read(storageServiceProvider).isMessageStarred(message);
+                _showFocusedMenu(context, isUser, isStarred);
+              },
+              child: GestureDetector(
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  final isStarred =
+                      ref
+                          .read(storageServiceProvider)
+                          .isMessageStarred(message);
+                  _showFocusedMenu(context, isUser, isStarred);
+                },
                     child: RepaintBoundary(
                       child: Container(
                         key: _bubbleKey,
@@ -418,14 +416,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (isStarred) ...[
-                                    const Icon(
-                                      Icons.star,
-                                      size: 12,
-                                      color: Colors.amber,
-                                    ),
-                                    const SizedBox(width: 4),
-                                  ],
+                                  _StarredStatusIcon(message: message),
                                   Text(
                                     _formattedTimestamp,
                                     style: TextStyle(
@@ -467,8 +458,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
             ],
           ),
         );
-      },
-    );
   }
 
   void _showFocusedMenu(BuildContext context, bool isUser, bool isStarred) {
@@ -838,6 +827,36 @@ class _FocusedMenuOverlay extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StarredStatusIcon extends ConsumerWidget {
+  final ChatMessage message;
+
+  const _StarredStatusIcon({required this.message});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final storage = ref.watch(storageServiceProvider);
+    return ValueListenableBuilder(
+      valueListenable: storage.starredMessagesListenable,
+      builder: (context, _, __) {
+        if (storage.isMessageStarred(message)) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(
+                Icons.star,
+                size: 12,
+                color: Colors.amber,
+              ),
+              SizedBox(width: 4),
+            ],
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 }
