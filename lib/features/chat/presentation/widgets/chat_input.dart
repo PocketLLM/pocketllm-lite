@@ -15,6 +15,7 @@ import '../providers/prompt_enhancer_provider.dart';
 import '../providers/connection_status_provider.dart';
 import '../providers/draft_message_provider.dart';
 import '../providers/editing_message_provider.dart';
+import 'package:intl/intl.dart';
 import '../../domain/models/text_file_attachment.dart';
 import '../../domain/models/chat_message.dart';
 import 'templates_sheet.dart';
@@ -1052,23 +1053,62 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         ? theme.colorScheme.error
                         : theme.colorScheme.onSurfaceVariant;
 
+                    // Progressive Disclosure: Only show if user has typed a lot (>1000)
+                    // or is approaching the limit (<=2000 remaining).
+                    final showCounter = charCount > 1000 || remaining <= 2000;
+                    final formatter = NumberFormat.decimalPattern();
+                    final formattedCount = formatter.format(charCount);
+                    final formattedMax = formatter.format(maxLength);
+
+                    String counterText;
+                    String semanticsLabel;
+
+                    if (remaining <= 2000) {
+                      counterText = '$formattedCount / $formattedMax';
+                      semanticsLabel =
+                          '$formattedCount characters of $formattedMax used';
+                    } else {
+                      counterText = '$formattedCount chars';
+                      semanticsLabel = '$formattedCount characters typed';
+                    }
+
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          ExcludeSemantics(
-                            child: Text(
-                              '$charCount/$maxLength',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: counterColor,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            transitionBuilder: (child, animation) =>
+                                FadeTransition(
+                              opacity: animation,
+                              child: SizeTransition(
+                                sizeFactor: animation,
+                                axis: Axis.horizontal,
+                                axisAlignment: 1.0,
+                                child: child,
                               ),
                             ),
+                            child: showCounter
+                                ? Padding(
+                                    padding: const EdgeInsets.only(right: 12),
+                                    child: Semantics(
+                                      label: semanticsLabel,
+                                      child: Text(
+                                        counterText,
+                                        key: ValueKey('counter_$counterText'),
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                          color: counterColor,
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
-                          const SizedBox(width: 12),
                           Container(
                             decoration: BoxDecoration(
                               color: canSend

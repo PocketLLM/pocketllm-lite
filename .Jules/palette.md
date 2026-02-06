@@ -65,3 +65,7 @@
 ## 2026-01-21 - [Chat List Context]
 **Learning:** In chat history lists, displaying only the date forces users to recall conversations by time alone, which is difficult. Showing a snippet of the last message provides immediate context (semantic memory) and significantly speeds up list scanning.
 **Action:** Always include a text preview (truncated to 1 line) and use the *last message timestamp* (not creation date) in chat list items to maximize information density and relevance.
+
+## 2025-10-26 - [Progressive Disclosure for Input Metadata]
+**Learning:** Always showing metadata like character counts (e.g., `0/50000`) creates visual noise, especially when limits are high. Users only need this information when they have typed a significant amount or are approaching a limit.
+**Action:** Implement progressive disclosure for character counters: hide them by default, show them when content exceeds a threshold (e.g., >1000 chars) or nears a limit (e.g., <2000 remaining), and use `Semantics` to make the disclosure accessible.
