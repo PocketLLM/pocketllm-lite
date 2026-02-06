@@ -1383,6 +1383,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
               ListTile(
+                title: const Text('File Gallery'),
+                subtitle: const Text('Manage attached text files'),
+                leading: const Icon(Icons.folder_open),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/files');
+                },
+              ),
+              ListTile(
                 title: const Text('Tag Management'),
                 subtitle: const Text('Organize and rename chat tags'),
                 leading: const Icon(Icons.label_outline),

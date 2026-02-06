@@ -12,7 +12,6 @@ import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
-import 'dart:typed_data';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
@@ -523,6 +522,48 @@ class StorageService {
         );
       }
     }
+  }
+
+  Future<void> deleteAttachment(
+    String chatId,
+    ChatMessage message,
+    TextFileAttachment attachment,
+  ) async {
+    final session = getChatSession(chatId);
+    if (session == null) return;
+
+    final messageIndex = session.messages.indexWhere((m) => m == message);
+    if (messageIndex == -1) return;
+
+    final targetMessage = session.messages[messageIndex];
+    if (targetMessage.attachments == null) return;
+
+    final updatedAttachments = List<TextFileAttachment>.from(
+      targetMessage.attachments!,
+    );
+    updatedAttachments.remove(attachment);
+
+    final updatedMessage = ChatMessage(
+      role: targetMessage.role,
+      content: targetMessage.content,
+      timestamp: targetMessage.timestamp,
+      images: targetMessage.images,
+      attachments:
+          updatedAttachments.isEmpty
+              ? null
+              : List.unmodifiable(updatedAttachments),
+    );
+
+    final updatedMessages = List<ChatMessage>.from(session.messages);
+    updatedMessages[messageIndex] = updatedMessage;
+
+    final updatedSession = session.copyWith(messages: updatedMessages);
+
+    await saveChatSession(updatedSession, log: false);
+    await logActivity(
+      'Attachment Deleted',
+      'Deleted attachment "${attachment.name}" from chat $chatId',
+    );
   }
 
   // Message Templates
