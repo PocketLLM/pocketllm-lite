@@ -12,6 +12,8 @@ class AppRelease {
   final String name;
   final String body;
   final String? apkDownloadUrl;
+  final String? checksumUrl;
+  final String? apkFilename;
   final DateTime publishedAt;
 
   AppRelease({
@@ -20,18 +22,31 @@ class AppRelease {
     required this.name,
     required this.body,
     this.apkDownloadUrl,
+    this.checksumUrl,
+    this.apkFilename,
     required this.publishedAt,
   });
 
   factory AppRelease.fromJson(Map<String, dynamic> json) {
     String? apkUrl;
+    String? checksumUrl;
+    String? apkFilename;
+
     final assets = json['assets'] as List<dynamic>?;
     if (assets != null && assets.isNotEmpty) {
       for (final asset in assets) {
         final name = asset['name'] as String?;
-        if (name != null && name.endsWith('.apk')) {
-          apkUrl = asset['browser_download_url'] as String?;
-          break;
+        final url = asset['browser_download_url'] as String?;
+        if (name == null || url == null) continue;
+
+        if (apkUrl == null && name.endsWith('.apk')) {
+          apkUrl = url;
+          apkFilename = name;
+        } else if (checksumUrl == null &&
+            (name.endsWith('.sha256') ||
+                name == 'checksums.txt' ||
+                name == 'SHA256SUMS')) {
+          checksumUrl = url;
         }
       }
     }
@@ -46,6 +61,8 @@ class AppRelease {
       name: json['name'] as String? ?? tagName,
       body: json['body'] as String? ?? '',
       apkDownloadUrl: apkUrl,
+      checksumUrl: checksumUrl,
+      apkFilename: apkFilename,
       publishedAt: DateTime.parse(json['published_at'] as String),
     );
   }
@@ -97,10 +114,17 @@ class UpdateService {
   static const String _lastUpdateCheckKey = 'last_update_check';
   static const String _dismissedVersionKey = 'dismissed_update_version';
 
+  http.Client _client = http.Client();
+
   // Singleton pattern
   static final UpdateService _instance = UpdateService._internal();
   factory UpdateService() => _instance;
   UpdateService._internal();
+
+  @visibleForTesting
+  void setClient(http.Client client) {
+    _client = client;
+  }
 
   /// Check if auto-update is enabled
   Future<bool> isAutoUpdateEnabled() async {
@@ -161,7 +185,7 @@ class UpdateService {
       }
 
       // Fetch latest release from GitHub
-      final response = await http
+      final response = await _client
           .get(
             Uri.parse(_releasesApiUrl),
             headers: {'Accept': 'application/vnd.github.v3+json'},
@@ -218,17 +242,66 @@ class UpdateService {
 
   /// Download and install the APK update
   /// Returns a stream of download progress (0.0 to 1.0)
-  Stream<OtaEvent> downloadAndInstallUpdate(String downloadUrl) {
+  Stream<OtaEvent> downloadAndInstallUpdate(
+    String downloadUrl, {
+    String? sha256checksum,
+  }) {
     if (kDebugMode) {
-      print('Starting download from: $downloadUrl');
+      print(
+        'Starting download from: $downloadUrl${sha256checksum != null ? ' (Checksum provided)' : ''}',
+      );
     }
 
     return OtaUpdate().execute(
       downloadUrl,
       destinationFilename: 'pocketllm_lite_update.apk',
-      sha256checksum:
-          null, // GitHub doesn't provide SHA256, but this is optional
+      sha256checksum: sha256checksum,
     );
+  }
+
+  /// Fetch the checksum file content
+  Future<String?> fetchChecksum(String checksumUrl) async {
+    try {
+      final response = await _client
+          .get(Uri.parse(checksumUrl))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return response.body;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching checksum: $e');
+      }
+    }
+    return null;
+  }
+
+  /// Extract the SHA256 checksum for the APK from the checksum file content
+  String? extractChecksum(String content, String apkFilename) {
+    // Attempt to split by lines
+    final lines = const LineSplitter().convert(content);
+    for (final line in lines) {
+      final parts = line.trim().split(RegExp(r'\s+'));
+      if (parts.length >= 2) {
+        final hash = parts[0];
+        final file = parts.sublist(1).join(' ');
+        // Checksum files often have *filename (binary mode) or just filename
+        if (file == apkFilename ||
+            file == '*$apkFilename' ||
+            file.endsWith(apkFilename)) {
+          // Validate hash is 64 hex characters (SHA256)
+          if (RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(hash)) {
+            return hash;
+          }
+        }
+      } else if (parts.length == 1) {
+        // Single hash in file?
+        if (RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(parts[0])) {
+          return parts[0];
+        }
+      }
+    }
+    return null;
   }
 
   /// Get the GitHub releases page URL for manual download
