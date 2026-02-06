@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -313,20 +314,63 @@ class _StreamingChatBubbleState extends ConsumerState<_StreamingChatBubble> {
   // object creation and identity changes during high-frequency updates.
   late final DateTime _timestamp;
 
+  // Throttling state to prevent excessive rebuilds during fast streaming
+  String _content = '';
+  String? _pendingContent;
+  Timer? _throttleTimer;
+
   @override
   void initState() {
     super.initState();
     _timestamp = DateTime.now();
+    // Initialize with current content without triggering a watch rebuild
+    _content = ref.read(chatProvider).streamingContent;
+  }
+
+  @override
+  void dispose() {
+    _throttleTimer?.cancel();
+    super.dispose();
+  }
+
+  void _updateContent(String newContent) {
+    _pendingContent = newContent;
+
+    // If timer is active, we just updated _pendingContent and wait.
+    if (_throttleTimer?.isActive ?? false) return;
+
+    // Immediate update if first time or timer expired
+    if (_content != newContent) {
+      setState(() {
+        _content = newContent;
+      });
+    }
+
+    // Start timer to throttle subsequent updates
+    _throttleTimer = Timer(const Duration(milliseconds: 50), () {
+      _throttleTimer = null;
+      // If we have pending content that is different, update it
+      if (_pendingContent != null && _pendingContent != _content) {
+        if (mounted) {
+          setState(() {
+            _content = _pendingContent!;
+          });
+        }
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final content = ref.watch(chatProvider.select((s) => s.streamingContent));
+    // Listen to changes without rebuilding automatically
+    ref.listen(chatProvider.select((s) => s.streamingContent), (prev, next) {
+      _updateContent(next);
+    });
 
     return ChatBubble(
       message: ChatMessage(
         role: 'assistant',
-        content: content,
+        content: _content,
         timestamp: _timestamp,
       ),
     );
