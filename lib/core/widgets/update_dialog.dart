@@ -77,9 +77,57 @@ class _UpdateDialogState extends State<UpdateDialog>
 
     HapticFeedback.mediumImpact();
 
+    String? checksum;
+    if (widget.release.checksumUrl != null &&
+        widget.release.apkFilename != null) {
+      setState(() => _status = 'Verifying update security...');
+      try {
+        final content = await _updateService.fetchChecksum(
+          widget.release.checksumUrl!,
+        );
+        if (content != null) {
+          checksum = _updateService.extractChecksum(
+            content,
+            widget.release.apkFilename!,
+          );
+          if (checksum == null) {
+            if (mounted) {
+              setState(() {
+                _error =
+                    'Security check failed: Checksum not found for ${widget.release.apkFilename}';
+                _isDownloading = false;
+              });
+            }
+            return;
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              _error = 'Security check failed: Could not fetch verification file';
+              _isDownloading = false;
+            });
+          }
+          return;
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _error = 'Security verification error: $e';
+            _isDownloading = false;
+          });
+        }
+        return;
+      }
+    }
+
+    setState(() => _status = 'Starting download...');
+
     try {
       _updateService
-          .downloadAndInstallUpdate(widget.release.apkDownloadUrl!)
+          .downloadAndInstallUpdate(
+            widget.release.apkDownloadUrl!,
+            sha256checksum: checksum,
+          )
           .listen(
             (event) {
               setState(() {
