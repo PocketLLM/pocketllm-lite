@@ -43,16 +43,25 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   @override
-  void dispose() {
-    // Save any pending draft before disposing
+  void deactivate() {
+    // Save any pending draft before disposing/deactivating
     if (_debounceTimer?.isActive ?? false) {
       _debounceTimer!.cancel();
-      final sessionId = ref.read(chatProvider).currentSessionId;
-      final draftKey = sessionId ?? 'new_chat';
-      final storage = ref.read(storageServiceProvider);
-      // We can't await here, but storage is synchronous (Hive memory) or fire-and-forget
-      storage.saveDraft(draftKey, _controller.text);
+      try {
+        final sessionId = ref.read(chatProvider).currentSessionId;
+        final draftKey = sessionId ?? 'new_chat';
+        final storage = ref.read(storageServiceProvider);
+        // We can't await here, but storage is synchronous (Hive memory) or fire-and-forget
+        storage.saveDraft(draftKey, _controller.text);
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
     }
+    super.deactivate();
+  }
+
+  @override
+  void dispose() {
     _controller.removeListener(_onTextChanged);
     _controller.dispose();
     _focusNode.dispose();
@@ -1048,6 +1057,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     final charCount = value.text.length;
                     final maxLength = AppConstants.maxInputLength;
                     final remaining = maxLength - charCount;
+                    // Show counter if text is long (>1000) or nearing limit (<2000 remaining)
+                    final showCounter = charCount > 1000 || remaining < 2000;
                     final counterColor = remaining <= 200
                         ? theme.colorScheme.error
                         : theme.colorScheme.onSurfaceVariant;
@@ -1057,18 +1068,39 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          ExcludeSemantics(
-                            child: Text(
-                              '$charCount/$maxLength',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: counterColor,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            transitionBuilder: (child, animation) =>
+                                SizeTransition(
+                              sizeFactor: animation,
+                              axis: Axis.horizontal,
+                              axisAlignment: 1.0,
+                              child: FadeTransition(
+                                opacity: animation,
+                                child: child,
                               ),
                             ),
+                            child: showCounter
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ExcludeSemantics(
+                                        child: Text(
+                                          '$charCount/$maxLength',
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                            color: counterColor,
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                    ],
+                                  )
+                                : const SizedBox.shrink(),
                           ),
-                          const SizedBox(width: 12),
                           Container(
                             decoration: BoxDecoration(
                               color: canSend

@@ -67,4 +67,45 @@ void main() {
     );
     expect(counter, isNull);
   });
+
+  testWidgets(
+    'ChatInput shows character counter only when text is long',
+    (WidgetTester tester) async {
+      final mockStorage = MockStorageService();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            storageServiceProvider.overrideWithValue(mockStorage),
+            usageLimitsProvider.overrideWith(UsageLimitsNotifier.new),
+          ],
+          child: const MaterialApp(home: Scaffold(body: ChatInput())),
+        ),
+      );
+
+      // Find the TextField
+      final textFieldFinder = find.byType(TextField);
+      expect(textFieldFinder, findsOneWidget);
+
+      // 1. Enter short text (< 1000 chars)
+      await tester.enterText(textFieldFinder, 'Short message');
+      await tester.pumpAndSettle();
+
+      // Verify counter is NOT visible
+      // The counter text format is "$charCount/$maxLength"
+      // maxLength is AppConstants.maxInputLength (50000)
+      final shortCounterText =
+          '${'Short message'.length}/${AppConstants.maxInputLength}';
+      expect(find.text(shortCounterText), findsNothing);
+
+      // 2. Enter long text (> 1000 chars)
+      final longText = 'a' * 1001;
+      await tester.enterText(textFieldFinder, longText);
+      await tester.pumpAndSettle();
+
+      // Verify counter IS visible
+      final longCounterText = '${longText.length}/${AppConstants.maxInputLength}';
+      expect(find.text(longCounterText), findsOneWidget);
+    },
+  );
 }
