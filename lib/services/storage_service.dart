@@ -852,6 +852,12 @@ class StorageService {
     return const JsonEncoder.withIndent('  ').convert(logs);
   }
 
+  Future<Uint8List> exportActivityLogsToPdf() async {
+    logActivity('Data Export', 'Exported activity logs as PDF');
+    final logs = getActivityLogs();
+    return await PdfExportService().generateActivityLogPdf(logs: logs);
+  }
+
   Future<Uint8List> exportToPdf({List<String>? chatIds}) async {
     logActivity('Data Export', 'Exported data as PDF');
     var sessions = getChatSessions();

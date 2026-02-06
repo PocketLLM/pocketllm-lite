@@ -93,5 +93,17 @@ void main() {
         expect(json, contains('"action": "Settings Changed"'));
       },
     );
+
+    test('exportActivityLogsToPdf logs activity and returns PDF bytes', () async {
+      final bytes = await storage.exportActivityLogsToPdf();
+      expect(storage.logs.length, 1);
+      expect(storage.logs.first['action'], 'Data Export');
+      expect(storage.logs.first['details'], contains('activity logs as PDF'));
+
+      expect(bytes, isNotNull);
+      expect(bytes.isNotEmpty, true);
+      // Check PDF header
+      expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+    });
   });
 }
