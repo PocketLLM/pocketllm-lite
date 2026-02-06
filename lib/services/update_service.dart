@@ -5,6 +5,21 @@ import 'package:ota_update/ota_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Wrapper for OtaUpdate to facilitate testing
+class OtaUpdateWrapper {
+  Stream<OtaEvent> execute(
+    String url, {
+    required String destinationFilename,
+    String? sha256checksum,
+  }) {
+    return OtaUpdate().execute(
+      url,
+      destinationFilename: destinationFilename,
+      sha256checksum: sha256checksum,
+    );
+  }
+}
+
 /// Model representing a GitHub release
 class AppRelease {
   final String tagName;
@@ -12,6 +27,8 @@ class AppRelease {
   final String name;
   final String body;
   final String? apkDownloadUrl;
+  final String? checksumUrl;
+  final String? apkFilename;
   final DateTime publishedAt;
 
   AppRelease({
@@ -20,18 +37,30 @@ class AppRelease {
     required this.name,
     required this.body,
     this.apkDownloadUrl,
+    this.checksumUrl,
+    this.apkFilename,
     required this.publishedAt,
   });
 
   factory AppRelease.fromJson(Map<String, dynamic> json) {
     String? apkUrl;
+    String? checksumUrl;
+    String? apkFilename;
     final assets = json['assets'] as List<dynamic>?;
+
     if (assets != null && assets.isNotEmpty) {
       for (final asset in assets) {
         final name = asset['name'] as String?;
-        if (name != null && name.endsWith('.apk')) {
-          apkUrl = asset['browser_download_url'] as String?;
-          break;
+        final url = asset['browser_download_url'] as String?;
+        if (name == null || url == null) continue;
+
+        if (name.endsWith('.apk')) {
+          apkUrl = url;
+          apkFilename = name;
+        } else if (name.endsWith('.sha256') ||
+            name.endsWith('.sha256sum') ||
+            name == 'checksums.txt') {
+          checksumUrl = url;
         }
       }
     }
@@ -46,6 +75,8 @@ class AppRelease {
       name: json['name'] as String? ?? tagName,
       body: json['body'] as String? ?? '',
       apkDownloadUrl: apkUrl,
+      checksumUrl: checksumUrl,
+      apkFilename: apkFilename,
       publishedAt: DateTime.parse(json['published_at'] as String),
     );
   }
@@ -96,6 +127,17 @@ class UpdateService {
   static const String _autoUpdateKey = 'auto_update_enabled';
   static const String _lastUpdateCheckKey = 'last_update_check';
   static const String _dismissedVersionKey = 'dismissed_update_version';
+
+  http.Client _client = http.Client();
+  OtaUpdateWrapper _otaUpdate = OtaUpdateWrapper();
+
+  /// Visible for testing
+  @visibleForTesting
+  set client(http.Client client) => _client = client;
+
+  /// Visible for testing
+  @visibleForTesting
+  set otaUpdate(OtaUpdateWrapper otaUpdate) => _otaUpdate = otaUpdate;
 
   // Singleton pattern
   static final UpdateService _instance = UpdateService._internal();
@@ -161,7 +203,7 @@ class UpdateService {
       }
 
       // Fetch latest release from GitHub
-      final response = await http
+      final response = await _client
           .get(
             Uri.parse(_releasesApiUrl),
             headers: {'Accept': 'application/vnd.github.v3+json'},
@@ -218,17 +260,83 @@ class UpdateService {
 
   /// Download and install the APK update
   /// Returns a stream of download progress (0.0 to 1.0)
-  Stream<OtaEvent> downloadAndInstallUpdate(String downloadUrl) {
+  Stream<OtaEvent> downloadAndInstallUpdate(AppRelease release) async* {
+    final downloadUrl = release.apkDownloadUrl;
+    if (downloadUrl == null) {
+      yield OtaEvent(
+        OtaStatus.INTERNAL_ERROR,
+        'No APK download URL available',
+      );
+      return;
+    }
+
     if (kDebugMode) {
       print('Starting download from: $downloadUrl');
     }
 
-    return OtaUpdate().execute(
+    String? checksum;
+    if (release.checksumUrl != null && release.apkFilename != null) {
+      yield OtaEvent(OtaStatus.DOWNLOADING, '0');
+      try {
+        if (kDebugMode) {
+          print('Fetching checksum from: ${release.checksumUrl}');
+        }
+        checksum = await _fetchChecksum(
+          release.checksumUrl!,
+          release.apkFilename!,
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print('Failed to fetch/parse checksum: $e');
+        }
+        yield OtaEvent(
+          OtaStatus.CHECKSUM_ERROR,
+          'Failed to verify update integrity: $e',
+        );
+        return;
+      }
+    }
+
+    yield* _otaUpdate.execute(
       downloadUrl,
       destinationFilename: 'pocketllm_lite_update.apk',
-      sha256checksum:
-          null, // GitHub doesn't provide SHA256, but this is optional
+      sha256checksum: checksum,
     );
+  }
+
+  /// Fetch and parse the checksum file
+  Future<String?> _fetchChecksum(String url, String filename) async {
+    final response = await _client.get(Uri.parse(url)).timeout(
+      const Duration(seconds: 10),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to download checksum file: ${response.statusCode}',
+      );
+    }
+
+    // Parse the checksum file (lines like "HASH  filename" or "HASH *filename")
+    // GitHub releases often use `sha256sum` output format
+    final lines = const LineSplitter().convert(response.body);
+    for (final line in lines) {
+      final parts = line.trim().split(RegExp(r'\s+'));
+      if (parts.length >= 2) {
+        final hash = parts[0];
+        // The filename part might contain '*' for binary mode or be just the name
+        // We join the rest just in case, but usually it's just the name
+        var nameInFile = parts.sublist(1).join(' ');
+        if (nameInFile.startsWith('*')) {
+          nameInFile = nameInFile.substring(1);
+        }
+
+        if (nameInFile == filename) {
+          return hash;
+        }
+      }
+    }
+
+    throw Exception('Checksum for $filename not found in checksum file');
   }
 
   /// Get the GitHub releases page URL for manual download
