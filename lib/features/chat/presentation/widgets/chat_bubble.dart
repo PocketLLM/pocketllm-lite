@@ -214,8 +214,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final hasElevation = appearance.bubbleElevation;
     final showAvatars = appearance.showAvatars;
 
-    final storage = ref.watch(storageServiceProvider);
-
     // Show loading indicator for empty assistant messages (AI is generating)
     if (!isUser && message.content.isEmpty) {
       return Padding(
@@ -261,213 +259,201 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       );
     }
 
-    return ValueListenableBuilder(
-      valueListenable: storage.starredMessagesListenable,
-      builder: (context, _, __) {
-        final isStarred = storage.isMessageStarred(message);
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (!isUser && showAvatars) ...[
-                Semantics(
-                  excludeSemantics: true,
-                  child: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Icon(
-                      Icons.auto_awesome,
-                      size: 16,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isUser && showAvatars) ...[
+            Semantics(
+              excludeSemantics: true,
+              child: CircleAvatar(
+                radius: 14,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 16,
+                  color: theme.colorScheme.onPrimaryContainer,
                 ),
-                const SizedBox(width: 8),
-              ],
-              Flexible(
-                child: Semantics(
-                  container: true,
-                  hint: 'Double tap and hold for options',
-                  onLongPress: () {
-                    HapticFeedback.mediumImpact();
-                    _showFocusedMenu(context, isUser, isStarred);
-                  },
-                  child: GestureDetector(
-                    onLongPress: () {
-                      HapticFeedback.mediumImpact();
-                      _showFocusedMenu(context, isUser, isStarred);
-                    },
-                    child: RepaintBoundary(
-                      child: Container(
-                        key: _bubbleKey,
-                        padding: EdgeInsets.all(padding),
-                        decoration: BoxDecoration(
-                          color: bubbleColor,
-                          borderRadius: BorderRadius.circular(radius).copyWith(
-                            bottomRight: isUser
-                                ? const Radius.circular(0)
-                                : null,
-                            bottomLeft: !isUser
-                                ? const Radius.circular(0)
-                                : null,
-                          ),
-                          boxShadow: hasElevation
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 2,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_decodedImages != null &&
-                                _decodedImages!.isNotEmpty)
-                              ..._decodedImages!.map(
-                                (bytes) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 8.0),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: InkWell(
-                                      onTap: () => _showImageViewer(bytes),
-                                      child: Image.memory(
-                                        bytes,
-                                        height: 150,
-                                        fit: BoxFit.cover,
-                                        // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
-                                        cacheHeight: 450,
-                                      ),
-                                    ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Semantics(
+              container: true,
+              hint: 'Double tap and hold for options',
+              onLongPress: () {
+                HapticFeedback.mediumImpact();
+                final isStarred = ref.read(storageServiceProvider).isMessageStarred(message);
+                _showFocusedMenu(context, isUser, isStarred);
+              },
+              child: GestureDetector(
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  final isStarred = ref.read(storageServiceProvider).isMessageStarred(message);
+                  _showFocusedMenu(context, isUser, isStarred);
+                },
+                child: RepaintBoundary(
+                  child: Container(
+                    key: _bubbleKey,
+                    padding: EdgeInsets.all(padding),
+                    decoration: BoxDecoration(
+                      color: bubbleColor,
+                      borderRadius: BorderRadius.circular(radius).copyWith(
+                        bottomRight: isUser
+                            ? const Radius.circular(0)
+                            : null,
+                        bottomLeft: !isUser
+                            ? const Radius.circular(0)
+                            : null,
+                      ),
+                      boxShadow: hasElevation
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_decodedImages != null &&
+                            _decodedImages!.isNotEmpty)
+                          ..._decodedImages!.map(
+                            (bytes) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: InkWell(
+                                  onTap: () => _showImageViewer(bytes),
+                                  child: Image.memory(
+                                    bytes,
+                                    height: 150,
+                                    fit: BoxFit.cover,
+                                    // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
+                                    cacheHeight: 450,
                                   ),
                                 ),
-                              ),
-                            if (isUser)
-                              Text(
-                                message.content,
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: Colors.white,
-                                  fontSize: fontSize,
-                                ),
-                              )
-                            else
-                              MarkdownBody(
-                                data: message.content,
-                                // ignore: deprecated_member_use
-                                imageBuilder: MarkdownHandlers.imageBuilder,
-                                onTapLink: (text, href, title) async {
-                                  if (href != null) {
-                                    final uri = Uri.tryParse(href);
-                                    // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
-                                    if (uri != null &&
-                                        UrlValidator.isSecureUrl(uri) &&
-                                        await canLaunchUrl(uri)) {
-                                      await launchUrl(
-                                        uri,
-                                        mode: LaunchMode.externalApplication,
-                                      );
-                                    }
-                                  }
-                                },
-                                styleSheet: _getStyleSheet(theme, fontSize),
-                              ),
-                            if (message.attachments != null &&
-                                message.attachments!.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: message.attachments!.map((
-                                    attachment,
-                                  ) {
-                                    return ActionChip(
-                                      avatar: const Icon(
-                                        Icons.description,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                      label: Text(
-                                        attachment.name,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      backgroundColor: Colors.black.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      onPressed: () => _showAttachmentViewer(
-                                        attachment.name,
-                                        attachment.content,
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            // Timestamp display
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (isStarred) ...[
-                                    const Icon(
-                                      Icons.star,
-                                      size: 12,
-                                      color: Colors.amber,
-                                    ),
-                                    const SizedBox(width: 4),
-                                  ],
-                                  Text(
-                                    _formattedTimestamp,
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: fontSize * 0.7,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
                               ),
                             ),
-                          ],
+                          ),
+                        if (isUser)
+                          Text(
+                            message.content,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: Colors.white,
+                              fontSize: fontSize,
+                            ),
+                          )
+                        else
+                          MarkdownBody(
+                            data: message.content,
+                            // ignore: deprecated_member_use
+                            imageBuilder: MarkdownHandlers.imageBuilder,
+                            onTapLink: (text, href, title) async {
+                              if (href != null) {
+                                final uri = Uri.tryParse(href);
+                                // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
+                                if (uri != null &&
+                                    UrlValidator.isSecureUrl(uri) &&
+                                    await canLaunchUrl(uri)) {
+                                  await launchUrl(
+                                    uri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                }
+                              }
+                            },
+                            styleSheet: _getStyleSheet(theme, fontSize),
+                          ),
+                        if (message.attachments != null &&
+                            message.attachments!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: message.attachments!.map((
+                                attachment,
+                              ) {
+                                return ActionChip(
+                                  avatar: const Icon(
+                                    Icons.description,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                  label: Text(
+                                    attachment.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  backgroundColor: Colors.black.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  onPressed: () => _showAttachmentViewer(
+                                    attachment.name,
+                                    attachment.content,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        // Timestamp display
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _StarredStatus(message: message),
+                              Text(
+                                _formattedTimestamp,
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: fontSize * 0.7,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
               ),
-              if (isUser && showAvatars) ...[
-                const SizedBox(width: 8),
-                Semantics(
-                  excludeSemantics: true,
-                  child: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: Color(profile.avatarColor),
-                    backgroundImage: profile.avatarImageBase64 != null
-                        ? MemoryImage(base64Decode(profile.avatarImageBase64!))
-                        : null,
-                    child: profile.avatarImageBase64 == null
-                        ? const Icon(
-                            Icons.person,
-                            size: 16,
-                            color: Colors.white,
-                          )
-                        : null,
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
-        );
-      },
+          if (isUser && showAvatars) ...[
+            const SizedBox(width: 8),
+            Semantics(
+              excludeSemantics: true,
+              child: CircleAvatar(
+                radius: 14,
+                backgroundColor: Color(profile.avatarColor),
+                backgroundImage: profile.avatarImageBase64 != null
+                    ? MemoryImage(base64Decode(profile.avatarImageBase64!))
+                    : null,
+                child: profile.avatarImageBase64 == null
+                    ? const Icon(
+                        Icons.person,
+                        size: 16,
+                        color: Colors.white,
+                      )
+                    : null,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -524,6 +510,33 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           return FadeTransition(opacity: animation, child: child);
         },
       ),
+    );
+  }
+}
+
+class _StarredStatus extends ConsumerWidget {
+  final ChatMessage message;
+
+  const _StarredStatus({required this.message});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final storage = ref.watch(storageServiceProvider);
+    return ValueListenableBuilder(
+      valueListenable: storage.starredMessagesListenable,
+      builder: (context, _, __) {
+        if (storage.isMessageStarred(message)) {
+          return const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Icon(
+              Icons.star,
+              size: 12,
+              color: Colors.amber,
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 }
