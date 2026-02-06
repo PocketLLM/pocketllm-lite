@@ -79,7 +79,7 @@ class _UpdateDialogState extends State<UpdateDialog>
 
     try {
       _updateService
-          .downloadAndInstallUpdate(widget.release.apkDownloadUrl!)
+          .downloadAndInstallUpdate(widget.release)
           .listen(
             (event) {
               setState(() {

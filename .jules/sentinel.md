@@ -22,3 +22,8 @@
 **Vulnerability:** User input or LLM output containing Markdown structure tokens (like `### `) could spoof conversation structure in exported files.
 **Learning:** Text-based export formats that use content-accessible delimiters must sanitize content to prevent structure injection.
 **Prevention:** Encapsulate untrusted content in block elements (like blockquotes `> `) or escape structural delimiters.
+
+## 2025-05-25 - Unverified APK Updates
+**Vulnerability:** In-app updates were downloaded and installed without integrity verification, allowing potential installation of tampered APKs if the connection was compromised or the asset replaced.
+**Learning:** GitHub Releases usually include checksum files (e.g., `checksums.txt`). Client-side verification using these checksums provides a layer of defense against compromised binaries.
+**Prevention:** Always verify cryptographic signatures or checksums (SHA-256) of downloaded executables/APKs before installation using the update installer's verification features.
