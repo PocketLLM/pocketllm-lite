@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
 
@@ -21,12 +22,9 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Archived Chats'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: M3AppBar(
+        title: 'Archived Chats',
+        onBack: () => Navigator.pop(context),
       ),
       body: ValueListenableBuilder<Box<ChatSession>>(
         valueListenable: storage.chatBoxListenable,
@@ -188,10 +186,10 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text(
+              leading: Icon(Icons.delete, color: theme.colorScheme.error),
+              title: Text(
                 'Delete Permanently',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: theme.colorScheme.error),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -225,7 +223,10 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: theme.colorScheme.onError,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete'),
           ),

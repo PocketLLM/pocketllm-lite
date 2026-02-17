@@ -15,6 +15,7 @@ import 'widgets/chat_input.dart';
 import 'dialogs/chat_settings_dialog.dart';
 import 'screens/chat_history_screen.dart';
 import '../../media/presentation/screens/media_gallery_screen.dart';
+import '../../../core/widgets/m3_app_bar.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -40,8 +41,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
+      appBar: M3AppBar(
+        title: '',
+        automaticallyImplyLeading: false,
+        titleWidget: Row(
           children: [
             Expanded(
               child: connectionStatusAsync.when(

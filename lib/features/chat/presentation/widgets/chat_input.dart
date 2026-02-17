@@ -44,13 +44,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   void dispose() {
-    if (_debounceTimer?.isActive ?? false) {
-      _debounceTimer!.cancel();
-      final sessionId = ref.read(chatProvider).currentSessionId;
-      final storage = ref.read(storageServiceProvider);
-      storage.saveDraft(sessionId ?? 'new_chat', _controller.text);
-    }
-    super.deactivate();
+    _debounceTimer?.cancel();
+    _controller.removeListener(_onTextChanged);
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   void _loadDraft() {
