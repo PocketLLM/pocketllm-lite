@@ -80,7 +80,7 @@ We use a specific increment pattern for `pubspec.yaml`:
   1. **Highlights**: Summary of major changes (e.g., "Material 3 Redesign").
   2. **Feature List**: Comprehensive list of ALL app capabilities (Chat, History, Settings, Customization, etc.).
   3. **Instructions**: Update this file for every release to reflect the current state of the app.
-
+  4. Release command `flutter build apk --split-per-abi --release`
 ---
 
 ## 4. Agent Operational Checklist
