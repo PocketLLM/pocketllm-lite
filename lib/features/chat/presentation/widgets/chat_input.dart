@@ -44,13 +44,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   void dispose() {
-    // Save any pending draft before disposing
     if (_debounceTimer?.isActive ?? false) {
       _debounceTimer!.cancel();
       final sessionId = ref.read(chatProvider).currentSessionId;
       final draftKey = sessionId ?? 'new_chat';
       final storage = ref.read(storageServiceProvider);
-      // We can't await here, but storage is synchronous (Hive memory) or fire-and-forget
       storage.saveDraft(draftKey, _controller.text);
     }
     _controller.removeListener(_onTextChanged);
@@ -89,7 +87,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   Future<void> _pickImage() async {
-    // Show bottom sheet to choose camera or gallery
     final storage = ref.read(storageServiceProvider);
     if (storage.getSetting(
       AppConstants.hapticFeedbackKey,
@@ -107,7 +104,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 12),
-              // Drag handle
               Container(
                 width: 32,
                 height: 4,
@@ -125,12 +121,18 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.camera_alt),
+                leading: Icon(
+                  Icons.camera_alt_rounded,
+                  color: theme.colorScheme.primary,
+                ),
                 title: const Text('Camera'),
                 onTap: () => Navigator.pop(context, ImageSource.camera),
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library),
+                leading: Icon(
+                  Icons.photo_library_rounded,
+                  color: theme.colorScheme.primary,
+                ),
                 title: const Text('Gallery'),
                 onTap: () => Navigator.pop(context, ImageSource.gallery),
               ),
@@ -145,7 +147,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       final XFile? image = await _picker.pickImage(
         source: source,
         maxWidth: 1024,
-        maxHeight: 1024, // Security: Prevent DoS via memory exhaustion
+        maxHeight: 1024,
       );
       if (image != null) {
         final bytes = await image.readAsBytes();
@@ -180,9 +182,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     if (file.bytes!.lengthInBytes > maxBytes) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('File too large. Limit to 200KB.'),
-            backgroundColor: Colors.orange,
+          SnackBar(
+            content: const Text('File too large. Limit to 200KB.'),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -219,25 +221,27 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             content: Text(
               'Message too long. Please limit to ${AppConstants.maxInputLength} characters.',
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
       return;
     }
 
-    // Check connection status before sending using the auto-refreshing provider
     final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
-    await connectionChecker.refresh(); // Force a refresh before checking
+    await connectionChecker.refresh();
     final connectionState = await ref.read(autoConnectionStatusProvider.future);
     final isConnected = connectionState;
 
     if (!isConnected) {
-      // Show dialog prompting user to connect Ollama with improved button design
       if (mounted) {
         await showDialog(
           context: context,
           builder: (dialogContext) => AlertDialog(
+            icon: Icon(
+              Icons.cloud_off_rounded,
+              color: Theme.of(dialogContext).colorScheme.error,
+            ),
             title: const Text('Ollama Not Connected'),
             content: const Text(
               'Please ensure Ollama is running and connected. '
@@ -248,21 +252,19 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Cancel'),
               ),
-              TextButton(
+              FilledButton.tonal(
                 onPressed: () {
                   Navigator.pop(dialogContext);
-                  // Navigate to settings using State context
                   if (mounted) context.push('/settings');
                 },
                 child: const Text('Settings'),
               ),
-              TextButton(
+              FilledButton(
                 onPressed: () {
                   Navigator.pop(dialogContext);
-                  // Navigate to docs using State context
                   if (mounted) context.push('/settings/docs');
                 },
-                child: const Text('Docs'),
+                child: const Text('Setup Guide'),
               ),
             ],
           ),
@@ -283,7 +285,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         .map((bytes) => base64Encode(bytes))
         .toList();
 
-    // Clear draft before sending
     final sessionId = ref.read(chatProvider).currentSessionId;
     final draftKey = sessionId ?? 'new_chat';
     await storage.deleteDraft(draftKey);
@@ -339,13 +340,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             Navigator.pop(context);
             if (content.isNotEmpty) {
               setState(() {
-                // If controller is empty, just replace. If not, append.
                 if (_controller.text.isEmpty) {
                   _controller.text = content;
                 } else {
                   _controller.text = '${_controller.text}\n$content';
                 }
-                // Move cursor to end
                 _controller.selection = TextSelection.fromPosition(
                   TextPosition(offset: _controller.text.length),
                 );
@@ -361,9 +360,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Future<void> _enhancePrompt() async {
     if (_controller.text.trim().isEmpty) return;
 
-    // Check connection status before enhancing using the auto-refreshing provider
     final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
-    await connectionChecker.refresh(); // Force a refresh before checking
+    await connectionChecker.refresh();
     final connectionState = await ref.read(autoConnectionStatusProvider.future);
     final isConnected = connectionState;
 
@@ -372,10 +370,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Cannot enhance prompt: Ollama not connected'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
             action: SnackBarAction(
               label: 'Settings',
-              textColor: Colors.white,
+              textColor: Theme.of(context).colorScheme.onError,
               onPressed: () => context.push('/settings'),
             ),
           ),
@@ -402,10 +400,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       return;
     }
 
-    // Check usage limits
     final limitsNotifier = ref.read(usageLimitsProvider.notifier);
     if (!limitsNotifier.canUseEnhancer()) {
-      // Show ad dialog
       await _showEnhancerLimitDialog();
       return;
     }
@@ -426,7 +422,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           .enhancePrompt(_controller.text);
 
       if (mounted) {
-        // Consume one enhancer use
         await limitsNotifier.useEnhancer();
 
         if (!mounted) return;
@@ -436,7 +431,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           _isEnhancing = false;
         });
 
-        // Haptic success feedback
         if (storage.getSetting(
           AppConstants.hapticFeedbackKey,
           defaultValue: true,
@@ -449,7 +443,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           SnackBar(
             content: Text('Prompt enhanced! ($remaining uses left today)'),
             duration: const Duration(seconds: 2),
-            backgroundColor: Colors.green,
           ),
         );
       }
@@ -461,10 +454,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           SnackBar(
             content: const Text('Enhancement failed—check Ollama.'),
             duration: const Duration(seconds: 3),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
             action: SnackBarAction(
               label: 'Settings',
-              textColor: Colors.white,
+              textColor: Theme.of(context).colorScheme.onError,
               onPressed: () => context.push('/settings'),
             ),
           ),
@@ -476,10 +469,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Future<void> _showEnhancerLimitDialog() async {
     final limits = ref.read(usageLimitsProvider);
     final adService = AdService();
+    final theme = Theme.of(context);
 
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        icon: Icon(
+          Icons.auto_awesome_rounded,
+          color: theme.colorScheme.primary,
+        ),
         title: const Text('Enhancement Limit Reached'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -491,7 +489,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             const SizedBox(height: 8),
             Text(
               'Resets in ~${limits.hoursUntilEnhancerReset} hours.',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 16),
             const Text('Watch a short ad to unlock 5 more enhancements?'),
@@ -502,17 +502,16 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Later'),
           ),
-          ElevatedButton.icon(
+          FilledButton.icon(
             onPressed: () async {
-              // Check internet first
               if (!await adService.hasInternetConnection()) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
+                    SnackBar(
+                      content: const Text(
                         'Connect to WiFi/Data to watch ad and unlock.',
                       ),
-                      backgroundColor: Colors.orange,
+                      backgroundColor: Theme.of(context).colorScheme.error,
                     ),
                   );
                 }
@@ -520,19 +519,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               }
               if (context.mounted) Navigator.pop(context, true);
             },
-            icon: const Icon(Icons.play_circle),
+            icon: const Icon(Icons.play_circle_rounded),
             label: const Text('Watch Ad'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue, // Blue background
-              foregroundColor: Colors.white, // White text
-            ),
           ),
         ],
       ),
     );
 
     if (result == true && mounted) {
-      // Show and handle rewarded ad
       await adService.showPromptEnhancementRewardedAd(
         onUserEarnedReward: (reward) async {
           await ref
@@ -541,10 +535,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           if (mounted) {
             HapticFeedback.heavyImpact();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Unlocked 5 more enhancements!'),
-                backgroundColor: Colors.green,
-              ),
+              const SnackBar(content: Text('Unlocked 5 more enhancements!')),
             );
           }
         },
@@ -553,7 +544,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Ad failed: $error'),
-                backgroundColor: Colors.red,
+                backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
           }
@@ -572,7 +563,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           TextPosition(offset: next.length),
         );
         _focusNode.requestFocus();
-        // Reset the provider to avoid re-triggering or stale state
         ref.read(draftMessageProvider.notifier).update((state) => null);
       }
     });
@@ -596,465 +586,348 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     ref.listen<ChatState>(chatProvider, (prev, next) {
       if (prev?.currentSessionId != next.currentSessionId) {
         final storage = ref.read(storageServiceProvider);
-
-        // Save previous draft
         final prevKey = prev?.currentSessionId ?? 'new_chat';
-        // We use the controller's current text as the draft for the PREVIOUS session
-        // BUT we need to be careful: if the controller text has already been replaced,
-        // we might save the wrong thing.
-        // However, this listener runs *after* the provider updates but *before* the widget rebuilds?
-        // Actually, listeners run synchronously on change.
-        // The controller text at this exact moment is what the user typed in the PREVIOUS session.
         storage.saveDraft(prevKey, _controller.text);
-
-        // Load new draft
         final nextKey = next.currentSessionId ?? 'new_chat';
         final newDraft = storage.getDraft(nextKey);
-
-        // Update controller without triggering listener loop (listener checks if content changed, which is fine)
-        // We temporarily remove listener to avoid saving the "new draft" to the "old key" during the switch?
-        // No, `_onTextChanged` uses `ref.read(chatProvider).currentSessionId`.
-        // By the time `_onTextChanged` runs (after 500ms), `chatProvider` will return `next.currentSessionId`.
-        // So it will save to the NEW key. This is correct.
         _controller.text = newDraft ?? '';
       }
     });
 
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isGenerating = ref.watch(chatProvider.select((s) => s.isGenerating));
     final editingMessage = ref.watch(editingMessageProvider);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface, // Background of the bar area
+        color: colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+            width: 0.5,
+          ),
+        ),
       ),
-      child: AnimatedBuilder(
-        animation: _focusNode,
-        builder: (context, child) {
-          return Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F2F5),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: _focusNode.hasFocus
-                    ? theme.colorScheme.primary
-                    : (isDark ? Colors.grey[800]! : Colors.transparent),
-                width: 1.0, // Constant width to prevent layout shift
-              ),
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
-            child: child,
-          );
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (editingMessage != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withValues(
-                    alpha: 0.6,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.edit,
-                      size: 16,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Editing message',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        ref
-                            .read(editingMessageProvider.notifier)
-                            .clearEditingMessage();
-                        _controller.clear();
-                        setState(() {
-                          _selectedFiles.clear();
-                        });
-                      },
-                      child: const Text('Cancel'),
-                    ),
-                  ],
-                ),
-              ),
-            if (_selectedImages.isNotEmpty)
-              Container(
-                height: 70,
-                padding: const EdgeInsets.only(bottom: 8, top: 8),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _selectedImages.length,
-                  itemBuilder: (c, i) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            _selectedImages[i],
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                            // Optimize memory: Decode only to the size we need (60 * 3 for HiDPI)
-                            cacheWidth: 180,
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: IconButton(
-                            alignment: Alignment.topRight,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 40,
-                              minHeight: 40,
-                            ),
-                            tooltip: 'Remove image',
-                            onPressed: () =>
-                                setState(() => _selectedImages.removeAt(i)),
-                            icon: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: const BoxDecoration(
-                                color: Colors.black54,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            if (_selectedFiles.isNotEmpty)
-              Container(
-                height: 60,
-                padding: const EdgeInsets.only(bottom: 8),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _selectedFiles.length,
-                  itemBuilder: (c, i) {
-                    final attachment = _selectedFiles[i];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Semantics(
-                        label: 'Attached file ${attachment.name}',
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.7),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: theme.colorScheme.outlineVariant,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.description, size: 16),
-                              const SizedBox(width: 8),
-                              ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 120,
-                                ),
-                                child: Text(
-                                  attachment.name,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelMedium,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                ),
-                                tooltip: 'Remove file',
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedFiles.removeAt(i);
-                                  });
-                                },
-                                icon: const Icon(Icons.close, size: 16),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
+      child: SafeArea(
+        top: false,
+        child: AnimatedBuilder(
+          animation: _focusNode,
+          builder: (context, child) {
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: _isEnhancing
-                    ? LinearGradient(
-                        colors: [
-                          Colors.blue.withValues(alpha: 0.1),
-                          Colors.purple.withValues(alpha: 0.1),
-                          Colors.pink.withValues(alpha: 0.1),
-                          Colors.blue.withValues(alpha: 0.1),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : null,
-                boxShadow: _isEnhancing
-                    ? [
-                        BoxShadow(
-                          color: Colors.blue.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : null,
+                color: colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: _focusNode.hasFocus
+                      ? colorScheme.primary.withValues(alpha: 0.5)
+                      : colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  width: _focusNode.hasFocus ? 1.5 : 1.0,
+                ),
               ),
-              child: CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(
-                    LogicalKeyboardKey.enter,
-                    control: true,
-                  ): _send,
-                  const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                      _send,
-                },
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  enabled: !isGenerating && !_isEnhancing,
-                  textCapitalization: TextCapitalization.sentences,
-                  keyboardType: TextInputType.multiline,
-                  maxLines: 8,
-                  minLines: 1,
-                  style: theme.textTheme.bodyLarge,
-                  maxLength: AppConstants.maxInputLength,
-                  buildCounter:
-                      (
-                        context, {
-                        required currentLength,
-                        required isFocused,
-                        required maxLength,
-                      }) => null,
-                  decoration: InputDecoration(
-                    hintText: _isEnhancing
-                        ? 'Enhancing your prompt...'
-                        : 'Message Pocket LLM...',
-                    hintStyle: TextStyle(
-                      color: _isEnhancing
-                          ? Colors.blue
-                          : theme.hintColor.withValues(alpha: 0.7),
-                      fontStyle: _isEnhancing ? FontStyle.italic : null,
+              padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
+              child: child,
+            );
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Editing banner
+              if (editingMessage != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 8, top: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.edit_rounded,
+                        size: 16,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Editing message',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          ref
+                              .read(editingMessageProvider.notifier)
+                              .clearEditingMessage();
+                          _controller.clear();
+                          setState(() {
+                            _selectedFiles.clear();
+                          });
+                        },
+                        icon: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: colorScheme.onPrimaryContainer,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              // Image previews
+              if (_selectedImages.isNotEmpty)
+                Container(
+                  height: 70,
+                  padding: const EdgeInsets.only(bottom: 8, top: 8),
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _selectedImages.length,
+                    itemBuilder: (c, i) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(
+                              _selectedImages[i],
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              cacheWidth: 180,
+                            ),
+                          ),
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: GestureDetector(
+                              onTap: () =>
+                                  setState(() => _selectedImages.removeAt(i)),
+                              child: Container(
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.error,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  color: colorScheme.onError,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              // File previews
+              if (_selectedFiles.isNotEmpty)
+                Container(
+                  height: 52,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _selectedFiles.length,
+                    itemBuilder: (c, i) {
+                      final attachment = _selectedFiles[i];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Semantics(
+                          label: 'Attached file ${attachment.name}',
+                          child: Chip(
+                            avatar: Icon(
+                              Icons.description_outlined,
+                              size: 16,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            label: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 120),
+                              child: Text(
+                                attachment.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelMedium,
+                              ),
+                            ),
+                            deleteIcon: Icon(
+                              Icons.close_rounded,
+                              size: 16,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            onDeleted: () {
+                              setState(() {
+                                _selectedFiles.removeAt(i);
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              // Enhancing gradient (visual feedback)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: _isEnhancing
+                      ? LinearGradient(
+                          colors: [
+                            colorScheme.primary.withValues(alpha: 0.08),
+                            colorScheme.tertiary.withValues(alpha: 0.08),
+                            colorScheme.secondary.withValues(alpha: 0.08),
+                            colorScheme.primary.withValues(alpha: 0.08),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  boxShadow: _isEnhancing
+                      ? [
+                          BoxShadow(
+                            color: colorScheme.primary.withValues(alpha: 0.2),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: CallbackShortcuts(
+                  bindings: {
+                    const SingleActivator(
+                      LogicalKeyboardKey.enter,
+                      control: true,
+                    ): _send,
+                    const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                        _send,
+                  },
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    enabled: !isGenerating && !_isEnhancing,
+                    textCapitalization: TextCapitalization.sentences,
+                    keyboardType: TextInputType.multiline,
+                    maxLines: 8,
+                    minLines: 1,
+                    style: theme.textTheme.bodyLarge,
+                    maxLength: AppConstants.maxInputLength,
+                    buildCounter:
+                        (
+                          context, {
+                          required currentLength,
+                          required isFocused,
+                          required maxLength,
+                        }) => null,
+                    decoration: InputDecoration(
+                      hintText: _isEnhancing
+                          ? 'Enhancing your prompt...'
+                          : 'Message Pocket LLM...',
+                      hintStyle: TextStyle(
+                        color: _isEnhancing
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.6,
+                              ),
+                        fontStyle: _isEnhancing ? FontStyle.italic : null,
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Semantics(
-                      label: 'Add Image',
-                      button: true,
-                      enabled: !isGenerating,
-                      child: Tooltip(
-                        message: 'Add Image',
-                        child: Material(
-                          color: (isDark ? Colors.grey[800] : Colors.grey[300])
-                              ?.withValues(alpha: isGenerating ? 0.5 : 1.0),
-                          shape: const CircleBorder(),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: isGenerating ? null : _pickImage,
-                            child: Padding(
-                              padding: const EdgeInsets.all(6),
-                              child: Icon(
-                                Icons.add,
-                                size: 20,
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: isGenerating ? 0.5 : 1.0,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+              const SizedBox(height: 4),
+              // Bottom toolbar
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Left action buttons
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _InputActionButton(
+                        icon: Icons.add_rounded,
+                        tooltip: 'Add Image',
+                        onTap: _pickImage,
+                        isDisabled: isGenerating,
+                        colorScheme: colorScheme,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Semantics(
-                      label: 'Insert File',
-                      button: true,
-                      enabled: !isGenerating,
-                      child: Tooltip(
-                        message: 'Insert Text File',
-                        child: Material(
-                          color: (isDark ? Colors.grey[800] : Colors.grey[300])
-                              ?.withValues(alpha: isGenerating ? 0.5 : 1.0),
-                          shape: const CircleBorder(),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: isGenerating ? null : _pickFile,
-                            child: Padding(
-                              padding: const EdgeInsets.all(6),
-                              child: Icon(
-                                Icons.attach_file,
-                                size: 20,
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: isGenerating ? 0.5 : 1.0,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                      const SizedBox(width: 4),
+                      _InputActionButton(
+                        icon: Icons.attach_file_rounded,
+                        tooltip: 'Insert Text File',
+                        onTap: _pickFile,
+                        isDisabled: isGenerating,
+                        colorScheme: colorScheme,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Templates Button
-                    Semantics(
-                      label: 'Templates',
-                      button: true,
-                      enabled: !isGenerating,
-                      child: Tooltip(
-                        message: 'Quick Templates',
-                        child: Material(
-                          color: (isDark ? Colors.grey[800] : Colors.grey[300])
-                              ?.withValues(alpha: isGenerating ? 0.5 : 1.0),
-                          shape: const CircleBorder(),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: isGenerating ? null : _showTemplates,
-                            child: Padding(
-                              padding: const EdgeInsets.all(6),
-                              child: Icon(
-                                Icons.bolt,
-                                size: 20,
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: isGenerating ? 0.5 : 1.0,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                      const SizedBox(width: 4),
+                      _InputActionButton(
+                        icon: Icons.bolt_rounded,
+                        tooltip: 'Quick Templates',
+                        onTap: _showTemplates,
+                        isDisabled: isGenerating,
+                        colorScheme: colorScheme,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Enhance Prompt Button - only show if enhancer model selected
-                    Consumer(
-                      builder: (context, ref, child) {
-                        final enhancerState = ref.watch(promptEnhancerProvider);
-                        final hasEnhancer =
-                            enhancerState.selectedModelId != null;
+                      const SizedBox(width: 4),
+                      // Enhance Prompt Button
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final enhancerState = ref.watch(
+                            promptEnhancerProvider,
+                          );
+                          final hasEnhancer =
+                              enhancerState.selectedModelId != null;
 
-                        if (!hasEnhancer) return const SizedBox.shrink();
+                          if (!hasEnhancer) return const SizedBox.shrink();
 
-                        final isDisabled = isGenerating || _isEnhancing;
-                        return Semantics(
-                          label: 'Enhance Prompt',
-                          button: true,
-                          enabled: !isDisabled,
-                          child: Tooltip(
-                            message: 'Enhance Prompt',
-                            child: Material(
-                              color:
-                                  (isDark ? Colors.grey[800] : Colors.grey[300])
-                                      ?.withValues(
-                                        alpha: isDisabled ? 0.5 : 1.0,
-                                      ),
-                              shape: const CircleBorder(),
-                              clipBehavior: Clip.antiAlias,
-                              child: InkWell(
-                                onTap: isDisabled ? null : _enhancePrompt,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 200),
-                                    child: _isEnhancing
-                                        ? SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                    theme.colorScheme.onSurface,
-                                                  ),
-                                            ),
-                                          )
-                                        : Icon(
-                                            Icons.auto_awesome,
-                                            size: 20,
-                                            color: theme.colorScheme.onSurface
-                                                .withValues(
-                                                  alpha: isDisabled ? 0.5 : 1.0,
-                                                ),
-                                          ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                // Optimize: Only rebuild the Send button when text changes, not the whole widget
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _controller,
-                  builder: (context, value, child) {
-                    final canSend =
-                        (value.text.trim().isNotEmpty ||
-                            _selectedImages.isNotEmpty ||
-                            _selectedFiles.isNotEmpty) &&
-                        !isGenerating;
-                    final charCount = value.text.length;
-                    final maxLength = AppConstants.maxInputLength;
-                    final remaining = maxLength - charCount;
-                    final counterColor = remaining <= 200
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.onSurfaceVariant;
+                          final isDisabled = isGenerating || _isEnhancing;
+                          return _InputActionButton(
+                            icon: Icons.auto_awesome_rounded,
+                            tooltip: 'Enhance Prompt',
+                            onTap: _enhancePrompt,
+                            isDisabled: isDisabled,
+                            colorScheme: colorScheme,
+                            isLoading: _isEnhancing,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  // Right side: counter + send
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _controller,
+                    builder: (context, value, child) {
+                      final canSend =
+                          (value.text.trim().isNotEmpty ||
+                              _selectedImages.isNotEmpty ||
+                              _selectedFiles.isNotEmpty) &&
+                          !isGenerating;
+                      final charCount = value.text.length;
+                      final maxLength = AppConstants.maxInputLength;
+                      final remaining = maxLength - charCount;
+                      final counterColor = remaining <= 200
+                          ? colorScheme.error
+                          : colorScheme.onSurfaceVariant;
 
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      child: Row(
+                      return Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ExcludeSemantics(
@@ -1068,12 +941,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Container(
+                          const SizedBox(width: 10),
+                          // M3 send button
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOutCubic,
                             decoration: BoxDecoration(
                               color: canSend
-                                  ? theme.colorScheme.primary
-                                  : Colors.grey,
+                                  ? colorScheme.primary
+                                  : colorScheme.surfaceContainerHighest,
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
@@ -1090,17 +966,20 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                         key: const ValueKey('spinner'),
                                         width: 18,
                                         height: 18,
-                                        child: const CircularProgressIndicator(
+                                        child: CircularProgressIndicator(
                                           strokeWidth: 2,
                                           valueColor: AlwaysStoppedAnimation(
-                                            Colors.white,
+                                            colorScheme.onSurfaceVariant,
                                           ),
                                         ),
                                       )
-                                    : const Icon(
-                                        Icons.arrow_upward,
-                                        key: ValueKey('send_icon'),
-                                        color: Colors.white,
+                                    : Icon(
+                                        Icons.arrow_upward_rounded,
+                                        key: const ValueKey('send_icon'),
+                                        color: canSend
+                                            ? colorScheme.onPrimary
+                                            : colorScheme.onSurfaceVariant
+                                                  .withValues(alpha: 0.5),
                                         size: 20,
                                       ),
                               ),
@@ -1110,13 +989,78 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             ),
                           ),
                         ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Reusable M3 action button for the input toolbar
+class _InputActionButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  final bool isDisabled;
+  final ColorScheme colorScheme;
+  final bool isLoading;
+
+  const _InputActionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    required this.isDisabled,
+    required this.colorScheme,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: tooltip,
+      button: true,
+      enabled: !isDisabled,
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: isDisabled
+              ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+              : colorScheme.surfaceContainerHighest,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: isDisabled ? null : onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: isLoading
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(
+                            colorScheme.onSurface,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        icon,
+                        size: 18,
+                        color: colorScheme.onSurface.withValues(
+                          alpha: isDisabled ? 0.4 : 1.0,
+                        ),
                       ),
-                    );
-                  },
-                ),
-              ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 class ThreeDotLoadingIndicator extends StatefulWidget {
-  final Color color;
+  final Color? color;
   final double size;
   final Duration animationDuration;
 
   const ThreeDotLoadingIndicator({
     super.key,
-    this.color = Colors.grey,
+    this.color,
     this.size = 8.0,
-    this.animationDuration = const Duration(milliseconds: 500),
+    this.animationDuration = const Duration(milliseconds: 600),
   });
 
   @override
@@ -30,15 +30,14 @@ class _ThreeDotLoadingIndicatorState extends State<ThreeDotLoadingIndicator>
       vsync: this,
     )..repeat(reverse: true);
 
-    // Initialize animations once to avoid per-frame allocation inside build/AnimatedBuilder
     _animations = List.generate(3, (index) {
-      return Tween<double>(begin: 0.5, end: 1.0).animate(
+      return Tween<double>(begin: 0.4, end: 1.0).animate(
         CurvedAnimation(
           parent: _controller,
           curve: Interval(
-            0.2 * index, // Stagger the animations
+            0.2 * index,
             0.2 * index + 0.6,
-            curve: Curves.easeInOut,
+            curve: Curves.easeInOutCubicEmphasized,
           ),
         ),
       );
@@ -53,25 +52,25 @@ class _ThreeDotLoadingIndicatorState extends State<ThreeDotLoadingIndicator>
 
   @override
   Widget build(BuildContext context) {
+    final dotColor =
+        widget.color ?? Theme.of(context).colorScheme.onSurfaceVariant;
+
     return Semantics(
       label: 'Loading...',
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: List.generate(3, (index) {
-          // Use nested transitions to avoid AnimatedBuilder's builder callback execution
-          // and per-frame widget recreation.
-          // The Container is built once (per ThreeDotLoadingIndicator build) and reused
-          // by ScaleTransition/FadeTransition during animation ticks.
           return FadeTransition(
             opacity: _animations[index],
             child: ScaleTransition(
               scale: _animations[index],
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 2),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
                 width: widget.size,
                 height: widget.size,
                 decoration: BoxDecoration(
-                  color: widget.color,
+                  color: dotColor,
                   shape: BoxShape.circle,
                 ),
               ),

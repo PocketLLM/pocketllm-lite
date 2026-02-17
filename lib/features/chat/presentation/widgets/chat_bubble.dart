@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/utils/image_decoder.dart';
 import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/utils/url_validator.dart';
+import '../../../../core/widgets/m3_avatar.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../settings/presentation/providers/appearance_provider.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
@@ -26,7 +27,6 @@ class TimestampFormatter {
     final difference = now.difference(timestamp);
 
     if (difference.inDays < 1) {
-      // Format as HH:MM AM/PM
       final hour = timestamp.hour;
       final minute = timestamp.minute.toString().padLeft(2, '0');
       final period = hour >= 12 ? 'PM' : 'AM';
@@ -58,6 +58,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   MarkdownStyleSheet? _cachedStyleSheet;
   ThemeData? _cachedTheme;
   double? _cachedFontSize;
+  Color? _cachedTextColor;
 
   @override
   void initState() {
@@ -66,25 +67,52 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     _formattedTimestamp = TimestampFormatter.format(widget.message.timestamp);
   }
 
-  MarkdownStyleSheet _getStyleSheet(ThemeData theme, double fontSize) {
-    // Use identical for theme to avoid expensive equality checks.
-    // During streaming, the theme instance typically remains the same.
+  MarkdownStyleSheet _getStyleSheet(
+    ThemeData theme,
+    double fontSize,
+    Color textColor,
+  ) {
     if (_cachedStyleSheet != null &&
         identical(_cachedTheme, theme) &&
-        _cachedFontSize == fontSize) {
+        _cachedFontSize == fontSize &&
+        _cachedTextColor == textColor) {
       return _cachedStyleSheet!;
     }
 
     _cachedTheme = theme;
     _cachedFontSize = fontSize;
+    _cachedTextColor = textColor;
     _cachedStyleSheet = MarkdownStyleSheet.fromTheme(theme).copyWith(
       p: theme.textTheme.bodyMedium?.copyWith(
-        color: Colors.white,
+        color: textColor,
         fontSize: fontSize,
+        height: 1.5,
       ),
       code: theme.textTheme.bodyMedium?.copyWith(
-        backgroundColor: Colors.black26,
+        backgroundColor: textColor.withValues(alpha: 0.08),
+        color: textColor,
         fontSize: fontSize * 0.9,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: textColor.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      h1: theme.textTheme.titleLarge?.copyWith(color: textColor),
+      h2: theme.textTheme.titleMedium?.copyWith(color: textColor),
+      h3: theme.textTheme.titleSmall?.copyWith(color: textColor),
+      listBullet: theme.textTheme.bodyMedium?.copyWith(
+        color: textColor,
+        fontSize: fontSize,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(color: textColor.withValues(alpha: 0.4), width: 3),
+        ),
+      ),
+      blockquote: theme.textTheme.bodyMedium?.copyWith(
+        color: textColor.withValues(alpha: 0.8),
+        fontSize: fontSize,
+        fontStyle: FontStyle.italic,
       ),
     );
     return _cachedStyleSheet!;
@@ -93,8 +121,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   @override
   void didUpdateWidget(ChatBubble oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Only re-decode if the image list actually changed.
-    // Using listEquals from foundation to check content equality if references differ.
     final oldImages = oldWidget.message.images;
     final newImages = widget.message.images;
     if (oldImages != newImages && !listEquals(oldImages, newImages)) {
@@ -108,8 +134,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
 
   Future<void> _decodeImages() async {
     if (widget.message.images != null && widget.message.images!.isNotEmpty) {
-      // Use Isolate to decode images off the main thread to avoid UI jank
-      // during scrolling or message reception.
       final images = await IsolateImageDecoder.decodeImages(
         widget.message.images!,
       );
@@ -143,14 +167,23 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   }
 
   void _showAttachmentViewer(String title, String content) {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        icon: Icon(
+          Icons.description_outlined,
+          color: theme.colorScheme.primary,
+        ),
         title: Text(title),
         content: SingleChildScrollView(
           child: SelectableText(
             content,
-            style: const TextStyle(fontFamily: 'monospace'),
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 13,
+              color: theme.colorScheme.onSurface,
+            ),
           ),
         ),
         actions: [
@@ -158,7 +191,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
           ),
-          TextButton(
+          FilledButton.tonal(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: content));
               Navigator.pop(context);
@@ -177,14 +210,31 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     );
   }
 
+  /// Compute the text color based on the bubble's background luminance.
+  /// This ensures readability regardless of user customization.
+  Color _getTextColor(Color bubbleColor) {
+    return bubbleColor.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
+  }
+
+  /// Build M3-style asymmetric bubble border radius.
+  /// User: rounded top + left, sharp bottom-right (tail).
+  /// AI: rounded top + right, sharp bottom-left (tail).
+  BorderRadius _getBubbleRadius(double radius, bool isUser) {
+    return BorderRadius.only(
+      topLeft: Radius.circular(radius),
+      topRight: Radius.circular(radius),
+      bottomLeft: Radius.circular(isUser ? radius : 4),
+      bottomRight: Radius.circular(isUser ? 4 : radius),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final message = widget.message;
     final isUser = message.role == 'user';
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    // Select only the properties that affect the bubble's appearance
-    // to prevent unnecessary rebuilds (e.g. when customBgColor changes).
     final appearance = ref.watch(
       appearanceProvider.select(
         (state) => (
@@ -202,7 +252,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
 
     final profile = ref.watch(profileProvider);
 
-    // Appearance Values
+    // Appearance Values — user customization takes priority
     final bubbleColor = isUser
         ? Color(
             appearance.userMsgColor,
@@ -213,6 +263,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final padding = appearance.chatPadding;
     final hasElevation = appearance.bubbleElevation;
     final showAvatars = appearance.showAvatars;
+    final textColor = _getTextColor(bubbleColor);
 
     final storage = ref.watch(storageServiceProvider);
 
@@ -225,34 +276,34 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (showAvatars) ...[
-              CircleAvatar(
-                radius: 14,
-                backgroundColor: theme.colorScheme.primaryContainer,
+              M3Avatar.ai(
+                size: 28,
+                backgroundColor: colorScheme.secondaryContainer,
                 child: Icon(
                   Icons.auto_awesome,
-                  size: 16,
-                  color: theme.colorScheme.onPrimaryContainer,
+                  size: 14,
+                  color: colorScheme.onSecondaryContainer,
                 ),
               ),
               const SizedBox(width: 8),
             ],
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: bubbleColor,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: _getBubbleRadius(18, false),
                 boxShadow: hasElevation
                     ? [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 2,
-                          offset: const Offset(0, 1),
+                          color: colorScheme.shadow.withValues(alpha: 0.08),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
                       ]
                     : null,
               ),
-              child: const ThreeDotLoadingIndicator(
-                color: Colors.white,
+              child: ThreeDotLoadingIndicator(
+                color: textColor.withValues(alpha: 0.7),
                 size: 6.0,
               ),
             ),
@@ -277,13 +328,13 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               if (!isUser && showAvatars) ...[
                 Semantics(
                   excludeSemantics: true,
-                  child: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: theme.colorScheme.primaryContainer,
+                  child: M3Avatar.ai(
+                    size: 28,
+                    backgroundColor: colorScheme.secondaryContainer,
                     child: Icon(
                       Icons.auto_awesome,
-                      size: 16,
-                      color: theme.colorScheme.onPrimaryContainer,
+                      size: 14,
+                      color: colorScheme.onSecondaryContainer,
                     ),
                   ),
                 ),
@@ -308,20 +359,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                         padding: EdgeInsets.all(padding),
                         decoration: BoxDecoration(
                           color: bubbleColor,
-                          borderRadius: BorderRadius.circular(radius).copyWith(
-                            bottomRight: isUser
-                                ? const Radius.circular(0)
-                                : null,
-                            bottomLeft: !isUser
-                                ? const Radius.circular(0)
-                                : null,
-                          ),
+                          borderRadius: _getBubbleRadius(radius, isUser),
                           boxShadow: hasElevation
                               ? [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 2,
-                                    offset: const Offset(0, 1),
+                                    color: colorScheme.shadow.withValues(
+                                      alpha: 0.08,
+                                    ),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
                                   ),
                                 ]
                               : null,
@@ -336,14 +382,13 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                 (bytes) => Padding(
                                   padding: const EdgeInsets.only(bottom: 8.0),
                                   child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(12),
                                     child: InkWell(
                                       onTap: () => _showImageViewer(bytes),
                                       child: Image.memory(
                                         bytes,
                                         height: 150,
                                         fit: BoxFit.cover,
-                                        // Optimize memory: Decode based on display height (150 * 3 for HiDPI)
                                         cacheHeight: 450,
                                       ),
                                     ),
@@ -354,8 +399,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                               Text(
                                 message.content,
                                 style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: Colors.white,
+                                  color: textColor,
                                   fontSize: fontSize,
+                                  height: 1.5,
                                 ),
                               )
                             else
@@ -366,7 +412,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                 onTapLink: (text, href, title) async {
                                   if (href != null) {
                                     final uri = Uri.tryParse(href);
-                                    // Use UrlValidator to ensure we only launch secure schemes (http, https, mailto)
                                     if (uri != null &&
                                         UrlValidator.isSecureUrl(uri) &&
                                         await canLaunchUrl(uri)) {
@@ -377,7 +422,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                     }
                                   }
                                 },
-                                styleSheet: _getStyleSheet(theme, fontSize),
+                                styleSheet: _getStyleSheet(
+                                  theme,
+                                  fontSize,
+                                  textColor,
+                                ),
                               ),
                             if (message.attachments != null &&
                                 message.attachments!.isNotEmpty)
@@ -390,19 +439,26 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                     attachment,
                                   ) {
                                     return ActionChip(
-                                      avatar: const Icon(
-                                        Icons.description,
+                                      avatar: Icon(
+                                        Icons.description_outlined,
                                         size: 16,
-                                        color: Colors.white,
+                                        color: textColor.withValues(alpha: 0.8),
                                       ),
                                       label: Text(
                                         attachment.name,
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: textColor,
+                                          fontSize: fontSize * 0.85,
                                         ),
                                       ),
-                                      backgroundColor: Colors.black.withValues(
-                                        alpha: 0.2,
+                                      backgroundColor: textColor.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      side: BorderSide(
+                                        color: textColor.withValues(alpha: 0.2),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
                                       onPressed: () => _showAttachmentViewer(
                                         attachment.name,
@@ -414,22 +470,22 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                               ),
                             // Timestamp display
                             Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
+                              padding: const EdgeInsets.only(top: 6.0),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   if (isStarred) ...[
-                                    const Icon(
-                                      Icons.star,
+                                    Icon(
+                                      Icons.star_rounded,
                                       size: 12,
-                                      color: Colors.amber,
+                                      color: Colors.amber.shade600,
                                     ),
                                     const SizedBox(width: 4),
                                   ],
                                   Text(
                                     _formattedTimestamp,
                                     style: TextStyle(
-                                      color: Colors.white70,
+                                      color: textColor.withValues(alpha: 0.6),
                                       fontSize: fontSize * 0.7,
                                       fontStyle: FontStyle.italic,
                                     ),
@@ -448,20 +504,23 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                 const SizedBox(width: 8),
                 Semantics(
                   excludeSemantics: true,
-                  child: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: Color(profile.avatarColor),
-                    backgroundImage: profile.avatarImageBase64 != null
-                        ? MemoryImage(base64Decode(profile.avatarImageBase64!))
-                        : null,
-                    child: profile.avatarImageBase64 == null
-                        ? const Icon(
+                  child: profile.avatarImageBase64 != null
+                      ? CircleAvatar(
+                          radius: 14,
+                          backgroundColor: Color(profile.avatarColor),
+                          backgroundImage: MemoryImage(
+                            base64Decode(profile.avatarImageBase64!),
+                          ),
+                        )
+                      : M3Avatar.user(
+                          size: 28,
+                          backgroundColor: Color(profile.avatarColor),
+                          child: const Icon(
                             Icons.person,
-                            size: 16,
+                            size: 14,
                             color: Colors.white,
-                          )
-                        : null,
-                  ),
+                          ),
+                        ),
                 ),
               ],
             ],
@@ -472,7 +531,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   }
 
   void _showFocusedMenu(BuildContext context, bool isUser, bool isStarred) {
-    // 1. Calculate Position
     final RenderBox renderBox =
         _bubbleKey.currentContext!.findRenderObject() as RenderBox;
     final size = renderBox.size;
@@ -481,9 +539,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
-        barrierColor: Colors.black.withValues(
-          alpha: 0.2,
-        ), // Slight dim initially, animated in widget
+        barrierColor: Colors.black.withValues(alpha: 0.2),
         pageBuilder: (context, _, __) => _FocusedMenuOverlay(
           message: widget.message,
           bubbleSize: size,
@@ -518,7 +574,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               ),
             );
           },
-          child: widget, // Pass actual widget or reconstructed bubble
+          child: widget,
         ),
         transitionsBuilder: (context, animation, _, child) {
           return FadeTransition(opacity: animation, child: child);
@@ -529,8 +585,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
 }
 
 class _FocusedMenuOverlay extends ConsumerWidget {
-  final Widget
-  child; // We will reconstruct visually or use cached image if needed, but easier to rebuild basic container
+  final Widget child;
   final ChatMessage message;
   final Size bubbleSize;
   final Offset bubbleOffset;
@@ -552,9 +607,8 @@ class _FocusedMenuOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Reconstruct appearance to match exactly
     final theme = Theme.of(context);
-    // Use ref to get current snapshot
+    final colorScheme = theme.colorScheme;
     final appearance = ref.read(appearanceProvider);
 
     final bubbleColor = isUser
@@ -565,9 +619,10 @@ class _FocusedMenuOverlay extends ConsumerWidget {
     final radius = appearance.bubbleRadius;
     final fontSize = appearance.fontSize;
     final padding = appearance.chatPadding;
+    final textColor = bubbleColor.computeLuminance() > 0.5
+        ? Colors.black87
+        : Colors.white;
 
-    // Determine where to put actions: Above or Below?
-    // If bubble is too low, put above.
     final screenHeight = MediaQuery.of(context).size.height;
     final showAbove = bubbleOffset.dy > screenHeight * 0.6;
 
@@ -578,12 +633,14 @@ class _FocusedMenuOverlay extends ConsumerWidget {
           // 1. Blur Backdrop
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-              child: Container(color: Colors.black.withValues(alpha: 0.4)),
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Container(
+                color: colorScheme.scrim.withValues(alpha: 0.35),
+              ),
             ),
           ),
 
-          // 2. Dismiss logic (tap anywhere)
+          // 2. Dismiss logic
           Positioned.fill(
             child: Semantics(
               label: 'Dismiss menu',
@@ -602,26 +659,33 @@ class _FocusedMenuOverlay extends ConsumerWidget {
             width: bubbleSize.width,
             child: Material(
               color: Colors.transparent,
-              elevation: 8,
-              shadowColor: Colors.black45,
+              elevation: 12,
+              shadowColor: colorScheme.shadow.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(radius),
+                topRight: Radius.circular(radius),
+                bottomLeft: Radius.circular(isUser ? radius : 4),
+                bottomRight: Radius.circular(isUser ? 4 : radius),
+              ),
               child: Container(
                 padding: EdgeInsets.all(padding),
                 decoration: BoxDecoration(
                   color: bubbleColor,
-                  borderRadius: BorderRadius.circular(radius).copyWith(
-                    bottomRight: isUser ? const Radius.circular(0) : null,
-                    bottomLeft: !isUser ? const Radius.circular(0) : null,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(radius),
+                    topRight: Radius.circular(radius),
+                    bottomLeft: Radius.circular(isUser ? radius : 4),
+                    bottomRight: Radius.circular(isUser ? 4 : radius),
                   ),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: colorScheme.primary.withValues(alpha: 0.4),
                     width: 1.5,
-                  ), // Highlight border
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Same content rendering ... simplified for overlay (no images for brevity if desired, or duplicate)
                     if (message.images != null)
                       ...message.images!.map(
                         (str) => const SizedBox(
@@ -636,7 +700,7 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                       Text(
                         message.content,
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color: Colors.white,
+                          color: textColor,
                           fontSize: fontSize,
                         ),
                       )
@@ -661,22 +725,24 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                         styleSheet: MarkdownStyleSheet.fromTheme(theme)
                             .copyWith(
                               p: theme.textTheme.bodyMedium?.copyWith(
-                                color: Colors.white,
+                                color: textColor,
                                 fontSize: fontSize,
                               ),
                               code: theme.textTheme.bodyMedium?.copyWith(
-                                backgroundColor: Colors.black26,
+                                backgroundColor: textColor.withValues(
+                                  alpha: 0.08,
+                                ),
                                 fontSize: fontSize * 0.9,
                               ),
                             ),
                       ),
                     // Timestamp display in overlay
                     Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
+                      padding: const EdgeInsets.only(top: 6.0),
                       child: Text(
                         TimestampFormatter.format(message.timestamp),
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: textColor.withValues(alpha: 0.6),
                           fontSize: fontSize * 0.7,
                           fontStyle: FontStyle.italic,
                         ),
@@ -688,72 +754,95 @@ class _FocusedMenuOverlay extends ConsumerWidget {
             ),
           ),
 
-          // 4. Action Icons
+          // 4. M3 Action Bar
           Positioned(
             top: showAbove
                 ? bubbleOffset.dy - 70
-                : bubbleOffset.dy + bubbleSize.height + 10,
+                : bubbleOffset.dy + bubbleSize.height + 12,
             left: isUser ? null : bubbleOffset.dx,
             right: isUser
                 ? MediaQuery.of(context).size.width -
                       (bubbleOffset.dx + bubbleSize.width)
                 : null,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildIconBtn(
-                  context,
-                  isStarred ? Icons.star : Icons.star_border,
-                  isStarred ? 'Unstar' : 'Star',
-                  () {
-                    onToggleStar();
-                    Navigator.pop(context);
-                  },
-                  color: Colors.amber,
-                ),
-                const SizedBox(width: 12),
-                _buildIconBtn(context, Icons.copy, 'Copy', () {
-                  Clipboard.setData(ClipboardData(text: message.content));
-                  // Capture messenger before popping to ensure feedback shows on parent screen
-                  final messenger = ScaffoldMessenger.of(context);
-                  Navigator.pop(context);
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Message copied to clipboard'),
-                      duration: Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }),
-                const SizedBox(width: 12),
-                _buildIconBtn(context, Icons.share, 'Share', () {
-                  SharePlus.instance.share(ShareParams(text: message.content));
-                  Navigator.pop(context);
-                }),
-                if (isUser) ...[
-                  const SizedBox(width: 12),
-                  _buildIconBtn(context, Icons.edit, 'Edit', () {
-                    // Populate the input with the message content
-                    ref
-                        .read(draftMessageProvider.notifier)
-                        .update((state) => message.content);
-                    ref
-                        .read(editingMessageProvider.notifier)
-                        .setEditingMessage(message);
-                    Navigator.pop(context);
-                  }),
-                ] else ...[
-                  const SizedBox(width: 12),
-                  _buildIconBtn(context, Icons.refresh, 'Regenerate', () {
-                    ref.read(chatProvider.notifier).regenerateMessage(message);
-                    Navigator.pop(context);
-                  }),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.shadow.withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
-                const SizedBox(width: 12),
-                _buildIconBtn(context, Icons.delete_outline, 'Delete', () {
-                  _confirmDelete(context);
-                }, color: Colors.redAccent),
-              ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildActionChip(
+                    context,
+                    isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
+                    isStarred ? 'Unstar' : 'Star',
+                    () {
+                      onToggleStar();
+                      Navigator.pop(context);
+                    },
+                    iconColor: isStarred
+                        ? Colors.amber.shade600
+                        : colorScheme.onSurface,
+                  ),
+                  _buildActionChip(context, Icons.copy_rounded, 'Copy', () {
+                    Clipboard.setData(ClipboardData(text: message.content));
+                    final messenger = ScaffoldMessenger.of(context);
+                    Navigator.pop(context);
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Message copied to clipboard'),
+                        duration: Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }),
+                  _buildActionChip(context, Icons.share_rounded, 'Share', () {
+                    SharePlus.instance.share(
+                      ShareParams(text: message.content),
+                    );
+                    Navigator.pop(context);
+                  }),
+                  if (isUser)
+                    _buildActionChip(context, Icons.edit_rounded, 'Edit', () {
+                      ref
+                          .read(draftMessageProvider.notifier)
+                          .update((state) => message.content);
+                      ref
+                          .read(editingMessageProvider.notifier)
+                          .setEditingMessage(message);
+                      Navigator.pop(context);
+                    })
+                  else
+                    _buildActionChip(
+                      context,
+                      Icons.refresh_rounded,
+                      'Redo',
+                      () {
+                        ref
+                            .read(chatProvider.notifier)
+                            .regenerateMessage(message);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  _buildActionChip(
+                    context,
+                    Icons.delete_outline_rounded,
+                    'Delete',
+                    () {
+                      _confirmDelete(context);
+                    },
+                    iconColor: colorScheme.error,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -761,21 +850,25 @@ class _FocusedMenuOverlay extends ConsumerWidget {
     );
   }
 
-  Widget _buildIconBtn(
+  Widget _buildActionChip(
     BuildContext context,
     IconData icon,
     String tooltip,
     VoidCallback onTap, {
-    Color? color,
+    Color? iconColor,
   }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Semantics(
-          label: tooltip,
-          button: true,
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = iconColor ?? colorScheme.onSurface;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Semantics(
+        label: tooltip,
+        button: true,
+        child: Tooltip(
+          message: tooltip,
           child: Material(
-            color: (color ?? Colors.white).withValues(alpha: 0.2),
+            color: Colors.transparent,
             shape: const CircleBorder(),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -784,41 +877,27 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                 onTap();
               },
               customBorder: const CircleBorder(),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: (color ?? Colors.white).withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Icon(icon, color: color ?? Colors.white, size: 24),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Icon(icon, color: color, size: 22),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 4),
-        ExcludeSemantics(
-          child: Text(
-            tooltip,
-            style: TextStyle(
-              color: color ?? Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   void _confirmDelete(BuildContext context) {
-    // Hide menu first
     Navigator.pop(context);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        icon: Icon(
+          Icons.delete_outline_rounded,
+          color: Theme.of(context).colorScheme.error,
+        ),
         title: const Text('Delete Message?'),
         content: const Text(
           'This message will be permanently removed from the chat.',
@@ -828,12 +907,15 @@ class _FocusedMenuOverlay extends ConsumerWidget {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () {
               Navigator.pop(context);
               onDelete();
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
             child: const Text('Delete'),
           ),
         ],

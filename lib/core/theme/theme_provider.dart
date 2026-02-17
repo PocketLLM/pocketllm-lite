@@ -18,7 +18,8 @@ class ThemeNotifier extends Notifier<ThemeMode> {
   ThemeMode _parseThemeMode(String? mode) {
     if (mode == 'light') return ThemeMode.light;
     if (mode == 'dark') return ThemeMode.dark;
-    return ThemeMode.light;
+    // Default to system for M3 Expressive — respects user OS preference
+    return ThemeMode.system;
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {

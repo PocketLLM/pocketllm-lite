@@ -31,13 +31,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Only watch selectedModel for the AppBar title to prevent unnecessary rebuilds of AppBar
-    // when streaming content changes.
     final selectedModel = ref.watch(
       chatProvider.select((s) => s.selectedModel),
     );
     final modelsAsync = ref.watch(modelsProvider);
     final connectionStatusAsync = ref.watch(autoConnectionStatusProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -53,31 +53,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
-                          vertical: 4,
+                          vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
+                          color: colorScheme.errorContainer,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.red.withValues(alpha: 0.3),
-                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.cloud_off,
+                            Icon(
+                              Icons.cloud_off_rounded,
                               size: 14,
-                              color: Colors.red,
+                              color: colorScheme.onErrorContainer,
                             ),
                             const SizedBox(width: 6),
                             Text(
                               'Not Connected',
-                              style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: colorScheme.onErrorContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
@@ -88,11 +84,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   return modelsAsync.when(
                     data: (models) {
                       String? currentValue = selectedModel;
-                      // Check if current value is valid, if not, pick first
                       if (models.isNotEmpty &&
                           !models.any((m) => m.name == currentValue)) {
                         currentValue = models.first.name;
-                        // defer update
                         Future.microtask(
                           () => ref
                               .read(chatProvider.notifier)
@@ -100,7 +94,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         );
                       }
 
-                      if (models.isEmpty) return const Text('No Models');
+                      if (models.isEmpty) {
+                        return Text(
+                          'No Models',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        );
+                      }
 
                       return Container(
                         padding: const EdgeInsets.symmetric(
@@ -108,7 +109,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.4),
+                          color: colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: DropdownButtonHideUnderline(
@@ -116,23 +117,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             isExpanded: false,
                             value: currentValue,
                             icon: Icon(
-                              Icons.expand_more,
+                              Icons.expand_more_rounded,
                               size: 20,
-                              color: Theme.of(context).iconTheme.color,
+                              color: colorScheme.onPrimaryContainer,
                             ),
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color:
-                                      Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.white
-                                      : Colors.black,
-                                ),
-                            dropdownColor:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF1E1E1E)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onPrimaryContainer,
+                            ),
+                            dropdownColor: colorScheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(16),
                             elevation: 4,
                             selectedItemBuilder: (BuildContext context) {
                               return models.map<Widget>((m) {
@@ -142,11 +135,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     Icon(
                                       Icons.smart_toy_outlined,
                                       size: 16,
-                                      color:
-                                          Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? Colors.white70
-                                          : Colors.black87,
+                                      color: colorScheme.onPrimaryContainer,
                                     ),
                                     const SizedBox(width: 8),
                                     ConstrainedBox(
@@ -156,11 +145,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       child: Text(
                                         m.name,
                                         overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
+                                        style: theme.textTheme.bodyMedium
                                             ?.copyWith(
                                               fontWeight: FontWeight.bold,
+                                              color: colorScheme
+                                                  .onPrimaryContainer,
                                             ),
                                       ),
                                     ),
@@ -177,19 +166,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     Icon(
                                       Icons.smart_toy_outlined,
                                       size: 16,
-                                      color:
-                                          Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? Colors.white70
-                                          : Colors.black87,
+                                      color: colorScheme.onSurface,
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
                                       m.name,
                                       overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: colorScheme.onSurface,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -227,7 +213,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               final storage = ref.read(storageServiceProvider);
               if (sessionId == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('No media yet for this chat.')),
+                  const SnackBar(
+                    content: Text('No media yet for this chat.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
                 );
                 return;
               }
@@ -243,7 +232,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.history),
+            icon: const Icon(Icons.history_rounded),
             tooltip: 'History',
             onPressed: () {
               if (ref
@@ -285,7 +274,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_rounded),
             tooltip: 'Settings',
             onPressed: () {
               if (ref
@@ -300,7 +289,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.tune),
+            icon: const Icon(Icons.tune_rounded),
             tooltip: 'Chat Settings',
             onPressed: () {
               if (ref
@@ -329,30 +318,59 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _showConnectionHelpDialog(BuildContext context) async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.cloud_off, color: Colors.red),
-            SizedBox(width: 8),
-            Text('Ollama Not Connected', style: TextStyle(fontSize: 18)),
-          ],
-        ),
-        content: const Column(
+        icon: Icon(Icons.cloud_off_rounded, color: colorScheme.error),
+        title: const Text('Ollama Not Connected'),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Pocket LLM cannot reach the Ollama server.',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
             ),
-            SizedBox(height: 12),
-            Text('Possible causes:'),
-            SizedBox(height: 4),
-            Text('• Ollama is not running (run "ollama serve")'),
-            Text('• Termux session was closed'),
-            Text('• Incorrect endpoint URL in Settings'),
+            const SizedBox(height: 12),
+            Text(
+              'Possible causes:',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 4),
+            ...[
+              'Ollama is not running (run "ollama serve")',
+              'Termux session was closed',
+              'Incorrect endpoint URL in Settings',
+            ].map(
+              (cause) => Padding(
+                padding: const EdgeInsets.only(left: 4, top: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '• ',
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
+                    Expanded(
+                      child: Text(
+                        cause,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
         actions: [
@@ -365,7 +383,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               Navigator.pop(context);
               context.push('/settings');
             },
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_rounded),
             label: const Text('Check Settings'),
           ),
         ],
@@ -375,22 +393,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Future<void> _showChatLimitDialog() async {
     final adService = AdService();
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        icon: Icon(Icons.lock_outline_rounded, color: colorScheme.primary),
         title: const Text('Chat Limit Reached'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_outline, size: 48, color: Colors.orange),
-            const SizedBox(height: 16),
             Text(
               "You've used your ${AppConstants.freeChatsAllowed} free chats.",
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Watch a short ad to unlock more chats!',
-              style: TextStyle(color: Colors.grey),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -399,16 +424,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Later'),
           ),
-          ElevatedButton.icon(
+          FilledButton.icon(
             onPressed: () async {
               if (!await adService.hasInternetConnection()) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
+                    SnackBar(
+                      content: const Text(
                         'Connect to WiFi/Data to watch ad and unlock.',
                       ),
-                      backgroundColor: Colors.orange,
+                      backgroundColor: Theme.of(context).colorScheme.error,
                     ),
                   );
                 }
@@ -416,12 +441,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               }
               if (context.mounted) Navigator.pop(context, true);
             },
-            icon: const Icon(Icons.play_circle),
+            icon: const Icon(Icons.play_circle_rounded),
             label: const Text('Watch Ad'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
           ),
         ],
       ),
@@ -449,9 +470,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             }
 
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Unlocked more chats! New chat created.'),
-                backgroundColor: Colors.green,
+              SnackBar(
+                content: const Text('Unlocked more chats! New chat created.'),
+                behavior: SnackBarBehavior.floating,
               ),
             );
           }
@@ -461,7 +482,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Ad failed: $error'),
-                backgroundColor: Colors.red,
+                backgroundColor: colorScheme.error,
               ),
             );
           }

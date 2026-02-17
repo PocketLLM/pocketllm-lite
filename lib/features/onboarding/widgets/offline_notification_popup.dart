@@ -5,32 +5,44 @@ class OfflineNotificationPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return AlertDialog(
-      title: const Row(
-        children: [
-          Icon(Icons.wifi_off, color: Colors.blue),
-          SizedBox(width: 12),
-          Text('Offline Only'),
-        ],
+      icon: Icon(
+        Icons.wifi_off_rounded,
+        color: theme.colorScheme.primary,
+        size: 32,
+      ),
+      title: Text(
+        'Offline Only',
+        style: theme.textTheme.headlineSmall?.copyWith(
+          color: theme.colorScheme.onSurface,
+        ),
       ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'This app is designed to run completely offline.',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'All AI processing happens locally on your device using Ollama. No data is sent to external servers.',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'To get started:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 12),
             _buildStep(context, '1', 'Install Ollama on your device'),
@@ -45,43 +57,49 @@ class OfflineNotificationPopup extends StatelessWidget {
         TextButton(
           child: const Text('Setup Guide'),
           onPressed: () {
-            // Return true to indicate we should go to docs
             Navigator.of(context).pop(true);
           },
         ),
         FilledButton(
           child: const Text('I Understand'),
           onPressed: () {
-            // Return false (or just pop) to proceed to chat
             Navigator.of(context).pop(false);
           },
         ),
       ],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     );
   }
 
   Widget _buildStep(BuildContext context, String number, String text) {
+    final theme = Theme.of(context);
+
     return Row(
       children: [
         Container(
-          width: 24,
-          height: 24,
+          width: 28,
+          height: 28,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
+            color: theme.colorScheme.primaryContainer,
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
           child: Text(
             number,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
         const SizedBox(width: 12),
-        Expanded(child: Text(text)),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+        ),
       ],
     );
   }

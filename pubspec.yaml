@@ -37,6 +37,7 @@ dependencies:
   connectivity_plus: ^6.1.4
   file_picker: ^8.0.0
   pdf: ^3.10.0
+  flutter_m3shapes: ^1.0.0+2
 
 dev_dependencies:
   flutter_test:
