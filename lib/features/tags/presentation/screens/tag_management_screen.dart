@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 
 class TagManagementScreen extends ConsumerStatefulWidget {
   const TagManagementScreen({super.key});
@@ -66,8 +67,13 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
               Navigator.pop(context);
               setState(() {});
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),
@@ -81,7 +87,10 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
     final tags = counts.keys.toList()..sort();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tag Management')),
+      appBar: M3AppBar(
+        title: 'Tag Management',
+        onBack: () => Navigator.pop(context),
+      ),
       body: tags.isEmpty
           ? Center(
               child: Text(

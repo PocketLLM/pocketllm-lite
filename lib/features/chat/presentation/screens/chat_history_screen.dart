@@ -1033,10 +1033,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text(
+              leading: Icon(Icons.delete, color: theme.colorScheme.error),
+              title: Text(
                 'Delete Chat',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: theme.colorScheme.error),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -1199,6 +1199,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   }
 
   Future<void> _showChatLimitDialog() async {
+    final theme = Theme.of(context);
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1206,15 +1207,19 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_outline, size: 48, color: Colors.orange),
+            Icon(
+              Icons.lock_outline,
+              size: 48,
+              color: theme.colorScheme.tertiary,
+            ),
             const SizedBox(height: 16),
             Text(
               "You've used your ${AppConstants.freeChatsAllowed} free chats.",
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Watch a short ad to unlock more chats!',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -1228,11 +1233,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               if (!await _adService.hasInternetConnection()) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
+                    SnackBar(
+                      content: const Text(
                         'Connect to WiFi/Data to watch ad and unlock.',
                       ),
-                      backgroundColor: Colors.orange,
+                      backgroundColor: theme.colorScheme.tertiary,
                     ),
                   );
                 }
@@ -1243,8 +1248,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             icon: const Icon(Icons.play_circle),
             label: const Text('Watch Ad'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
             ),
           ),
         ],
@@ -1266,9 +1271,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
             HapticFeedback.heavyImpact();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Unlocked more chats! New chat created.'),
-                backgroundColor: Colors.green,
+              SnackBar(
+                content: const Text('Unlocked more chats! New chat created.'),
+                backgroundColor: theme.colorScheme.primary,
               ),
             );
             Navigator.pop(context); // Go back to chat screen
@@ -1279,7 +1284,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Ad failed: $error'),
-                backgroundColor: Colors.red,
+                backgroundColor: theme.colorScheme.error,
               ),
             );
           }
@@ -1289,6 +1294,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   }
 
   Future<void> _deleteSession(String id) async {
+    final theme = Theme.of(context);
     // Show confirmation with ad requirement
     final confirm = await showDialog<bool>(
       context: context,
@@ -1302,17 +1308,24 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.1),
+                color: theme.colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.play_circle, size: 18, color: Colors.blue),
-                  SizedBox(width: 8),
+                  Icon(
+                    Icons.play_circle,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Watch a short ad to confirm',
-                      style: TextStyle(fontSize: 12, color: Colors.blue),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                   ),
                 ],
@@ -1326,7 +1339,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: theme.colorScheme.onError,
+            ),
             onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.play_circle, size: 18),
             label: const Text('Watch Ad & Delete'),
@@ -1339,9 +1355,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       if (!await _adService.hasInternetConnection()) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Connect to internet to watch ad and delete.'),
-              backgroundColor: Colors.orange,
+            SnackBar(
+              content: const Text(
+                'Connect to internet to watch ad and delete.',
+              ),
+              backgroundColor: theme.colorScheme.tertiary,
             ),
           );
         }
@@ -1355,9 +1373,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
           if (mounted) {
             HapticFeedback.heavyImpact();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Chat deleted!'),
-                backgroundColor: Colors.green,
+              SnackBar(
+                content: const Text('Chat deleted!'),
+                backgroundColor: theme.colorScheme.primary,
               ),
             );
           }
@@ -1367,7 +1385,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Ad failed: $error'),
-                backgroundColor: Colors.red,
+                backgroundColor: theme.colorScheme.error,
               ),
             );
           }
@@ -1403,6 +1421,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   Future<void> _deleteSelected() async {
     if (_selectedIds.isEmpty) return;
 
+    final theme = Theme.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1415,17 +1434,24 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.1),
+                color: theme.colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.play_circle, size: 18, color: Colors.blue),
-                  SizedBox(width: 8),
+                  Icon(
+                    Icons.play_circle,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Watch a short ad to confirm deletion',
-                      style: TextStyle(fontSize: 12, color: Colors.blue),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                   ),
                 ],
@@ -1439,7 +1465,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: theme.colorScheme.onError,
+            ),
             onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.play_circle, size: 18),
             label: const Text('Watch Ad & Delete'),
@@ -1453,9 +1482,11 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       if (!await _adService.hasInternetConnection()) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Connect to internet to watch ad and delete.'),
-              backgroundColor: Colors.orange,
+            SnackBar(
+              content: const Text(
+                'Connect to internet to watch ad and delete.',
+              ),
+              backgroundColor: theme.colorScheme.tertiary,
             ),
           );
         }
@@ -1475,9 +1506,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             });
             HapticFeedback.heavyImpact();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Chats deleted successfully!'),
-                backgroundColor: Colors.green,
+              SnackBar(
+                content: const Text('Chats deleted successfully!'),
+                backgroundColor: theme.colorScheme.primary,
               ),
             );
           }
@@ -1487,7 +1518,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Ad failed: $error'),
-                backgroundColor: Colors.red,
+                backgroundColor: theme.colorScheme.error,
               ),
             );
           }
