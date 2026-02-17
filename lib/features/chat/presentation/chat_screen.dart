@@ -15,7 +15,7 @@ import 'widgets/chat_input.dart';
 import 'dialogs/chat_settings_dialog.dart';
 import 'screens/chat_history_screen.dart';
 import '../../media/presentation/screens/media_gallery_screen.dart';
-import 'package:pocketllm_lite/core/widgets/m3_app_bar.dart';
+import '../../../core/widgets/m3_app_bar.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
