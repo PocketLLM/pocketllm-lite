@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../../services/ad_service.dart';
 import '../../../../services/usage_limits_provider.dart';
 import '../../domain/models/chat_session.dart';
@@ -297,8 +298,9 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
     return Scaffold(
       appBar: _isSearching
-          ? AppBar(
-              title: TextField(
+          ? M3AppBar(
+              title: '',
+              titleWidget: TextField(
                 controller: _searchController,
                 autofocus: true,
                 decoration: InputDecoration(
@@ -330,12 +332,24 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   ),
               ],
             )
-          : AppBar(
-              title: Text(
-                _isSelectionMode
-                    ? '${_selectedIds.length} Selected'
-                    : 'Chat History',
-              ),
+          : M3AppBar(
+              title: _isSelectionMode
+                  ? '${_selectedIds.length} Selected'
+                  : 'Chat History',
+              leading: _isSelectionMode
+                  ? IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Cancel selection',
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        setState(() {
+                          _isSelectionMode = false;
+                          _selectedIds.clear();
+                        });
+                      },
+                    )
+                  : null,
+              automaticallyImplyLeading: !_isSelectionMode,
               actions: [
                 if (_isSelectionMode) ...[
                   IconButton(
@@ -356,7 +370,10 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                     onPressed: _selectedIds.isEmpty ? null : _exportSelected,
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    icon: Icon(
+                      Icons.delete_outline,
+                      color: theme.colorScheme.error,
+                    ),
                     tooltip: 'Delete selected chats',
                     onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
                   ),
@@ -401,26 +418,6 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   ),
                 ],
               ],
-              leading: _isSelectionMode
-                  ? IconButton(
-                      icon: const Icon(Icons.close),
-                      tooltip: 'Cancel selection',
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        setState(() {
-                          _isSelectionMode = false;
-                          _selectedIds.clear();
-                        });
-                      },
-                    )
-                  : IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      tooltip: 'Back',
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        Navigator.pop(context);
-                      },
-                    ),
             ),
       body: Column(
         children: [
