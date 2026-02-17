@@ -12,7 +12,6 @@ import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
-import 'dart:typed_data';
 
 class StorageService {
   late Box<ChatSession> _chatBox;

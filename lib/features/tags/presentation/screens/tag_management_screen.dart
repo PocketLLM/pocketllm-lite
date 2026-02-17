@@ -36,10 +36,10 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
               final newTag = controller.text.trim();
               if (newTag.isEmpty || newTag == tag) return;
               await ref.read(storageServiceProvider).renameTag(tag, newTag);
-              if (!mounted) return;
+              if (!context.mounted) return;
               HapticFeedback.selectionClick();
               Navigator.pop(context);
-              setState(() {});
+              if (mounted) setState(() {});
             },
             child: const Text('Save'),
           ),
@@ -62,10 +62,10 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
           TextButton(
             onPressed: () async {
               await ref.read(storageServiceProvider).deleteTag(tag);
-              if (!mounted) return;
+              if (!context.mounted) return;
               HapticFeedback.mediumImpact();
               Navigator.pop(context);
-              setState(() {});
+              if (mounted) setState(() {});
             },
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.error,
