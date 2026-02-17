@@ -29,7 +29,7 @@ A premium, privacy-first, offline AI chat application for Android/iOS, integrati
     *   **Dynamic Chat History**: Rename, bulk delete, and organize chats.
     *   **System Prompts**: 15+ rich presets (Productivity Coach, Fitness Trainer, etc.).
 *   **Tag Management**: Organize chats with tags and bulk tagging tools.
-*   **Interactive UI**: Haptic feedback, smooth animations, and a focused menu for messages.
+*   **Interactive UI**: Fully native Material 3 design with haptic feedback, smooth animations, and a focused menu for messages.
 *   **Markdown Support**: Full rendering for code blocks, tables, and links.
 *   **Privacy Centric**: History stored locally using secure Hive database.
 
