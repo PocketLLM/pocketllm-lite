@@ -778,9 +778,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     borderRadius: BorderRadius.circular(26),
                     border: Border.all(
                       color: _focusNode.hasFocus
-                          ? colorScheme.primary.withValues(alpha: 0.5)
+                          ? colorScheme.primary.withValues(alpha: 0.3)
                           : colorScheme.outlineVariant.withValues(alpha: 0.25),
-                      width: _focusNode.hasFocus ? 1.5 : 1.0,
+                      width: 1.5,
                     ),
                   ),
                   padding: const EdgeInsets.fromLTRB(6, 2, 4, 4),
@@ -828,7 +828,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           keyboardType: TextInputType.multiline,
                           maxLines: 6,
                           minLines: 1,
-                          style: theme.textTheme.bodyMedium,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            height: 1.5, // Better line height for readability
+                            fontSize: 16, // Readable font size
+                          ),
                           maxLength: AppConstants.maxInputLength,
                           buildCounter:
                               (
@@ -850,9 +853,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               fontStyle: _isEnhancing ? FontStyle.italic : null,
                             ),
                             border: InputBorder.none,
-                            isDense: true,
+                            isDense: false, // Allow default comfortable height
                             contentPadding: const EdgeInsets.symmetric(
-                              vertical: 10,
+                              vertical: 14, // Ensures ~48px+ height
                             ),
                           ),
                         ),
