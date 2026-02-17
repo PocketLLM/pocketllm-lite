@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../chat/domain/models/chat_session.dart';
 
 class MediaGalleryScreen extends ConsumerWidget {
@@ -18,9 +19,7 @@ class MediaGalleryScreen extends ConsumerWidget {
     final storage = ref.watch(storageServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(chatTitle != null ? 'Media: $chatTitle' : 'Media Gallery'),
-      ),
+      appBar: M3AppBar(title: 'Media Gallery', subtitle: chatTitle),
       body: ValueListenableBuilder<Box<ChatSession>>(
         valueListenable: storage.chatBoxListenable,
         builder: (context, box, _) {

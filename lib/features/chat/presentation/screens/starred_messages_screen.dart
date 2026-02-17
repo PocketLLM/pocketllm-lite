@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/providers.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 import '../../domain/models/starred_message.dart';
 import '../providers/chat_provider.dart';
 
@@ -23,18 +24,15 @@ class _StarredMessagesScreenState extends ConsumerState<StarredMessagesScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Starred Messages'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (GoRouter.of(context).canPop()) {
-              context.pop();
-            } else {
-              context.go('/settings');
-            }
-          },
-        ),
+      appBar: M3AppBar(
+        title: 'Starred Messages',
+        onBack: () {
+          if (GoRouter.of(context).canPop()) {
+            context.pop();
+          } else {
+            context.go('/settings');
+          }
+        },
       ),
       body: ValueListenableBuilder(
         valueListenable: storage.settingsBoxListenable,
@@ -93,8 +91,8 @@ class _StarredMessagesScreenState extends ConsumerState<StarredMessagesScreen> {
                 background: Container(
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 20),
-                  color: Colors.red,
-                  child: const Icon(Icons.delete, color: Colors.white),
+                  color: theme.colorScheme.error,
+                  child: Icon(Icons.delete, color: theme.colorScheme.onError),
                 ),
                 onDismissed: (direction) {
                   storage.unstarMessage(item.id);
@@ -123,7 +121,7 @@ class _StarredMessagesScreenState extends ConsumerState<StarredMessagesScreen> {
                                     : Icons.chat_bubble_outline,
                                 size: 14,
                                 color: isDeleted
-                                    ? Colors.red
+                                    ? theme.colorScheme.error
                                     : theme.colorScheme.primary,
                               ),
                               const SizedBox(width: 8),
@@ -133,7 +131,7 @@ class _StarredMessagesScreenState extends ConsumerState<StarredMessagesScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: isDeleted
-                                        ? Colors.red
+                                        ? theme.colorScheme.error
                                         : theme.colorScheme.primary,
                                     fontWeight: FontWeight.bold,
                                   ),

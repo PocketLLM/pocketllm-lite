@@ -212,6 +212,7 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
     // The ad logic is specific to `ChatHistoryScreen` ad service. I don't want to duplicate 50 lines of ad logic here.
     // Simple delete is fine for "Archived".
 
+    final theme = Theme.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
