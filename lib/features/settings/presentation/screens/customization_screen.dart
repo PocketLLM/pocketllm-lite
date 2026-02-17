@@ -606,18 +606,27 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: Color(preset.userColor),
-                                radius: 8,
-                              ),
-                              const SizedBox(width: -4),
-                              CircleAvatar(
-                                backgroundColor: Color(preset.aiColor),
-                                radius: 8,
-                              ),
-                            ],
+                          SizedBox(
+                            width: 28,
+                            height: 16,
+                            child: Stack(
+                              children: [
+                                Positioned(
+                                  left: 0,
+                                  child: CircleAvatar(
+                                    backgroundColor: Color(preset.userColor),
+                                    radius: 8,
+                                  ),
+                                ),
+                                Positioned(
+                                  left: 12,
+                                  child: CircleAvatar(
+                                    backgroundColor: Color(preset.aiColor),
+                                    radius: 8,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Text(
