@@ -1,0 +1,4 @@
+storePassword=pocket123
+keyPassword=pocket123
+keyAlias=upload
+storeFile=D:/Projects/pocketllm_lite/upload-keystore.jks

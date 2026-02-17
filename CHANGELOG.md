@@ -14,11 +14,22 @@ We use a specific versioning pattern:
 
 ## [1.0.10] - 2026-02-18
 
+### Added
+- **System Prompt Management**: Dedicated screen to create, save, and select different system prompts.
+- **Usage Statistics Dashboard**: Visual breakdown of token usage and model activity.
+- **Advanced Appearance Settings**: 
+  - Live preview for chat bubble customization.
+  - Granular control over font sizes and border radius.
+  - New preset themes.
+
 ### Changed
 - **Material 3 Expressive Redesign**: Refactored entire application to strictly follow Material 3 design principles.
 - **M3 Elements**: Replaced all legacy `AppBar`s with the new `M3AppBar` component for consistent headers.
 - **Theming**: Replaced hardcoded colors in dialogs, menus, and widgets with dynamic theme-aware colors (`ColorScheme`).
 - **Standardization**: Unified styling across all Settings sub-pages, Tag Management, and Profile screens.
+- **Build System**: Improved Android release build configuration (robust keystore handling).
+
+### Fixed
 - **Code Quality**: Fixed various lint issues including unused imports and async context usage.
 
 ## [1.0.9] - 2026-01-20
