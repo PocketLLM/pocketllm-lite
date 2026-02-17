@@ -600,402 +600,420 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final editingMessage = ref.watch(editingMessageProvider);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
           top: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
             width: 0.5,
           ),
         ),
       ),
       child: SafeArea(
         top: false,
-        child: AnimatedBuilder(
-          animation: _focusNode,
-          builder: (context, child) {
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: _focusNode.hasFocus
-                      ? colorScheme.primary.withValues(alpha: 0.5)
-                      : colorScheme.outlineVariant.withValues(alpha: 0.3),
-                  width: _focusNode.hasFocus ? 1.5 : 1.0,
-                ),
-              ),
-              padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
-              child: child,
-            );
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Editing banner
-              if (editingMessage != null)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8, top: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Editing banner — above the input capsule
+            if (editingMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6, left: 4, right: 4),
+                child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
-                    vertical: 8,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(16),
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.edit_rounded,
-                        size: 16,
+                        size: 14,
                         color: colorScheme.onPrimaryContainer,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Editing message',
-                          style: theme.textTheme.labelMedium?.copyWith(
+                          style: theme.textTheme.labelSmall?.copyWith(
                             color: colorScheme.onPrimaryContainer,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () {
-                          ref
-                              .read(editingMessageProvider.notifier)
-                              .clearEditingMessage();
-                          _controller.clear();
-                          setState(() {
-                            _selectedFiles.clear();
-                          });
-                        },
-                        icon: Icon(
-                          Icons.close_rounded,
-                          size: 18,
-                          color: colorScheme.onPrimaryContainer,
-                        ),
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
+                      SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: IconButton(
+                          onPressed: () {
+                            ref
+                                .read(editingMessageProvider.notifier)
+                                .clearEditingMessage();
+                            _controller.clear();
+                            setState(() {
+                              _selectedFiles.clear();
+                            });
+                          },
+                          icon: Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: colorScheme.onPrimaryContainer,
+                          ),
+                          padding: EdgeInsets.zero,
                         ),
                       ),
                     ],
-                  ),
-                ),
-              // Image previews
-              if (_selectedImages.isNotEmpty)
-                Container(
-                  height: 70,
-                  padding: const EdgeInsets.only(bottom: 8, top: 8),
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _selectedImages.length,
-                    itemBuilder: (c, i) => Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.memory(
-                              _selectedImages[i],
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
-                              cacheWidth: 180,
-                            ),
-                          ),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: GestureDetector(
-                              onTap: () =>
-                                  setState(() => _selectedImages.removeAt(i)),
-                              child: Container(
-                                width: 22,
-                                height: 22,
-                                decoration: BoxDecoration(
-                                  color: colorScheme.error,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.close_rounded,
-                                  color: colorScheme.onError,
-                                  size: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              // File previews
-              if (_selectedFiles.isNotEmpty)
-                Container(
-                  height: 52,
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _selectedFiles.length,
-                    itemBuilder: (c, i) {
-                      final attachment = _selectedFiles[i];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Semantics(
-                          label: 'Attached file ${attachment.name}',
-                          child: Chip(
-                            avatar: Icon(
-                              Icons.description_outlined,
-                              size: 16,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            label: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 120),
-                              child: Text(
-                                attachment.name,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.labelMedium,
-                              ),
-                            ),
-                            deleteIcon: Icon(
-                              Icons.close_rounded,
-                              size: 16,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            onDeleted: () {
-                              setState(() {
-                                _selectedFiles.removeAt(i);
-                              });
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              // Enhancing gradient (visual feedback)
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: _isEnhancing
-                      ? LinearGradient(
-                          colors: [
-                            colorScheme.primary.withValues(alpha: 0.08),
-                            colorScheme.tertiary.withValues(alpha: 0.08),
-                            colorScheme.secondary.withValues(alpha: 0.08),
-                            colorScheme.primary.withValues(alpha: 0.08),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
-                  boxShadow: _isEnhancing
-                      ? [
-                          BoxShadow(
-                            color: colorScheme.primary.withValues(alpha: 0.2),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: CallbackShortcuts(
-                  bindings: {
-                    const SingleActivator(
-                      LogicalKeyboardKey.enter,
-                      control: true,
-                    ): _send,
-                    const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                        _send,
-                  },
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    enabled: !isGenerating && !_isEnhancing,
-                    textCapitalization: TextCapitalization.sentences,
-                    keyboardType: TextInputType.multiline,
-                    maxLines: 8,
-                    minLines: 1,
-                    style: theme.textTheme.bodyLarge,
-                    maxLength: AppConstants.maxInputLength,
-                    buildCounter:
-                        (
-                          context, {
-                          required currentLength,
-                          required isFocused,
-                          required maxLength,
-                        }) => null,
-                    decoration: InputDecoration(
-                      hintText: _isEnhancing
-                          ? 'Enhancing your prompt...'
-                          : 'Message Pocket LLM...',
-                      hintStyle: TextStyle(
-                        color: _isEnhancing
-                            ? colorScheme.primary
-                            : colorScheme.onSurfaceVariant.withValues(
-                                alpha: 0.6,
-                              ),
-                        fontStyle: _isEnhancing ? FontStyle.italic : null,
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
-              // Bottom toolbar
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Left action buttons
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+            // Attachment previews row — above input capsule
+            if (_selectedImages.isNotEmpty || _selectedFiles.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6, left: 4, right: 4),
+                child: SizedBox(
+                  height: _selectedImages.isNotEmpty ? 64 : 36,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
                     children: [
-                      _InputActionButton(
-                        icon: Icons.add_rounded,
-                        tooltip: 'Add Image',
-                        onTap: _pickImage,
-                        isDisabled: isGenerating,
-                        colorScheme: colorScheme,
-                      ),
-                      const SizedBox(width: 4),
-                      _InputActionButton(
-                        icon: Icons.attach_file_rounded,
-                        tooltip: 'Insert Text File',
-                        onTap: _pickFile,
-                        isDisabled: isGenerating,
-                        colorScheme: colorScheme,
-                      ),
-                      const SizedBox(width: 4),
-                      _InputActionButton(
-                        icon: Icons.bolt_rounded,
-                        tooltip: 'Quick Templates',
-                        onTap: _showTemplates,
-                        isDisabled: isGenerating,
-                        colorScheme: colorScheme,
-                      ),
-                      const SizedBox(width: 4),
-                      // Enhance Prompt Button
-                      Consumer(
-                        builder: (context, ref, child) {
-                          final enhancerState = ref.watch(
-                            promptEnhancerProvider,
-                          );
-                          final hasEnhancer =
-                              enhancerState.selectedModelId != null;
-
-                          if (!hasEnhancer) return const SizedBox.shrink();
-
-                          final isDisabled = isGenerating || _isEnhancing;
-                          return _InputActionButton(
-                            icon: Icons.auto_awesome_rounded,
-                            tooltip: 'Enhance Prompt',
-                            onTap: _enhancePrompt,
-                            isDisabled: isDisabled,
-                            colorScheme: colorScheme,
-                            isLoading: _isEnhancing,
-                          );
-                        },
-                      ),
+                      // Image previews
+                      ..._selectedImages.asMap().entries.map((entry) {
+                        final i = entry.key;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.memory(
+                                  entry.value,
+                                  width: 56,
+                                  height: 56,
+                                  fit: BoxFit.cover,
+                                  cacheWidth: 168,
+                                ),
+                              ),
+                              Positioned(
+                                right: -4,
+                                top: -4,
+                                child: GestureDetector(
+                                  onTap: () => setState(
+                                    () => _selectedImages.removeAt(i),
+                                  ),
+                                  child: Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.error,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: colorScheme.surface,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.close_rounded,
+                                      color: colorScheme.onError,
+                                      size: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      // File chips
+                      ..._selectedFiles.asMap().entries.map((entry) {
+                        final i = entry.key;
+                        final attachment = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Semantics(
+                            label: 'Attached file ${attachment.name}',
+                            child: InputChip(
+                              avatar: Icon(
+                                Icons.description_outlined,
+                                size: 14,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              label: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 100,
+                                ),
+                                child: Text(
+                                  attachment.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelSmall,
+                                ),
+                              ),
+                              onDeleted: () {
+                                setState(() => _selectedFiles.removeAt(i));
+                              },
+                              deleteIconColor: colorScheme.onSurfaceVariant,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                        );
+                      }),
                     ],
                   ),
-                  // Right side: counter + send
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _controller,
-                    builder: (context, value, child) {
-                      final canSend =
-                          (value.text.trim().isNotEmpty ||
-                              _selectedImages.isNotEmpty ||
-                              _selectedFiles.isNotEmpty) &&
-                          !isGenerating;
-                      final charCount = value.text.length;
-                      final maxLength = AppConstants.maxInputLength;
-                      final remaining = maxLength - charCount;
-                      final counterColor = remaining <= 200
-                          ? colorScheme.error
-                          : colorScheme.onSurfaceVariant;
-
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ExcludeSemantics(
-                            child: Text(
-                              '$charCount/$maxLength',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: counterColor,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          // M3 send button
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOutCubic,
-                            decoration: BoxDecoration(
-                              color: canSend
+                ),
+              ),
+            // Main input capsule
+            AnimatedBuilder(
+              animation: _focusNode,
+              builder: (context, child) {
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(26),
+                    border: Border.all(
+                      color: _focusNode.hasFocus
+                          ? colorScheme.primary.withValues(alpha: 0.5)
+                          : colorScheme.outlineVariant.withValues(alpha: 0.25),
+                      width: _focusNode.hasFocus ? 1.5 : 1.0,
+                    ),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(6, 2, 4, 4),
+                  child: child,
+                );
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Enhancing gradient (visual feedback)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: _isEnhancing
+                          ? LinearGradient(
+                              colors: [
+                                colorScheme.primary.withValues(alpha: 0.06),
+                                colorScheme.tertiary.withValues(alpha: 0.06),
+                                colorScheme.secondary.withValues(alpha: 0.06),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                    ),
+                    child: CallbackShortcuts(
+                      bindings: {
+                        const SingleActivator(
+                          LogicalKeyboardKey.enter,
+                          control: true,
+                        ): _send,
+                        const SingleActivator(
+                          LogicalKeyboardKey.enter,
+                          meta: true,
+                        ): _send,
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: TextField(
+                          controller: _controller,
+                          focusNode: _focusNode,
+                          enabled: !isGenerating && !_isEnhancing,
+                          textCapitalization: TextCapitalization.sentences,
+                          keyboardType: TextInputType.multiline,
+                          maxLines: 6,
+                          minLines: 1,
+                          style: theme.textTheme.bodyMedium,
+                          maxLength: AppConstants.maxInputLength,
+                          buildCounter:
+                              (
+                                context, {
+                                required currentLength,
+                                required isFocused,
+                                required maxLength,
+                              }) => null,
+                          decoration: InputDecoration(
+                            hintText: _isEnhancing
+                                ? 'Enhancing your prompt...'
+                                : 'Message Pocket LLM...',
+                            hintStyle: TextStyle(
+                              color: _isEnhancing
                                   ? colorScheme.primary
-                                  : colorScheme.surfaceContainerHighest,
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              onPressed: canSend ? _send : null,
-                              icon: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 200),
-                                transitionBuilder: (child, animation) =>
-                                    ScaleTransition(
-                                      scale: animation,
-                                      child: child,
+                                  : colorScheme.onSurfaceVariant.withValues(
+                                      alpha: 0.5,
                                     ),
-                                child: isGenerating
-                                    ? SizedBox(
-                                        key: const ValueKey('spinner'),
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation(
-                                            colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      )
-                                    : Icon(
-                                        Icons.arrow_upward_rounded,
-                                        key: const ValueKey('send_icon'),
-                                        color: canSend
-                                            ? colorScheme.onPrimary
-                                            : colorScheme.onSurfaceVariant
-                                                  .withValues(alpha: 0.5),
-                                        size: 20,
-                                      ),
-                              ),
-                              tooltip: isGenerating
-                                  ? 'Generating...'
-                                  : 'Send (Ctrl/⌘ + Enter)',
+                              fontStyle: _isEnhancing ? FontStyle.italic : null,
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
                             ),
                           ),
-                        ],
-                      );
-                    },
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Bottom toolbar — inside capsule
+                  Padding(
+                    padding: const EdgeInsets.only(left: 2, right: 2),
+                    child: Row(
+                      children: [
+                        // Left action buttons
+                        _InputActionButton(
+                          icon: Icons.add_photo_alternate_outlined,
+                          tooltip: 'Add Image',
+                          onTap: _pickImage,
+                          isDisabled: isGenerating,
+                          colorScheme: colorScheme,
+                        ),
+                        const SizedBox(width: 2),
+                        _InputActionButton(
+                          icon: Icons.attach_file_rounded,
+                          tooltip: 'Attach File',
+                          onTap: _pickFile,
+                          isDisabled: isGenerating,
+                          colorScheme: colorScheme,
+                        ),
+                        const SizedBox(width: 2),
+                        _InputActionButton(
+                          icon: Icons.bolt_rounded,
+                          tooltip: 'Templates',
+                          onTap: _showTemplates,
+                          isDisabled: isGenerating,
+                          colorScheme: colorScheme,
+                        ),
+                        // Enhance Prompt — conditional
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final enhancerState = ref.watch(
+                              promptEnhancerProvider,
+                            );
+                            final hasEnhancer =
+                                enhancerState.selectedModelId != null;
+
+                            if (!hasEnhancer) return const SizedBox.shrink();
+
+                            final isDisabled = isGenerating || _isEnhancing;
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 2),
+                              child: _InputActionButton(
+                                icon: Icons.auto_awesome_rounded,
+                                tooltip: 'Enhance Prompt',
+                                onTap: _enhancePrompt,
+                                isDisabled: isDisabled,
+                                colorScheme: colorScheme,
+                                isLoading: _isEnhancing,
+                              ),
+                            );
+                          },
+                        ),
+                        const Spacer(),
+                        // Character counter
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _controller,
+                          builder: (context, value, child) {
+                            final charCount = value.text.length;
+                            final maxLength = AppConstants.maxInputLength;
+                            final remaining = maxLength - charCount;
+                            // Only show counter when typing
+                            if (charCount == 0) return const SizedBox.shrink();
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ExcludeSemantics(
+                                child: Text(
+                                  '$charCount/$maxLength',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: remaining <= 200
+                                        ? colorScheme.error
+                                        : colorScheme.onSurfaceVariant
+                                              .withValues(alpha: 0.5),
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        // Send button
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _controller,
+                          builder: (context, value, child) {
+                            final canSend =
+                                (value.text.trim().isNotEmpty ||
+                                    _selectedImages.isNotEmpty ||
+                                    _selectedFiles.isNotEmpty) &&
+                                !isGenerating;
+
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOutCubic,
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: canSend
+                                    ? colorScheme.primary
+                                    : colorScheme.surfaceContainerHighest,
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                onPressed: canSend ? _send : null,
+                                icon: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  transitionBuilder: (child, animation) =>
+                                      ScaleTransition(
+                                        scale: animation,
+                                        child: child,
+                                      ),
+                                  child: isGenerating
+                                      ? SizedBox(
+                                          key: const ValueKey('spinner'),
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation(
+                                              colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        )
+                                      : Icon(
+                                          Icons.arrow_upward_rounded,
+                                          key: const ValueKey('send_icon'),
+                                          color: canSend
+                                              ? colorScheme.onPrimary
+                                              : colorScheme.onSurfaceVariant
+                                                    .withValues(alpha: 0.4),
+                                          size: 18,
+                                        ),
+                                ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 36,
+                                  minHeight: 36,
+                                ),
+                                tooltip: isGenerating
+                                    ? 'Generating...'
+                                    : 'Send (Ctrl/⌘ + Enter)',
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1029,9 +1047,7 @@ class _InputActionButton extends StatelessWidget {
       child: Tooltip(
         message: tooltip,
         child: Material(
-          color: isDisabled
-              ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
-              : colorScheme.surfaceContainerHighest,
+          color: Colors.transparent,
           shape: const CircleBorder(),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
@@ -1047,15 +1063,15 @@ class _InputActionButton extends StatelessWidget {
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation(
-                            colorScheme.onSurface,
+                            colorScheme.onSurfaceVariant,
                           ),
                         ),
                       )
                     : Icon(
                         icon,
-                        size: 18,
-                        color: colorScheme.onSurface.withValues(
-                          alpha: isDisabled ? 0.4 : 1.0,
+                        size: 20,
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: isDisabled ? 0.35 : 0.8,
                         ),
                       ),
               ),

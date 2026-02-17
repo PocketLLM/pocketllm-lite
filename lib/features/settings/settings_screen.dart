@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../../core/widgets/m3_app_bar.dart';
 import '../../../../core/constants/legal_constants.dart';
 import '../../core/utils/url_validator.dart';
 
@@ -142,14 +143,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error checking for updates: ${result.error}'),
-            backgroundColor: Colors.orange,
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('You are using the latest version! 🎉'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('You are using the latest version! 🎉'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -225,9 +228,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!UrlValidator.isHttpUrlString(url)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid URL: Must start with http:// or https://'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text(
+              'Invalid URL: Must start with http:// or https://',
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -259,21 +265,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Settings'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
-              if (GoRouter.of(context).canPop()) {
-                context.pop();
-              } else {
-                // If we can't pop, go to the chat screen directly
-                context.go('/chat');
-              }
-            },
-          ),
+        appBar: M3AppBar(
+          title: 'Settings',
+          onBack: () {
+            if (GoRouter.of(context).canPop()) {
+              context.pop();
+            } else {
+              context.go('/chat');
+            }
+          },
         ),
         body: Column(
           children: [
@@ -371,6 +371,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildSectionHeader(String title, {Widget? trailing}) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -378,7 +379,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: colorScheme.primary,
+            ),
           ),
           if (trailing != null) trailing,
         ],
@@ -414,18 +419,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: (_isConnected ?? false)
-                          ? Colors.green.withValues(alpha: 0.2)
-                          : Colors.red.withValues(alpha: 0.2),
+                          ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                          : theme.colorScheme.error.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.circle,
-                          size: 10,
+                          size: 8,
                           color: (_isConnected ?? false)
-                              ? Colors.green
-                              : Colors.red,
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.error,
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -434,9 +439,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               : 'Disconnected',
                           style: TextStyle(
                             color: (_isConnected ?? false)
-                                ? Colors.green
-                                : Colors.red,
-                            fontWeight: FontWeight.bold,
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.error,
+                            fontWeight: FontWeight.w600,
                             fontSize: 12,
                           ),
                         ),
@@ -446,9 +451,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Endpoint URL',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -489,11 +497,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ),
                       child: _isConnecting
-                          ? const SizedBox(
+                          ? SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
-                                color: Colors.white,
+                                color: theme.colorScheme.onPrimary,
                                 strokeWidth: 2,
                               ),
                             )
@@ -665,7 +673,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.withValues(alpha: 0.2),
+                                    color: theme.colorScheme.tertiary
+                                        .withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Row(
@@ -674,14 +683,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                       Icon(
                                         Icons.visibility,
                                         size: 12,
-                                        color: Colors.blue,
+                                        color: theme.colorScheme.tertiary,
                                       ),
                                       SizedBox(width: 4),
                                       Text(
                                         "Vision",
                                         style: TextStyle(
                                           fontSize: 10,
-                                          color: Colors.blue,
+                                          color: theme.colorScheme.tertiary,
                                         ),
                                       ),
                                     ],
@@ -704,14 +713,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   );
                                   setState(() {});
                                 },
-                                activeColor: Colors.blue,
+                                activeColor: theme.colorScheme.primary,
                                 visualDensity: VisualDensity.compact,
                               ),
                               IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.edit,
                                   size: 20,
-                                  color: Colors.grey,
+                                  color: theme.colorScheme.onSurfaceVariant,
                                 ),
                                 onPressed: () {
                                   HapticFeedback.lightImpact();
@@ -786,7 +795,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 selectedModel ?? 'No model selected',
                 style: TextStyle(
                   fontSize: 12,
-                  color: selectedModel != null ? Colors.green : Colors.grey,
+                  color: selectedModel != null
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
                 ),
               ),
               leading: Icon(
@@ -817,19 +828,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
+                      color: theme.colorScheme.primaryContainer.withValues(
+                        alpha: 0.3,
+                      ),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: theme.colorScheme.primary,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'This model will enhance prompts with best practices like specificity and structure.',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.blue[800],
+                              color: theme.colorScheme.onPrimaryContainer,
                             ),
                           ),
                         ),
@@ -893,19 +910,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.blue.withValues(
-                                            alpha: 0.2,
-                                          ),
+                                          color: theme.colorScheme.tertiary
+                                              .withValues(alpha: 0.15),
                                           borderRadius: BorderRadius.circular(
                                             4,
                                           ),
                                         ),
                                         child: const Text(
                                           'Vision',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.blue,
-                                          ),
+                                          style: TextStyle(fontSize: 10),
                                         ),
                                       ),
                                     ),
@@ -963,7 +976,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               const Text(
                 'This prompt instructs the AI how to enhance your prompts:',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 12),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -985,7 +998,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -993,13 +1008,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Icon(
                       Icons.info_outline,
                       size: 16,
-                      color: Colors.orange[700],
+                      color: Theme.of(context).colorScheme.tertiary,
                     ),
                     const SizedBox(width: 8),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'This prompt is optimized for best results. Editing is disabled to ensure consistent enhancement quality.',
-                        style: TextStyle(fontSize: 11, color: Colors.orange),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onTertiaryContainer,
+                        ),
                       ),
                     ),
                   ],
@@ -1051,16 +1071,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 leading: Icon(
                   Icons.chat_bubble_outline,
-                  color: limits.canCreateFreeChat ? Colors.blue : Colors.red,
+                  color: limits.canCreateFreeChat
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.error,
                 ),
                 title: Text(
                   'Chats Created: ${limits.totalChatsCreated}/${AppConstants.freeChatsAllowed}',
                 ),
                 subtitle: limits.canCreateFreeChat
                     ? null
-                    : const Text(
+                    : Text(
                         'Limit reached - Watch ad to unlock more chats',
-                        style: TextStyle(fontSize: 12, color: Colors.red),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.error,
+                        ),
                       ),
                 trailing: !limits.canCreateFreeChat
                     ? TextButton.icon(
@@ -1078,7 +1103,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 leading: Icon(
                   Icons.auto_awesome,
-                  color: limits.hasEnhancerUses ? Colors.blue : Colors.orange,
+                  color: limits.hasEnhancerUses
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.tertiary,
                 ),
                 title: Text(
                   'Prompt Enhancements: ${limits.enhancerRemaining}/${AppConstants.freeEnhancementsPerDay}',
@@ -1087,7 +1114,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ? null
                     : Text(
                         'Resets in ~${limits.hoursUntilEnhancerReset} hours',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                 trailing: limits.hasEnhancerUses
                     ? null
@@ -1106,8 +1136,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 leading: Icon(
                   Icons.token,
                   color: limits.remainingTokens > 1000
-                      ? Colors.green
-                      : Colors.orange,
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.tertiary,
                 ),
                 title: Text(
                   'Token Balance: ${limits.remainingTokens}/${limits.tokenBalance}',
@@ -1120,17 +1150,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       value: limits.tokenBalance > 0
                           ? limits.remainingTokens / limits.tokenBalance
                           : 0,
-                      backgroundColor: Colors.grey[300],
+                      backgroundColor:
+                          theme.colorScheme.surfaceContainerHighest,
                       valueColor: AlwaysStoppedAnimation(
                         limits.remainingTokens > 1000
-                            ? Colors.green
-                            : Colors.orange,
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.tertiary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Total used: ${limits.totalTokensUsed}',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -1140,7 +1174,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         icon: const Icon(Icons.play_circle, size: 18),
                         label: const Text('+10K'),
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.green,
+                          foregroundColor: theme.colorScheme.primary,
                         ),
                       )
                     : null,
@@ -1151,14 +1185,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 14, color: Colors.grey[600]),
+                    Icon(
+                      Icons.info_outline,
+                      size: 14,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Ads help support development—thanks!',
                         style: TextStyle(
                           fontSize: 11,
-                          color: Colors.grey[600],
+                          color: theme.colorScheme.onSurfaceVariant,
                           fontStyle: FontStyle.italic,
                         ),
                       ),
