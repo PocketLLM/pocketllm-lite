@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../chat/presentation/widgets/templates_sheet.dart';
 
 class TemplateManagementScreen extends ConsumerStatefulWidget {
@@ -17,18 +18,15 @@ class _TemplateManagementScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Message Templates'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (GoRouter.of(context).canPop()) {
-              context.pop();
-            } else {
-              context.go('/settings');
-            }
-          },
-        ),
+      appBar: M3AppBar(
+        title: 'Message Templates',
+        onBack: () {
+          if (GoRouter.of(context).canPop()) {
+            context.pop();
+          } else {
+            context.go('/settings');
+          }
+        },
       ),
       body: TemplatesSheet(
         // In management mode, selection is not primary, but we can allow copying or editing.

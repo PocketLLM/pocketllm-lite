@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/utils/url_validator.dart';
 import '../../../../core/utils/markdown_handlers.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 
 class Docs extends StatefulWidget {
   const Docs({super.key});
@@ -302,6 +303,8 @@ ollama pull <model-name>
 - [Ollama Documentation](https://ollama.ai/docs)
 ''';
 
+    final theme = Theme.of(context);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -315,35 +318,22 @@ ollama pull <model-name>
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.grey[50], // User specified
-        appBar: AppBar(
-          backgroundColor: Colors.grey[50],
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black, size: 28),
-            onPressed: () {
-              // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
-              if (GoRouter.of(context).canPop()) {
-                context.pop();
-              } else {
-                // If we can't pop, go to the settings screen directly
-                context.go('/settings');
-              }
-            },
-          ),
-          title: const Text(
-            'Documentation',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+        appBar: M3AppBar(
+          title: 'Documentation',
+          onBack: () {
+            // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+            if (GoRouter.of(context).canPop()) {
+              context.pop();
+            } else {
+              // If we can't pop, go to the settings screen directly
+              context.go('/settings');
+            }
+          },
           bottom: TabBar(
             controller: _tabController,
-            labelColor: const Color(0xFF8B5CF6),
-            unselectedLabelColor: Colors.grey[600],
-            indicatorColor: const Color(0xFF8B5CF6),
+            labelColor: theme.colorScheme.primary,
+            unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+            indicatorColor: theme.colorScheme.primary,
             tabs: const [
               Tab(text: 'Termux'),
               Tab(text: 'Ollama'),
@@ -362,45 +352,46 @@ ollama pull <model-name>
   }
 
   Widget _buildMarkdownTab(String content) {
+    final theme = Theme.of(context);
     return Markdown(
       data: content,
       selectable: true,
       padding: const EdgeInsets.all(16),
       imageBuilder: MarkdownHandlers.imageBuilder,
       styleSheet: MarkdownStyleSheet(
-        h1: const TextStyle(
+        h1: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.bold,
-          color: Colors.black87,
+          color: theme.colorScheme.onSurface,
         ),
-        h2: const TextStyle(
+        h2: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: Colors.black87,
+          color: theme.colorScheme.onSurface,
         ),
-        h3: const TextStyle(
+        h3: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Colors.black87,
+          color: theme.colorScheme.onSurface,
         ),
         code: TextStyle(
-          backgroundColor: Colors.grey[100],
-          color: const Color(0xFF8B5CF6),
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          color: theme.colorScheme.primary,
           fontSize: 14,
           fontFamily: 'monospace',
         ),
         codeblockDecoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(color: theme.colorScheme.outlineVariant),
         ),
         blockquote: TextStyle(
-          color: Colors.grey[800],
+          color: theme.colorScheme.onSurfaceVariant,
           fontSize: 16,
           fontStyle: FontStyle.italic,
         ),
-        listBullet: const TextStyle(color: Color(0xFF8B5CF6), fontSize: 16),
-        p: const TextStyle(color: Colors.black87), // Ensure body text is black
+        listBullet: TextStyle(color: theme.colorScheme.primary, fontSize: 16),
+        p: TextStyle(color: theme.colorScheme.onSurface),
       ),
       onTapLink: (text, url, title) {
         if (url != null) _launchUrl(url);

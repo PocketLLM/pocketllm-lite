@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 import '../providers/profile_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -81,10 +82,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               if (_avatarImageBase64 != null)
                 ListTile(
-                  leading: const Icon(Icons.delete, color: Colors.red),
-                  title: const Text(
+                  leading: Icon(
+                    Icons.delete,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(
                     'Remove Photo',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                   onTap: () => Navigator.pop(context, 'remove'),
                 ),
@@ -157,13 +163,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
+      appBar: M3AppBar(
+        title: 'Profile',
+        onBack: () => Navigator.pop(context),
         actions: [
           IconButton(
             icon: const Icon(Icons.save),
             tooltip: 'Save',
-            onPressed: _saveProfile,
+            onPressed: () {
+              // Since _saveProfile is async and returns void, we can call it directly.
+              // However, typically we might want to await it if we were showing a loader.
+              // For now, fire and forget as per original, but it shows a snackbar.
+              _saveProfile();
+            },
           ),
         ],
       ),
@@ -205,9 +217,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           width: 2,
                         ),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.camera_alt,
-                        color: Colors.white,
+                        color: theme.colorScheme.onPrimary,
                         size: 16,
                       ),
                     ),

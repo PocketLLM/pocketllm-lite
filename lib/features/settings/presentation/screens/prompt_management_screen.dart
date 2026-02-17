@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../../services/storage_service.dart';
 import '../../../chat/domain/models/system_prompt.dart';
 
@@ -28,20 +29,17 @@ class PromptManagementScreen extends ConsumerWidget {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('System Prompts Library'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
-              if (GoRouter.of(context).canPop()) {
-                context.pop();
-              } else {
-                // If we can't pop, go to the settings screen directly
-                context.go('/settings');
-              }
-            },
-          ),
+        appBar: M3AppBar(
+          title: 'System Prompts Library',
+          onBack: () {
+            // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+            if (GoRouter.of(context).canPop()) {
+              context.pop();
+            } else {
+              // If we can't pop, go to the settings screen directly
+              context.go('/settings');
+            }
+          },
           actions: [
             IconButton(
               icon: const Icon(Icons.add),
@@ -252,13 +250,15 @@ class PromptManagementScreen extends ConsumerWidget {
                         TextButton.icon(
                           onPressed: () =>
                               _confirmDelete(context, storage, prompt),
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.delete_outline,
-                            color: Colors.red,
+                            color: Theme.of(context).colorScheme.error,
                           ),
-                          label: const Text(
+                          label: Text(
                             'Delete',
-                            style: TextStyle(color: Colors.red),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
                           ),
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
@@ -281,7 +281,9 @@ class PromptManagementScreen extends ConsumerWidget {
                               }
                             },
                             style: TextButton.styleFrom(
-                              foregroundColor: Colors.grey,
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 24,
                                 vertical: 12,
@@ -289,7 +291,9 @@ class PromptManagementScreen extends ConsumerWidget {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 side: BorderSide(
-                                  color: Colors.grey.withValues(alpha: 0.2),
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.outline.withValues(alpha: 0.2),
                                 ),
                               ),
                             ),
@@ -333,8 +337,12 @@ class PromptManagementScreen extends ConsumerWidget {
                               }
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 32,
                                 vertical: 12,
@@ -388,8 +396,13 @@ class PromptManagementScreen extends ConsumerWidget {
                 }
               }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),

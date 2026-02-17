@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../../services/storage_service.dart';
 import '../widgets/activity_chart.dart';
 
@@ -21,8 +22,9 @@ class UsageStatisticsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Usage Statistics'),
+      appBar: M3AppBar(
+        title: 'Usage Statistics',
+        onBack: () => Navigator.pop(context),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -58,6 +60,7 @@ class UsageStatisticsScreen extends ConsumerWidget {
   }
 
   Widget _buildSummaryCards(BuildContext context, UsageStatistics stats) {
+    final theme = Theme.of(context);
     return GridView.count(
       crossAxisCount: 2,
       crossAxisSpacing: 16,
@@ -71,28 +74,28 @@ class UsageStatisticsScreen extends ConsumerWidget {
           'Total Chats',
           stats.totalChats.toString(),
           Icons.chat_bubble_outline,
-          Colors.blue,
+          theme.colorScheme.primary,
         ),
         _buildStatCard(
           context,
           'Total Messages',
           stats.totalMessages.toString(),
           Icons.message_outlined,
-          Colors.green,
+          theme.colorScheme.secondary,
         ),
         _buildStatCard(
           context,
           'Tokens Used',
           NumberFormat.compact().format(stats.totalTokensUsed),
           Icons.token,
-          Colors.orange,
+          theme.colorScheme.tertiary,
         ),
         _buildStatCard(
           context,
           'Chats (7d)',
           stats.chatsLast7Days.toString(),
           Icons.calendar_today,
-          Colors.purple,
+          theme.colorScheme.inversePrimary,
         ),
       ],
     );

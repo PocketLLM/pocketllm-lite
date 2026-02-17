@@ -8,6 +8,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 
 import '../../../../core/providers.dart';
 import '../../../../services/storage_service.dart';
@@ -66,6 +67,7 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
 
   Future<void> _handleExport(StorageService storage) async {
     // Show format selection dialog
+    final theme = Theme.of(context);
     final format = await showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -73,26 +75,29 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, 'csv'),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Row(
                 children: [
-                  Icon(Icons.table_chart_outlined, color: Colors.green),
-                  SizedBox(width: 12),
-                  Text('CSV (Excel/Sheets)'),
+                  Icon(
+                    Icons.table_chart_outlined,
+                    color: theme.colorScheme.secondary,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('CSV (Excel/Sheets)'),
                 ],
               ),
             ),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, 'json'),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Row(
                 children: [
-                  Icon(Icons.code, color: Colors.orange),
-                  SizedBox(width: 12),
-                  Text('JSON (Raw Data)'),
+                  Icon(Icons.code, color: theme.colorScheme.tertiary),
+                  const SizedBox(width: 12),
+                  const Text('JSON (Raw Data)'),
                 ],
               ),
             ),
@@ -148,18 +153,15 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Activity Audit Trail'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (GoRouter.of(context).canPop()) {
-              context.pop();
-            } else {
-              context.go('/settings');
-            }
-          },
-        ),
+      appBar: M3AppBar(
+        title: 'Activity Audit Trail',
+        onBack: () {
+          if (GoRouter.of(context).canPop()) {
+            context.pop();
+          } else {
+            context.go('/settings');
+          }
+        },
         actions: [
           IconButton(
             icon: const Icon(Icons.upload_file),
@@ -375,6 +377,7 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
 
   Widget _buildFilterChip(LogFilter filter, String label) {
     final isSelected = _selectedFilter == filter;
+    final theme = Theme.of(context);
     return FilterChip(
       label: Text(label),
       selected: isSelected,
@@ -382,15 +385,15 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
         setState(() => _selectedFilter = filter);
         HapticFeedback.selectionClick();
       },
-      checkmarkColor: isSelected ? Colors.white : null,
+      checkmarkColor: isSelected ? theme.colorScheme.onPrimary : null,
       labelStyle: TextStyle(
-        color: isSelected ? Colors.white : null,
+        color: isSelected ? theme.colorScheme.onPrimary : null,
         fontWeight: isSelected ? FontWeight.w600 : null,
       ),
-      selectedColor: Theme.of(context).colorScheme.primary,
-      backgroundColor: Theme.of(
-        context,
-      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      selectedColor: theme.colorScheme.primary,
+      backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(
+        alpha: 0.5,
+      ),
       side: BorderSide.none,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
@@ -412,40 +415,41 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
   Widget _buildIconForAction(String action) {
     IconData icon;
     Color? color;
+    final theme = Theme.of(context);
 
     if (action.contains('Chat Created')) {
       icon = Icons.chat_bubble_outline;
-      color = Colors.blue;
+      color = theme.colorScheme.primary;
     } else if (action.contains('Chat Deleted') ||
         action.contains('History Cleared')) {
       icon = Icons.delete_outline;
-      color = Colors.red;
+      color = theme.colorScheme.error;
     } else if (action.contains('Prompt')) {
       if (action.contains('Deleted')) {
         icon = Icons.delete_outline;
-        color = Colors.deepOrange;
+        color = theme.colorScheme.error;
       } else {
         icon = Icons.edit_note;
-        color = Colors.purple;
+        color = theme.colorScheme.tertiary;
       }
     } else if (action.contains('Settings')) {
       icon = Icons.settings;
-      color = Colors.grey;
+      color = theme.colorScheme.outline;
     } else if (action.contains('Export')) {
       icon = Icons.download;
-      color = Colors.green;
+      color = theme.colorScheme.secondary;
     } else if (action.contains('Import')) {
       icon = Icons.upload;
-      color = Colors.teal;
+      color = theme.colorScheme.secondary;
     } else if (action.contains('Logs Cleared')) {
       icon = Icons.cleaning_services;
-      color = Colors.amber;
+      color = theme.colorScheme.tertiary;
     } else if (action.contains('Pinned')) {
       icon = Icons.push_pin_outlined;
-      color = Colors.orange;
+      color = theme.colorScheme.tertiary;
     } else {
       icon = Icons.info_outline;
-      color = Colors.blueGrey;
+      color = theme.colorScheme.onSurfaceVariant;
     }
 
     return CircleAvatar(
@@ -473,8 +477,13 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
               await storage.clearActivityLogs();
               if (context.mounted) Navigator.pop(context);
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Clear'),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(
+              'Clear',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),

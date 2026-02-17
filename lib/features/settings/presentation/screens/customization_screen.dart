@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../chat/domain/models/chat_message.dart';
 import '../../../chat/presentation/widgets/chat_bubble.dart';
 import '../providers/appearance_provider.dart';
@@ -144,20 +145,17 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Chat Appearance'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
-              if (GoRouter.of(context).canPop()) {
-                context.pop();
-              } else {
-                // If we can't pop, go to the settings screen directly
-                context.go('/settings');
-              }
-            },
-          ),
+        appBar: M3AppBar(
+          title: 'Chat Appearance',
+          onBack: () {
+            // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
+            if (GoRouter.of(context).canPop()) {
+              context.pop();
+            } else {
+              // If we can't pop, go to the settings screen directly
+              context.go('/settings');
+            }
+          },
         ),
         body: SingleChildScrollView(
           child: Column(
@@ -414,10 +412,12 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                                 ),
                                 const Spacer(),
                                 if (isSelected)
-                                  const Icon(
+                                  Icon(
                                     Icons.check_circle,
                                     size: 16,
-                                    color: Colors.blue,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   ),
                               ],
                             ),
@@ -433,7 +433,9 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                               preset.note,
                               style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.grey[600],
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                               maxLines: 1,
                             ),
