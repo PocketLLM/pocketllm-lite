@@ -5,10 +5,17 @@ All notable changes to PocketLLM - Lite will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2026-02-18
+## Versioning Guide
+We use a specific versioning pattern:
+- Increment the 3rd number (patch) by 1 for each update.
+- The 3rd number goes up to 100 (e.g., 1.0.99 -> 1.0.100).
+- Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
+- Similarly, 1.1.100 becomes 1.2.0.
+
+## [1.0.10] - 2026-02-18
 
 ### Changed
-- **UI Overhaul**: Refactored entire application to strictly follow Material 3 design principles.
+- **Material 3 Expressive Redesign**: Refactored entire application to strictly follow Material 3 design principles.
 - **M3 Elements**: Replaced all legacy `AppBar`s with the new `M3AppBar` component for consistent headers.
 - **Theming**: Replaced hardcoded colors in dialogs, menus, and widgets with dynamic theme-aware colors (`ColorScheme`).
 - **Standardization**: Unified styling across all Settings sub-pages, Tag Management, and Profile screens.

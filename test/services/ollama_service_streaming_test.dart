@@ -61,7 +61,7 @@ void main() {
       // If optimized with LineSplitter, it should buffer "wor" and combine with "ld!"...
       // producing "Hello " and "world!".
 
-      print('Collected output: $collectedOutput');
+      //print('Collected output: $collectedOutput');
 
       // This assertion is expected to FAIL with current implementation
       expect(collectedOutput.join(''), 'Hello world!');

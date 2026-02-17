@@ -172,7 +172,15 @@ lib/
 │   └── splash/         # Initial loading screen
 ├── services/           # OllamaService, StorageService
 └── main.dart           # Application entry point
-```
+
+## 📦 Versioning & Releases
+
+We use a specific versioning pattern:
+- Increment the 3rd number (patch) by 1 for each update.
+- The 3rd number goes up to 100 (e.g., 1.0.99 -> 1.0.100).
+- Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
+- Similarly, 1.1.100 becomes 1.2.0.
+
 
 ## 🎯 Core Features
 
