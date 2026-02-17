@@ -14,6 +14,7 @@ import '../features/chat/presentation/screens/starred_messages_screen.dart';
 import '../features/media/presentation/screens/media_gallery_screen.dart';
 import '../features/tags/presentation/screens/tag_management_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
+import '../features/settings/presentation/screens/system_prompt_details_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -35,6 +36,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'prompts',
             builder: (context, state) => const PromptManagementScreen(),
+            routes: [
+              GoRoute(
+                path: 'details/:id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id'];
+                  return SystemPromptDetailsScreen(promptId: id);
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: 'templates',
