@@ -1,4 +1,4 @@
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive_ce.dart';
 import 'chat_message.dart';
 
 part 'chat_session.g.dart';

@@ -8,7 +8,7 @@ part of 'text_file_attachment.dart';
 
 class TextFileAttachmentAdapter extends TypeAdapter<TextFileAttachment> {
   @override
-  final int typeId = 3;
+  final typeId = 3;
 
   @override
   TextFileAttachment read(BinaryReader reader) {
@@ -19,7 +19,7 @@ class TextFileAttachmentAdapter extends TypeAdapter<TextFileAttachment> {
     return TextFileAttachment(
       name: fields[0] as String,
       content: fields[1] as String,
-      sizeBytes: fields[2] as int,
+      sizeBytes: (fields[2] as num).toInt(),
       mimeType: fields[3] as String?,
     );
   }

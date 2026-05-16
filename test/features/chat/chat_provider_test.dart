@@ -6,7 +6,7 @@ import 'package:pocketllm_lite/core/providers.dart';
 import 'package:pocketllm_lite/services/storage_service.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_session.dart';
 import 'package:pocketllm_lite/services/usage_limits_provider.dart';
-// import 'package:hive_flutter/hive_flutter.dart'; // Needed for ValueListenable
+// import 'package:hive_ce_flutter/hive_ce_flutter.dart'; // Needed for ValueListenable
 
 // Mock Classes
 class MockOllamaService extends OllamaService {

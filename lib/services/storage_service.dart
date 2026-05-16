@@ -1,7 +1,7 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/constants/app_constants.dart';

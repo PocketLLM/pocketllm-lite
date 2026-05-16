@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../chat/domain/models/chat_session.dart';

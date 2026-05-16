@@ -8,7 +8,7 @@ part of 'system_prompt.dart';
 
 class SystemPromptAdapter extends TypeAdapter<SystemPrompt> {
   @override
-  final int typeId = 2;
+  final typeId = 2;
 
   @override
   SystemPrompt read(BinaryReader reader) {
