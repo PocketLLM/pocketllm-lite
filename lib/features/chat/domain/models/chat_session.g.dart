@@ -8,7 +8,7 @@ part of 'chat_session.dart';
 
 class ChatSessionAdapter extends TypeAdapter<ChatSession> {
   @override
-  final int typeId = 1;
+  final typeId = 1;
 
   @override
   ChatSession read(BinaryReader reader) {
@@ -23,9 +23,9 @@ class ChatSessionAdapter extends TypeAdapter<ChatSession> {
       messages: (fields[3] as List).cast<ChatMessage>(),
       createdAt: fields[4] as DateTime,
       systemPrompt: fields[5] as String?,
-      temperature: fields[6] as double?,
-      topP: fields[7] as double?,
-      topK: fields[8] as int?,
+      temperature: (fields[6] as num?)?.toDouble(),
+      topP: (fields[7] as num?)?.toDouble(),
+      topK: (fields[8] as num?)?.toInt(),
     );
   }
 
