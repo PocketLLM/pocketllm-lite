@@ -7,6 +7,8 @@ class AppConstants {
   static const String settingsBoxName = 'settings';
   static const String systemPromptsBoxName = 'system_prompts';
   static const String activityLogBoxName = 'activity_logs';
+  static const String errorLogBoxName = 'error_logs';
+  static const String personasBoxName = 'chat_personas';
 
   // Keys
   static const String isFirstLaunchKey = 'is_first_launch';
@@ -47,52 +49,6 @@ class AppConstants {
   // Fixed System Prompt for Enhancer
   static const String promptEnhancerSystemPrompt =
       '''You are an expert prompt engineer. Your task is to take the user's input text, which is a prompt intended for an AI model, and enhance it by applying best practices: Make it more specific, descriptive, and structured; add context if implied; use delimiters like ### or """ for sections; encourage step-by-step reasoning if appropriate; preserve the original intent. Output ONLY the enhanced prompt text—no introductions, explanations, conclusions, or additional text.''';
-
-  // ============ AdMob Configuration ============
-  // App IDs are configured in AndroidManifest.xml (via build.gradle) and Info.plist
-  // Pass Unit IDs via --dart-define or use defaults (Test IDs)
-
-  // Production Ad Unit IDs (Defaults to Google Test IDs)
-  static const String bannerAdUnitId = String.fromEnvironment(
-    'ADMOB_BANNER_ID',
-    defaultValue: 'ca-app-pub-3940256099942544/6300978111',
-  );
-  static const String rewardedAdUnitId = String.fromEnvironment(
-    'ADMOB_REWARDED_ID',
-    defaultValue: 'ca-app-pub-3940256099942544/5224354917',
-  );
-  static const String deletionRewardedAdUnitId = String.fromEnvironment(
-    'ADMOB_DELETION_ID',
-    defaultValue: 'ca-app-pub-3940256099942544/5224354917',
-  );
-  static const String promptEnhancementRewardedAdUnitId =
-      String.fromEnvironment(
-        'ADMOB_ENHANCEMENT_ID',
-        defaultValue: 'ca-app-pub-3940256099942544/5224354917',
-      );
-  static const String chatCreationRewardedAdUnitId = String.fromEnvironment(
-    'ADMOB_CHAT_CREATION_ID',
-    defaultValue: 'ca-app-pub-3940256099942544/5224354917',
-  );
-
-  // ============ Usage Limits ============
-  // Token System
-  static const String tokenBalanceKey = 'token_balance';
-  static const String totalTokensUsedKey = 'total_tokens_used';
-  static const String lastTokenAdUnlockKey = 'last_token_ad_unlock';
-  static const int initialTokenBalance = 10000;
-  static const int tokensPerAdWatch = 10000;
-
-  // Prompt Enhancer Limits
-  static const String enhancerUsesTodayKey = 'enhancer_uses_today';
-  static const String lastEnhancerResetKey = 'last_enhancer_reset';
-  static const int freeEnhancementsPerDay = 5;
-  static const int enhancementsPerAdWatch = 5;
-
-  // Chat Limits
-  static const String totalChatsCreatedKey = 'total_chats_created';
-  static const int freeChatsAllowed = 5;
-  static const int chatsPerAdWatch = 5;
 
   // Security Limits
   static const int maxInputLength = 50000;

@@ -8,8 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
-import '../../../../services/ad_service.dart';
-import '../../../../services/usage_limits_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/prompt_enhancer_provider.dart';
 import '../providers/connection_status_provider.dart';
@@ -18,6 +16,7 @@ import '../providers/editing_message_provider.dart';
 import '../../domain/models/text_file_attachment.dart';
 import '../../domain/models/chat_message.dart';
 import 'templates_sheet.dart';
+import '../providers/audio_provider.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -394,12 +393,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       return;
     }
 
-    final limitsNotifier = ref.read(usageLimitsProvider.notifier);
-    if (!limitsNotifier.canUseEnhancer()) {
-      await _showEnhancerLimitDialog();
-      return;
-    }
-
     final storage = ref.read(storageServiceProvider);
     if (storage.getSetting(
       AppConstants.hapticFeedbackKey,
@@ -416,10 +409,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           .enhancePrompt(_controller.text);
 
       if (mounted) {
-        await limitsNotifier.useEnhancer();
-
-        if (!mounted) return;
-
         setState(() {
           _controller.text = enhanced;
           _isEnhancing = false;
@@ -432,11 +421,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           HapticFeedback.mediumImpact();
         }
 
-        final remaining = ref.read(usageLimitsProvider).enhancerRemaining;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Prompt enhanced! ($remaining uses left today)'),
-            duration: const Duration(seconds: 2),
+          const SnackBar(
+            content: Text('Prompt enhanced!'),
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -457,93 +445,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           ),
         );
       }
-    }
-  }
-
-  Future<void> _showEnhancerLimitDialog() async {
-    final limits = ref.read(usageLimitsProvider);
-    final adService = AdService();
-    final theme = Theme.of(context);
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        icon: Icon(
-          Icons.auto_awesome_rounded,
-          color: theme.colorScheme.primary,
-        ),
-        title: const Text('Enhancement Limit Reached'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "You've used your ${AppConstants.freeEnhancementsPerDay} free enhancements today.",
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Resets in ~${limits.hoursUntilEnhancerReset} hours.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Watch a short ad to unlock 5 more enhancements?'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Later'),
-          ),
-          FilledButton.icon(
-            onPressed: () async {
-              if (!await adService.hasInternetConnection()) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text(
-                        'Connect to WiFi/Data to watch ad and unlock.',
-                      ),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-                return;
-              }
-              if (context.mounted) Navigator.pop(context, true);
-            },
-            icon: const Icon(Icons.play_circle_rounded),
-            label: const Text('Watch Ad'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true && mounted) {
-      await adService.showPromptEnhancementRewardedAd(
-        onUserEarnedReward: (reward) async {
-          await ref
-              .read(usageLimitsProvider.notifier)
-              .addEnhancerUses(AppConstants.enhancementsPerAdWatch);
-          if (mounted) {
-            HapticFeedback.heavyImpact();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Unlocked 5 more enhancements!')),
-            );
-          }
-        },
-        onFailed: (error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Ad failed: $error'),
-                backgroundColor: Theme.of(context).colorScheme.error,
-              ),
-            );
-          }
-        },
-      );
     }
   }
 
@@ -885,6 +786,43 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           isDisabled: isGenerating,
                           colorScheme: colorScheme,
                         ),
+                        const SizedBox(width: 2),
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final sttState = ref.watch(sttProvider);
+                            final isListening = sttState.isListening;
+
+                            return _InputActionButton(
+                              icon: isListening
+                                  ? Icons.mic_rounded
+                                  : Icons.mic_none_rounded,
+                              tooltip: isListening
+                                  ? 'Listening...'
+                                  : 'Voice Input',
+                              onTap: () {
+                                final notifier = ref.read(sttProvider.notifier);
+                                if (isListening) {
+                                  HapticFeedback.lightImpact();
+                                  notifier.stopListening();
+                                } else {
+                                  HapticFeedback.heavyImpact();
+                                  notifier.startListening((words) {
+                                    if (words.isNotEmpty) {
+                                      _controller.text = words;
+                                      _controller.selection =
+                                          TextSelection.fromPosition(
+                                            TextPosition(offset: words.length),
+                                          );
+                                    }
+                                  });
+                                }
+                              },
+                              isDisabled: isGenerating,
+                              colorScheme: colorScheme,
+                              iconColor: isListening ? colorScheme.error : null,
+                            );
+                          },
+                        ),
                         // Enhance Prompt — conditional
                         Consumer(
                           builder: (context, ref, child) {
@@ -1025,6 +963,7 @@ class _InputActionButton extends StatelessWidget {
   final bool isDisabled;
   final ColorScheme colorScheme;
   final bool isLoading;
+  final Color? iconColor;
 
   const _InputActionButton({
     required this.icon,
@@ -1033,6 +972,7 @@ class _InputActionButton extends StatelessWidget {
     required this.isDisabled,
     required this.colorScheme,
     this.isLoading = false,
+    this.iconColor,
   });
 
   @override
@@ -1067,9 +1007,11 @@ class _InputActionButton extends StatelessWidget {
                     : Icon(
                         icon,
                         size: 20,
-                        color: colorScheme.onSurfaceVariant.withValues(
-                          alpha: isDisabled ? 0.35 : 0.8,
-                        ),
+                        color:
+                            iconColor ??
+                            colorScheme.onSurfaceVariant.withValues(
+                              alpha: isDisabled ? 0.35 : 0.8,
+                            ),
                       ),
               ),
             ),

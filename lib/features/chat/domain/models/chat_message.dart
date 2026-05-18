@@ -21,6 +21,9 @@ class ChatMessage {
   @HiveField(4)
   final List<TextFileAttachment>? attachments;
 
+  @HiveField(5)
+  final String? thinkingContent;
+
   // Cache hashCode to avoid expensive re-calculation, especially for messages with images.
   // This is safe because the images list is made unmodifiable in the constructor.
   // ignore: prefer_final_fields
@@ -32,6 +35,7 @@ class ChatMessage {
     required this.timestamp,
     List<String>? images,
     List<TextFileAttachment>? attachments,
+    this.thinkingContent,
   }) : images = images != null ? List.unmodifiable(images) : null,
        attachments = attachments != null
            ? List.unmodifiable(attachments)
@@ -43,6 +47,7 @@ class ChatMessage {
     DateTime? timestamp,
     List<String>? images,
     List<TextFileAttachment>? attachments,
+    String? thinkingContent,
   }) {
     return ChatMessage(
       role: role ?? this.role,
@@ -50,6 +55,7 @@ class ChatMessage {
       timestamp: timestamp ?? this.timestamp,
       images: images ?? this.images,
       attachments: attachments ?? this.attachments,
+      thinkingContent: thinkingContent ?? this.thinkingContent,
     );
   }
 
@@ -62,7 +68,8 @@ class ChatMessage {
         other.content == content &&
         other.timestamp == timestamp &&
         listEquals(other.images, images) &&
-        listEquals(other.attachments, attachments);
+        listEquals(other.attachments, attachments) &&
+        other.thinkingContent == thinkingContent;
   }
 
   @override
@@ -74,6 +81,7 @@ class ChatMessage {
       // Use Object.hashAll for lists to generate a consistent hash code based on content
       images != null ? Object.hashAll(images!) : null,
       attachments != null ? Object.hashAll(attachments!) : null,
+      thinkingContent,
     );
     return _cachedHashCode!;
   }

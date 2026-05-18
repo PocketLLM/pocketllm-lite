@@ -6,7 +6,9 @@ import '../../domain/models/chat_message.dart';
 import '../../domain/models/chat_session.dart';
 import '../../domain/models/text_file_attachment.dart';
 import '../../../../core/constants/app_constants.dart';
-import '../../../../services/usage_limits_provider.dart';
+import '../../../../services/inference_service.dart';
+import '../../../../services/rag_service.dart';
+import '../../domain/models/chat_persona.dart';
 
 class ChatState {
   final List<ChatMessage> messages;
@@ -18,6 +20,12 @@ class ChatState {
   final double topP;
   final int topK;
   final String streamingContent;
+  final String streamingThinkingContent;
+  final bool useRag;
+  final double? lastTps;
+  final int? lastTtftMs;
+  final String? activePersonaId;
+  final bool useTools;
 
   ChatState({
     required this.messages,
@@ -29,6 +37,12 @@ class ChatState {
     this.topP = 0.9,
     this.topK = 40,
     this.streamingContent = '',
+    this.streamingThinkingContent = '',
+    this.useRag = false,
+    this.lastTps,
+    this.lastTtftMs,
+    this.activePersonaId = 'general_assistant',
+    this.useTools = false,
   });
 
   ChatState copyWith({
@@ -41,6 +55,12 @@ class ChatState {
     double? topP,
     int? topK,
     String? streamingContent,
+    String? streamingThinkingContent,
+    bool? useRag,
+    double? lastTps,
+    int? lastTtftMs,
+    String? activePersonaId,
+    bool? useTools,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -52,6 +72,13 @@ class ChatState {
       topP: topP ?? this.topP,
       topK: topK ?? this.topK,
       streamingContent: streamingContent ?? this.streamingContent,
+      streamingThinkingContent:
+          streamingThinkingContent ?? this.streamingThinkingContent,
+      useRag: useRag ?? this.useRag,
+      lastTps: lastTps != null ? lastTps : this.lastTps,
+      lastTtftMs: lastTtftMs != null ? lastTtftMs : this.lastTtftMs,
+      activePersonaId: activePersonaId ?? this.activePersonaId,
+      useTools: useTools ?? this.useTools,
     );
   }
 }
@@ -61,7 +88,34 @@ class ChatNotifier extends Notifier<ChatState> {
 
   @override
   ChatState build() {
-    return ChatState(messages: [], isGenerating: false, streamingContent: '');
+    return ChatState(
+      messages: [],
+      isGenerating: false,
+      streamingContent: '',
+      streamingThinkingContent: '',
+      useRag: false,
+      activePersonaId: 'general_assistant',
+      useTools: false,
+    );
+  }
+
+  void toggleRag() {
+    state = state.copyWith(useRag: !state.useRag);
+  }
+
+  void toggleTools() {
+    state = state.copyWith(useTools: !state.useTools);
+  }
+
+  void setPersona(ChatPersona persona) {
+    state = state.copyWith(
+      activePersonaId: persona.id,
+      systemPrompt: persona.systemPrompt,
+      temperature: persona.temperature,
+    );
+    if (persona.modelId != null) {
+      setModel(persona.modelId!);
+    }
   }
 
   void setModel(String model) {
@@ -142,6 +196,8 @@ class ChatNotifier extends Notifier<ChatState> {
       topP: topP,
       topK: topK,
       streamingContent: '',
+      streamingThinkingContent: '',
+      useRag: false,
     );
   }
 
@@ -253,32 +309,56 @@ class ChatNotifier extends Notifier<ChatState> {
       messages: baseMessages,
       isGenerating: true,
       streamingContent: '',
+      streamingThinkingContent: '',
+      lastTps: 0.0,
+      lastTtftMs: 0,
     );
 
-    final ollama = ref.read(ollamaServiceProvider);
-    final history = baseMessages
-        .map(
-          (m) => {
-            "role": m.role,
-            "content": _buildMessageContent(m),
-            "images": m.images,
-          },
-        )
-        .toList();
+    final inferenceFactory = ref.read(inferenceServiceFactoryProvider);
 
     try {
-      final options = {
-        "temperature": state.temperature,
-        "top_p": state.topP,
-        "top_k": state.topK,
-      };
-
-      final stream = ollama.generateChatStream(
+      final service = await inferenceFactory.chooseForModel(
         state.selectedModel,
-        history,
-        options: options,
-        system: state.systemPrompt,
       );
+
+      // Augment the last user query with RAG if enabled
+      final messages = <ChatRequestMessage>[];
+      for (int i = 0; i < baseMessages.length; i++) {
+        final m = baseMessages[i];
+        String content = _buildMessageContent(m);
+
+        if (state.useRag && i == baseMessages.length - 1 && m.role == 'user') {
+          try {
+            final ragService = ref.read(ragServiceProvider);
+            content = await ragService.augmentPrompt(content);
+          } catch (e) {
+            // Fallback to unaugmented content on RAG error
+            debugPrint('RAG error: $e');
+          }
+        }
+
+        messages.add(
+          ChatRequestMessage(role: m.role, content: content, images: m.images),
+        );
+      }
+
+      String? systemPrompt = state.systemPrompt;
+      if (state.useTools) {
+        final toolService = ref.read(toolCallingServiceProvider);
+        systemPrompt =
+            '${systemPrompt ?? ""}\n${toolService.getToolSystemInstructions()}';
+      }
+
+      final request = ChatRequest(
+        modelId: state.selectedModel,
+        messages: messages,
+        systemPrompt: systemPrompt,
+        temperature: state.temperature,
+        topP: state.topP,
+        topK: state.topK,
+      );
+
+      final stream = service.chatStream(request);
 
       final hapticEnabled = ref
           .read(storageServiceProvider)
@@ -287,9 +367,15 @@ class ChatNotifier extends Notifier<ChatState> {
       final buffer = StringBuffer();
       DateTime? lastHapticTime;
       DateTime? lastUiUpdateTime;
+      final startTime = DateTime.now();
+      int? timeToFirstTokenMs;
 
       await for (final chunk in stream) {
         final now = DateTime.now();
+        if (timeToFirstTokenMs == null) {
+          timeToFirstTokenMs = now.difference(startTime).inMilliseconds;
+        }
+
         if (hapticEnabled) {
           if (lastHapticTime == null ||
               now.difference(lastHapticTime) >
@@ -298,44 +384,160 @@ class ChatNotifier extends Notifier<ChatState> {
             lastHapticTime = now;
           }
         }
-        buffer.write(chunk);
+        buffer.write(chunk.text);
+
+        final rawText = buffer.toString();
+        String thinking = '';
+        String mainContent = rawText;
+
+        if (rawText.contains('<think>')) {
+          final thinkStart = rawText.indexOf('<think>');
+          if (rawText.contains('</think>')) {
+            final thinkEnd = rawText.indexOf('</think>');
+            thinking = rawText.substring(thinkStart + 7, thinkEnd);
+            mainContent =
+                rawText.substring(0, thinkStart) +
+                rawText.substring(thinkEnd + 8);
+          } else {
+            thinking = rawText.substring(thinkStart + 7);
+            mainContent = rawText.substring(0, thinkStart);
+          }
+        }
 
         // Optimize: Throttle UI updates to ~20 FPS (50ms) to prevent excessive
         // rebuilds and Markdown re-parsing on every token.
         if (lastUiUpdateTime == null ||
             now.difference(lastUiUpdateTime) >
                 const Duration(milliseconds: 50)) {
-          state = state.copyWith(streamingContent: buffer.toString());
+          final elapsed = now.difference(startTime).inMilliseconds;
+          final words = _wordRegExp.allMatches(mainContent).length;
+          final tokens = (words * 1.3).ceil();
+          final tps = elapsed > 0 ? (tokens / (elapsed / 1000.0)) : 0.0;
+
+          state = state.copyWith(
+            streamingContent: mainContent,
+            streamingThinkingContent: thinking,
+            lastTps: tps,
+            lastTtftMs: timeToFirstTokenMs,
+          );
           lastUiUpdateTime = now;
         }
       }
 
-      final assistantContent = buffer.toString();
-      if (state.streamingContent != assistantContent) {
-        state = state.copyWith(streamingContent: assistantContent);
+      final finalRaw = buffer.toString();
+      String finalThinking = '';
+      String finalMainContent = finalRaw;
+
+      if (finalRaw.contains('<think>')) {
+        final thinkStart = finalRaw.indexOf('<think>');
+        if (finalRaw.contains('</think>')) {
+          final thinkEnd = finalRaw.indexOf('</think>');
+          finalThinking = finalRaw.substring(thinkStart + 7, thinkEnd);
+          finalMainContent =
+              finalRaw.substring(0, thinkStart) +
+              finalRaw.substring(thinkEnd + 8);
+        } else {
+          finalThinking = finalRaw.substring(thinkStart + 7);
+          finalMainContent = finalRaw.substring(0, thinkStart);
+        }
+      }
+
+      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+      final words = _wordRegExp.allMatches(finalMainContent).length;
+      final tokens = (words * 1.3).ceil();
+      final finalTps = elapsed > 0 ? (tokens / (elapsed / 1000.0)) : 0.0;
+
+      if (state.streamingContent != finalMainContent ||
+          state.streamingThinkingContent != finalThinking) {
+        state = state.copyWith(
+          streamingContent: finalMainContent,
+          streamingThinkingContent: finalThinking,
+          lastTps: finalTps,
+          lastTtftMs: timeToFirstTokenMs ?? elapsed,
+        );
       }
 
       final assistantMessage = ChatMessage(
         role: 'assistant',
-        content: assistantContent,
+        content: finalMainContent,
         timestamp: DateTime.now(),
+        thinkingContent: finalThinking.isNotEmpty ? finalThinking : null,
       );
+
+      final toolService = ref.read(toolCallingServiceProvider);
+      final toolCall = toolService.parseToolCall(finalMainContent);
+
+      if (state.useTools && toolCall != null) {
+        int toolCallCount = 0;
+        for (final m in baseMessages.reversed) {
+          if (m.content.startsWith('🔧 [TOOL_RESPONSE]')) {
+            toolCallCount++;
+          } else {
+            break;
+          }
+        }
+
+        if (toolCallCount < 5) {
+          final toolName = toolCall['name']!;
+          final toolArgsRaw = toolCall['args']!;
+
+          final toolMessage = ChatMessage(
+            role: 'assistant',
+            content:
+                '🔧 [TOOL_CALL] Calling native tool "$toolName" with arguments: $toolArgsRaw',
+            timestamp: DateTime.now(),
+          );
+
+          state = state.copyWith(
+            messages: [...baseMessages, toolMessage],
+            streamingContent: '',
+            streamingThinkingContent: '',
+          );
+
+          String toolResult = 'Error: Tool handler not found.';
+          final tool = toolService.getTool(toolName);
+          if (tool != null) {
+            try {
+              // Convert single quotes in JSON string to double quotes
+              final cleanJson = toolArgsRaw.replaceAll("'", '"');
+              final Map<String, dynamic> args = jsonDecode(cleanJson);
+              toolResult = await tool.handler(args);
+            } catch (e) {
+              toolResult = 'Error invoking tool: $e';
+            }
+          }
+
+          final toolReturnMessage = ChatMessage(
+            role: 'user',
+            content: '🔧 [TOOL_RESPONSE] Tool returned:\n$toolResult',
+            timestamp: DateTime.now(),
+          );
+
+          await _generateAssistantResponse([
+            ...baseMessages,
+            toolMessage,
+            toolReturnMessage,
+          ]);
+          return;
+        }
+      }
 
       state = state.copyWith(
         messages: [...baseMessages, assistantMessage],
         streamingContent: '',
+        streamingThinkingContent: '',
+        lastTps: finalTps,
+        lastTtftMs: timeToFirstTokenMs ?? elapsed,
       );
-
-      if (userInput != null) {
-        final userTokens = _estimateTokens(userInput);
-        final aiTokens = _estimateTokens(assistantContent);
-        final totalTokens = userTokens + aiTokens;
-        await ref.read(usageLimitsProvider.notifier).consumeTokens(totalTokens);
-      }
     } catch (e) {
       // Handle potential errors, e.g., show a message to the user
+      print('Inference Error: $e');
     } finally {
-      state = state.copyWith(isGenerating: false, streamingContent: '');
+      state = state.copyWith(
+        isGenerating: false,
+        streamingContent: '',
+        streamingThinkingContent: '',
+      );
       _saveSession();
     }
   }

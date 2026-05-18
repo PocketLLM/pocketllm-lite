@@ -1,0 +1,18 @@
+{
+  "@@locale": "hi",
+  "appTitle": "पॉकेट एलएलएम लाइट",
+  "chatSettings": "चैट सेटिंग्स",
+  "enableTools": "मूल एजेंट उपकरण",
+  "enableRag": "ज्ञान का आधार (RAG)",
+  "temperature": "तापमान",
+  "topP": "टॉप पी",
+  "systemPrompt": "सिस्टम प्रॉम्प्ट",
+  "applyChanges": "बदलाव लागू करें",
+  "cancel": "रद्द करें",
+  "deleteMessage": "संदेश हटाएं",
+  "clearChat": "चैट इतिहास मिटाएं",
+  "settings": "सेटिंग्स",
+  "benchmarks": "प्रदर्शन परीक्षण",
+  "history": "इतिहास",
+  "chat": "चैट"
+}

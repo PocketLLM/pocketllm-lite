@@ -1,0 +1,18 @@
+{
+  "@@locale": "ko",
+  "appTitle": "PocketLLM 라이트",
+  "chatSettings": "대화 설정",
+  "enableTools": "네이티브 에이전트 도구",
+  "enableRag": "지식 베이스 (RAG)",
+  "temperature": "온도",
+  "topP": "탑P",
+  "systemPrompt": "시스템 프롬프트",
+  "applyChanges": "변경 적용",
+  "cancel": "취소",
+  "deleteMessage": "메시지 삭제",
+  "clearChat": "대화 비우기",
+  "settings": "설정",
+  "benchmarks": "벤치마크",
+  "history": "기록",
+  "chat": "채팅"
+}

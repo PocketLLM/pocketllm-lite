@@ -4,6 +4,7 @@
 
 import 'package:hive_ce/hive_ce.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_message.dart';
+import 'package:pocketllm_lite/features/chat/domain/models/chat_persona.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/chat_session.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/system_prompt.dart';
 import 'package:pocketllm_lite/features/chat/domain/models/text_file_attachment.dart';
@@ -11,6 +12,7 @@ import 'package:pocketllm_lite/features/chat/domain/models/text_file_attachment.
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
     registerAdapter(ChatMessageAdapter());
+    registerAdapter(ChatPersonaAdapter());
     registerAdapter(ChatSessionAdapter());
     registerAdapter(SystemPromptAdapter());
     registerAdapter(TextFileAttachmentAdapter());
@@ -20,6 +22,7 @@ extension HiveRegistrar on HiveInterface {
 extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
     registerAdapter(ChatMessageAdapter());
+    registerAdapter(ChatPersonaAdapter());
     registerAdapter(ChatSessionAdapter());
     registerAdapter(SystemPromptAdapter());
     registerAdapter(TextFileAttachmentAdapter());

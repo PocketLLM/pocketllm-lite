@@ -1,0 +1,18 @@
+{
+  "@@locale": "ja",
+  "appTitle": "PocketLLM ライト",
+  "chatSettings": "チャット設定",
+  "enableTools": "ネイティブエージェントツール",
+  "enableRag": "知識ベース (RAG)",
+  "temperature": "温度",
+  "topP": "トップP",
+  "systemPrompt": "システムプロンプト",
+  "applyChanges": "変更を適用",
+  "cancel": "キャンセル",
+  "deleteMessage": "メッセージを削除",
+  "clearChat": "会話をクリア",
+  "settings": "設定",
+  "benchmarks": "ベンチマーク",
+  "history": "履歴",
+  "chat": "チャット"
+}

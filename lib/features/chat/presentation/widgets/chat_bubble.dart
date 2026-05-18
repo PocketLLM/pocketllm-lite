@@ -19,6 +19,7 @@ import '../providers/draft_message_provider.dart';
 import '../providers/editing_message_provider.dart';
 import '../../../../core/providers.dart';
 import 'three_dot_loading_indicator.dart';
+import '../providers/audio_provider.dart';
 
 // Helper class for formatting timestamps
 class TimestampFormatter {
@@ -53,12 +54,101 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   final GlobalKey _bubbleKey = GlobalKey();
   List<Uint8List>? _decodedImages;
   late String _formattedTimestamp;
+  bool? _isThinkingExpanded;
 
   // Cache for MarkdownStyleSheet to prevent expensive reconstruction on every frame during streaming
   MarkdownStyleSheet? _cachedStyleSheet;
   ThemeData? _cachedTheme;
   double? _cachedFontSize;
   Color? _cachedTextColor;
+
+  Widget _buildThinkingBlock(
+    BuildContext context,
+    String thinking,
+    bool isExpanded,
+    ThemeData theme,
+    Color textColor,
+    double fontSize,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12.0),
+      decoration: BoxDecoration(
+        color: textColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: textColor.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              setState(() {
+                _isThinkingExpanded = !isExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.psychology_outlined,
+                    size: 18,
+                    color: textColor.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Thinking Process',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: textColor.withValues(alpha: 0.7),
+                        fontWeight: FontWeight.bold,
+                        fontSize: fontSize * 0.9,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    size: 18,
+                    color: textColor.withValues(alpha: 0.7),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(
+                left: 12.0,
+                right: 12.0,
+                bottom: 12.0,
+              ),
+              child: Text(
+                thinking,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: textColor.withValues(alpha: 0.6),
+                  fontSize: fontSize * 0.85,
+                  fontStyle: FontStyle.italic,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            crossFadeState: isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -231,9 +321,23 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
   @override
   Widget build(BuildContext context) {
     final message = widget.message;
-    final isUser = message.role == 'user';
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    if (message.content.startsWith('🔧 [TOOL_CALL]')) {
+      return _buildToolCard(context, true, message.content, theme, colorScheme);
+    }
+    if (message.content.startsWith('🔧 [TOOL_RESPONSE]')) {
+      return _buildToolCard(
+        context,
+        false,
+        message.content,
+        theme,
+        colorScheme,
+      );
+    }
+
+    final isUser = message.role == 'user';
 
     final appearance = ref.watch(
       appearanceProvider.select(
@@ -395,6 +499,18 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                   ),
                                 ),
                               ),
+                            if (message.thinkingContent != null &&
+                                message.thinkingContent!.isNotEmpty) ...[
+                              _buildThinkingBlock(
+                                context,
+                                message.thinkingContent!,
+                                _isThinkingExpanded ??
+                                    (ref.read(chatProvider).isGenerating),
+                                theme,
+                                textColor,
+                                fontSize,
+                              ),
+                            ],
                             if (isUser)
                               Text(
                                 message.content,
@@ -582,6 +698,94 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       ),
     );
   }
+
+  Widget _buildToolCard(
+    BuildContext context,
+    bool isCall,
+    String content,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    final title = isCall ? 'NATIVE TOOL INVOCATION' : 'TOOL RESPONSE RETURN';
+    final icon = isCall
+        ? Icons.construction_rounded
+        : Icons.check_circle_outline_rounded;
+    final accentColor = isCall ? colorScheme.tertiary : colorScheme.primary;
+    final containerColor = isCall
+        ? colorScheme.tertiaryContainer.withValues(alpha: 0.15)
+        : colorScheme.primaryContainer.withValues(alpha: 0.15);
+
+    // Parse the details
+    final detail = content.replaceFirst(
+      isCall ? '🔧 [TOOL_CALL] ' : '🔧 [TOOL_RESPONSE] ',
+      '',
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Center(
+        child: Container(
+          maxWidth: 600,
+          decoration: BoxDecoration(
+            color: containerColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: accentColor.withValues(alpha: 0.3),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: accentColor.withValues(alpha: 0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  color: accentColor.withValues(alpha: 0.08),
+                  child: Row(
+                    children: [
+                      Icon(icon, size: 18, color: accentColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        title,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: accentColor,
+                          letterSpacing: 0.8,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Text(
+                    detail,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _FocusedMenuOverlay extends ConsumerWidget {
@@ -625,6 +829,8 @@ class _FocusedMenuOverlay extends ConsumerWidget {
 
     final screenHeight = MediaQuery.of(context).size.height;
     final showAbove = bubbleOffset.dy > screenHeight * 0.6;
+    final speakingId = ref.watch(ttsProvider);
+    final isSpeaking = speakingId == message.timestamp.toIso8601String();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -696,6 +902,53 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                         ),
                       ),
 
+                    if (message.thinkingContent != null &&
+                        message.thinkingContent!.isNotEmpty) ...[
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12.0),
+                        padding: const EdgeInsets.all(12.0),
+                        decoration: BoxDecoration(
+                          color: textColor.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: textColor.withValues(alpha: 0.1),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.psychology_outlined,
+                                  size: 18,
+                                  color: textColor.withValues(alpha: 0.7),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Thinking Process',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: textColor.withValues(alpha: 0.7),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: fontSize * 0.9,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              message.thinkingContent!,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: textColor.withValues(alpha: 0.6),
+                                fontSize: fontSize * 0.85,
+                                fontStyle: FontStyle.italic,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     if (isUser)
                       Text(
                         message.content,
@@ -790,6 +1043,25 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                     },
                     iconColor: isStarred
                         ? Colors.amber.shade600
+                        : colorScheme.onSurface,
+                  ),
+                  _buildActionChip(
+                    context,
+                    isSpeaking
+                        ? Icons.volume_off_rounded
+                        : Icons.volume_up_rounded,
+                    isSpeaking ? 'Stop' : 'Speak',
+                    () {
+                      ref
+                          .read(ttsProvider.notifier)
+                          .speak(
+                            message.content,
+                            message.timestamp.toIso8601String(),
+                          );
+                      Navigator.pop(context);
+                    },
+                    iconColor: isSpeaking
+                        ? colorScheme.error
                         : colorScheme.onSurface,
                   ),
                   _buildActionChip(context, Icons.copy_rounded, 'Copy', () {

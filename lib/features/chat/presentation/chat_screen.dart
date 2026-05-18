@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers.dart';
-import '../../../services/usage_limits_provider.dart';
-import '../../../services/ad_service.dart';
 import 'providers/chat_provider.dart';
 import 'providers/models_provider.dart';
 import 'providers/connection_status_provider.dart';
@@ -208,6 +206,54 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         actions: [
+          Consumer(
+            builder: (context, ref, child) {
+              final chatState = ref.watch(chatProvider);
+              final lastTps = chatState.lastTps;
+              final lastTtftMs = chatState.lastTtftMs;
+              final isGenerating = chatState.isGenerating;
+
+              if (isGenerating && lastTps != null && lastTps > 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Tooltip(
+                    message: 'Live inference speed',
+                    child: RawChip(
+                      avatar: const Icon(
+                        Icons.offline_bolt_rounded,
+                        size: 14,
+                        color: Colors.green,
+                      ),
+                      label: Text(
+                        '${lastTps.toStringAsFixed(1)} t/s' +
+                            (lastTtftMs != null ? ' • ${lastTtftMs}ms' : ''),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      backgroundColor: colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      border: BorderSide(
+                        color: colorScheme.outlineVariant.withValues(
+                          alpha: 0.3,
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 0,
+                      ),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.photo_library_outlined),
             tooltip: 'Media Gallery',
@@ -256,7 +302,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           IconButton(
             icon: const Icon(Icons.add_comment_outlined),
             tooltip: 'New Chat',
-            onPressed: () async {
+            onPressed: () {
               if (ref
                   .read(storageServiceProvider)
                   .getSetting(
@@ -265,14 +311,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   )) {
                 HapticFeedback.selectionClick();
               }
-
-              final limitsNotifier = ref.read(usageLimitsProvider.notifier);
-              if (!limitsNotifier.canCreateChat()) {
-                await _showChatLimitDialog();
-                return;
-              }
-
-              await limitsNotifier.incrementChatCount();
               ref.read(chatProvider.notifier).newChat();
             },
           ),
@@ -392,105 +430,5 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _showChatLimitDialog() async {
-    final adService = AdService();
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        icon: Icon(Icons.lock_outline_rounded, color: colorScheme.primary),
-        title: const Text('Chat Limit Reached'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "You've used your ${AppConstants.freeChatsAllowed} free chats.",
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Watch a short ad to unlock more chats!',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Later'),
-          ),
-          FilledButton.icon(
-            onPressed: () async {
-              if (!await adService.hasInternetConnection()) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text(
-                        'Connect to WiFi/Data to watch ad and unlock.',
-                      ),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-                return;
-              }
-              if (context.mounted) Navigator.pop(context, true);
-            },
-            icon: const Icon(Icons.play_circle_rounded),
-            label: const Text('Watch Ad'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true && mounted) {
-      await adService.showChatCreationRewardedAd(
-        onUserEarnedReward: (reward) async {
-          final limitsNotifier = ref.read(usageLimitsProvider.notifier);
-          await limitsNotifier.addChatCredits(AppConstants.chatsPerAdWatch);
-
-          if (mounted) {
-            await limitsNotifier.incrementChatCount();
-            if (!mounted) return;
-
-            ref.read(chatProvider.notifier).newChat();
-
-            if (ref
-                .read(storageServiceProvider)
-                .getSetting(
-                  AppConstants.hapticFeedbackKey,
-                  defaultValue: true,
-                )) {
-              HapticFeedback.heavyImpact();
-            }
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Unlocked more chats! New chat created.'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        onFailed: (error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Ad failed: $error'),
-                backgroundColor: colorScheme.error,
-              ),
-            );
-          }
-        },
-      );
-    }
   }
 }

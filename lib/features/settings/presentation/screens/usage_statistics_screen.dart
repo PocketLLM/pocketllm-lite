@@ -135,15 +135,6 @@ class _UsageStatisticsScreenState extends ConsumerState<UsageStatisticsScreen>
             ),
             _buildStatCard(
               context,
-              'Tokens',
-              NumberFormat.compact().format(stats.totalTokensUsed),
-              Icons.token_outlined,
-              theme.colorScheme.tertiary,
-              theme.colorScheme.tertiaryContainer,
-              Shapes.gem,
-            ),
-            _buildStatCard(
-              context,
               'This Week',
               stats.chatsLast7Days.toString(),
               Icons.calendar_today_rounded,

@@ -1,13 +1,22 @@
-# Release Notes - Version 1.0.10
+# Release Notes - Version 1.0.12
 
-## **Highlights: Material 3 Expressive Redesign & System Prompt Library**
-This release brings a major visual overhaul to the application, adopting **Material 3 Expressive** design principles. We've introduced a stunning new **Chat Appearance** page with live previews, theme presets, and granular control over your chat interface. Additionally, we've launched a dedicated **System Prompt Library** for better management of your AI personas.
+## **Highlights: Dynamic Persona System, Horizontal Picker HUD, Native Agentic Tools, and Adaptive UI Cards**
+This release supercharges local inference interactions, introducing a premium **Dynamic Persona System** where you can build customizable AI helpers with emoji avatars and behavioral overrides, an interactive **Horizontal Persona HUD** to select them instantly on new chats, and a complete **Native Agentic Tool calling pipeline** that empowers local models to execute mathematics, query system information, and perform general-knowledge simulated Wikipedia searches offline!
 
 ---
 
 ## **Feature List**
 
 ### **🤖 AI Chat & Interaction**
+*   **Dynamic AI Personas (New!)**: Design custom AI experts with specific emoji avatars, custom system prompts, temperature overrides, and associated default local models.
+*   **Horizontal Persona Picker HUD (New!)**: Choose your helper instantly when starting a chat using a gorgeous horizontally scrollable card deck with native haptic selections.
+*   **Native Agentic Tools (New!)**: Toggle "Native Agentic Tools" in Chat Settings to let local models execute native code tools:
+    *   **Calculator**: Solves complex and basic mathematical equations.
+    *   **System Info**: Queries native platform parameter details, local dates, and local times.
+    *   **Knowledge Search**: Simulates general knowledge Wikipedia-style summaries offline.
+*   **Adaptive Tool UI Cards (New!)**: Beautiful custom cards rendered in the chat timeline to highlight tool calls, parameter arguments, and returning response data dynamically.
+*   **DeepSeek R1 Thinking**: Streaming support for `<think>` tags, rendered in a beautifully animated Material 3 collapsible accordion.
+*   **Knowledge Base RAG**: Toggle Retrieval-Augmented Generation (RAG) directly in the Chat Settings dialog to automatically query offline vector databases and augment prompts with local context.
 *   **Ollama Integration**: Seamlessly connect to local Ollama instances.
 *   **Model Management**: View, pull, and delete local LLM models directly from the app.
 *   **Real-time Streaming**: Enjoy fast, token-by-token response streaming.
@@ -17,7 +26,15 @@ This release brings a major visual overhaul to the application, adopting **Mater
 *   **Markdown Support**: Full rendering of code blocks, tables, and formatted text.
 *   **Prompt Enhancer**: Automatically optimize simple prompts into detailed instructions.
 
-### **🎨 Customization & Appearance (New!)**
+### **🎙️ Audio & Voice Capabilities**
+*   **Offline Speech-to-Text (STT)**: Voice-type your prompts offline by holding the microphone toolbar button, sending speech directly to the text field with native pulsing animations.
+*   **Offline Text-to-Speech (TTS)**: Read any AI message aloud with a single tap of the "Speak" action chip in the focused long-press menu.
+
+### **📊 Performance Benchmarking**
+*   **Speed Profiler**: Run standard scenarios (Quick Test, Complex Reasoning, Custom) to measure Time to First Token (TTFT) latency and Generation Speed (tokens/sec).
+*   **Historical Logs**: Tracks past runs and shows percentage speed gains/losses compared to your device's average benchmarks.
+
+### **🎨 Customization & Appearance**
 *   **Live Preview**: See your changes instantly with a new interactive preview card.
 *   **Theme Presets**: One-tap application of curated themes (Ocean Breeze, Midnight Glow, Obsidian, etc.).
 *   **Granular Control**:
@@ -27,26 +44,22 @@ This release brings a major visual overhaul to the application, adopting **Mater
 *   **Advanced Options**: Toggle sender avatars and set custom background colors.
 *   **Haptic Feedback**: Meaningful vibrations for interactions (can be toggled).
 
-### **🧠 System Prompt Library (New!)**
-*   **Dedicated Management Page**: A new screen to organize all your system prompts.
+### **🧠 System Prompt Library**
+*   **Dedicated Management Page**: A screen to organize all your system prompts.
 *   **CRUD Operations**: Create, Read, Update, and Delete system prompts with ease.
 *   **Usage**: Select saved prompts quickly when starting new chats to define AI behavior (e.g., "Python Expert", "Creative Writer").
 
 ### **📚 Knowledge & Organization**
-*   **Chat Archives**: clean up your main list by archiving old conversations.
+*   **Document Manager**: Manage ingested text, PDF, and markdown files in the local vector DB for RAG.
+*   **Chat Archives**: Clean up your main list by archiving old conversations.
 *   **Starred Messages**: Bookmark important messages for quick access later.
 *   **Media Gallery**: Browse all images sent/received across all chats in one place.
 *   **Tags**: Organize chats with custom tags for easy filtering.
 *   **Full Text Search**: Search through your chat history to find specific information.
 
-### **📊 Activity & Insights**
-*   **Usage Statistics**: Visual charts showing daily message counts and token usage.
-*   **Activity Log**: detailed history of app actions (model pulls, deletions, settings changes).
-*   **Profile**: Manage your user profile details.
-
 ### **⚙️ Core Features**
-*   **Privacy First**: All data is stored locally on your device using Hive.
-*   **Offline Capable**: Works completely offline (requires local Ollama instance).
+*   **Privacy First & Ad-Free**: All monetization, Google Mobile Ads dependencies, banner widgets, and token limits are permanently removed.
+*   **Offline Capable**: Works completely offline.
 *   **Dark/Light Mode**: Full support for system, light, and dark themes.
 *   **Export/Import**: Backup your entire chat history and settings to a JSON file.
 *   **Onboarding**: Smooth introduction flow for new users.
@@ -54,6 +67,15 @@ This release brings a major visual overhaul to the application, adopting **Mater
 ---
 
 ## **Technical Improvements**
-*   **Performance**: Optimized list rendering for long chat histories.
-*   **UI Polish**: Fixed negative constraint layout issues in customization screen.
-*   **Dependencies**: Updated core packages for better stability.
+*   **Agentic Pipelines**: Built-in regex stream splitter and recursive follow-up loop that invokes native code handlers and re-injects tool response parameters.
+*   **Performance**: Optimized stream parsing of custom tags and faster Hive read/write operations.
+*   **Code Quality**: Fixed build_runner generated types, removed redundant imports, and fixed BuildContext async usage.
+*   **Zero-Ad Cleanse**: Cleaned up the app settings and layout file footprints.
+
+---
+
+## **Release Build Command**
+To build the signed, optimized release APK:
+```bash
+flutter build apk --split-per-abi --release
+```

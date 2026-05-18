@@ -1,0 +1,18 @@
+{
+  "@@locale": "es",
+  "appTitle": "PocketLLM Lite",
+  "chatSettings": "Ajustes de Chat",
+  "enableTools": "Herramientas de Agente Nativas",
+  "enableRag": "Base de Conocimiento (RAG)",
+  "temperature": "Temperatura",
+  "topP": "Top P",
+  "systemPrompt": "Fórmula del Sistema",
+  "applyChanges": "Aplicar Cambios",
+  "cancel": "Cancelar",
+  "deleteMessage": "Eliminar Mensaje",
+  "clearChat": "Limpiar Conversación",
+  "settings": "Ajustes",
+  "benchmarks": "Rendimiento",
+  "history": "Historial",
+  "chat": "Chat"
+}

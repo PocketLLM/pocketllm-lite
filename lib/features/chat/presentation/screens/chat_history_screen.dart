@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
-import '../../../../services/ad_service.dart';
-import '../../../../services/usage_limits_provider.dart';
 import '../../domain/models/chat_session.dart';
 import '../providers/chat_provider.dart';
 import '../../../settings/presentation/widgets/export_dialog.dart';
@@ -25,14 +21,6 @@ class ChatHistoryScreen extends ConsumerStatefulWidget {
 class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   bool _isSelectionMode = false;
   final Set<String> _selectedIds = {};
-  final AdService _adService = AdService();
-  bool _isTopBannerLoaded = false;
-  bool _isBottomBannerLoaded = false;
-  BannerAd? _topBannerAd;
-  BannerAd? _bottomBannerAd;
-  int _topBannerRetryCount = 0;
-  int _bottomBannerRetryCount = 0;
-  static const int _maxBannerRetries = 5;
 
   // Search & Filter State
   bool _isSearching = false;
@@ -48,12 +36,6 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    // Add a small delay to ensure the widget is built before loading banners
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadBannerAds();
-    });
-
-    // Listen to search controller changes to update state
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -80,78 +62,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
   void dispose() {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
-    _topBannerAd?.dispose();
-    _bottomBannerAd?.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadBannerAds() async {
-    _loadTopBanner();
-    // Add a small delay between loading the two banners
-    await Future.delayed(const Duration(milliseconds: 500));
-    _loadBottomBanner();
-  }
-
-  Future<void> _loadTopBanner() async {
-    _topBannerAd?.dispose();
-    _topBannerAd = await _adService.createAndLoadBannerAd(
-      onLoaded: () {
-        if (mounted) {
-          setState(() {
-            _isTopBannerLoaded = true;
-            _topBannerRetryCount = 0; // Reset retry count on success
-          });
-        }
-      },
-      onFailed: (error) {
-        if (kDebugMode) {
-          // print('Top banner ad failed to load: $error');
-        }
-        if (mounted) {
-          setState(() => _isTopBannerLoaded = false);
-          // Retry with longer delay and max retries
-          if (_topBannerRetryCount < _maxBannerRetries) {
-            _topBannerRetryCount++;
-            Future.delayed(const Duration(seconds: 5), () {
-              if (mounted && !_isTopBannerLoaded) {
-                _loadTopBanner();
-              }
-            });
-          }
-        }
-      },
-    );
-  }
-
-  Future<void> _loadBottomBanner() async {
-    _bottomBannerAd?.dispose();
-    _bottomBannerAd = await _adService.createAndLoadBannerAd(
-      onLoaded: () {
-        if (mounted) {
-          setState(() {
-            _isBottomBannerLoaded = true;
-            _bottomBannerRetryCount = 0; // Reset retry count on success
-          });
-        }
-      },
-      onFailed: (error) {
-        if (kDebugMode) {
-          // print('Bottom banner ad failed to load: $error');
-        }
-        if (mounted) {
-          setState(() => _isBottomBannerLoaded = false);
-          // Retry with longer delay and max retries
-          if (_bottomBannerRetryCount < _maxBannerRetries) {
-            _bottomBannerRetryCount++;
-            Future.delayed(const Duration(seconds: 5), () {
-              if (mounted && !_isBottomBannerLoaded) {
-                _loadBottomBanner();
-              }
-            });
-          }
-        }
-      },
-    );
   }
 
   String? _getMatchingSnippet(
@@ -421,70 +332,6 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
             ),
       body: Column(
         children: [
-          // Top Banner Ad
-          if (_isTopBannerLoaded && _topBannerAd != null)
-            Container(
-              alignment: Alignment.center,
-              width: double.infinity,
-              height: 60,
-              child: Stack(
-                alignment: Alignment.topRight,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 60,
-                    child: AdWidget(ad: _topBannerAd!),
-                  ),
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      padding: EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[600],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.refresh,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                        onPressed: () {
-                          _topBannerRetryCount = 0;
-                          _loadTopBanner();
-                        },
-                        padding: EdgeInsets.all(2),
-                        constraints: BoxConstraints.tight(Size(18, 18)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else if (!_isTopBannerLoaded)
-            Container(
-              height: 60,
-              alignment: Alignment.center,
-              color: Colors.grey[200],
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Top ad loading...',
-                    style: TextStyle(color: Colors.grey, fontSize: 11),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.refresh, size: 14),
-                    onPressed: () {
-                      _topBannerRetryCount = 0;
-                      _loadTopBanner();
-                    },
-                    padding: EdgeInsets.all(4),
-                  ),
-                ],
-              ),
-            ),
           if (_isSelectionMode)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -706,74 +553,6 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
               },
             ),
           ),
-          // Bottom Banner Ad
-          if (_isBottomBannerLoaded && _bottomBannerAd != null)
-            SafeArea(
-              child: Container(
-                alignment: Alignment.center,
-                width: double.infinity,
-                height: 60,
-                child: Stack(
-                  alignment: Alignment.topRight,
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: 60,
-                      child: AdWidget(ad: _bottomBannerAd!),
-                    ),
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        padding: EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[600],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.refresh,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                          onPressed: () {
-                            _bottomBannerRetryCount = 0;
-                            _loadBottomBanner();
-                          },
-                          padding: EdgeInsets.all(2),
-                          constraints: BoxConstraints.tight(Size(18, 18)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else if (!_isBottomBannerLoaded)
-            SafeArea(
-              child: Container(
-                height: 60,
-                alignment: Alignment.center,
-                color: Colors.grey[200],
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Bottom ad loading...',
-                      style: TextStyle(color: Colors.grey, fontSize: 11),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.refresh, size: 14),
-                      onPressed: () {
-                        _bottomBannerRetryCount = 0;
-                        _loadBottomBanner();
-                      },
-                      padding: EdgeInsets.all(4),
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
       floatingActionButton: _isSelectionMode
@@ -1198,199 +977,39 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
     );
   }
 
-  Future<void> _showChatLimitDialog() async {
-    final theme = Theme.of(context);
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Chat Limit Reached'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.lock_outline,
-              size: 48,
-              color: theme.colorScheme.tertiary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "You've used your ${AppConstants.freeChatsAllowed} free chats.",
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Watch a short ad to unlock more chats!',
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Later'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              if (!await _adService.hasInternetConnection()) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text(
-                        'Connect to WiFi/Data to watch ad and unlock.',
-                      ),
-                      backgroundColor: theme.colorScheme.tertiary,
-                    ),
-                  );
-                }
-                return;
-              }
-              if (context.mounted) Navigator.pop(context, true);
-            },
-            icon: const Icon(Icons.play_circle),
-            label: const Text('Watch Ad'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: theme.colorScheme.onPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true && mounted) {
-      await _adService.showChatCreationRewardedAd(
-        onUserEarnedReward: (reward) async {
-          final limitsNotifier = ref.read(usageLimitsProvider.notifier);
-          await limitsNotifier.addChatCredits(AppConstants.chatsPerAdWatch);
-
-          if (mounted) {
-            // Immediately use one credit to create the chat
-            await limitsNotifier.incrementChatCount();
-            if (!mounted) return;
-
-            ref.read(chatProvider.notifier).newChat();
-
-            HapticFeedback.heavyImpact();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Unlocked more chats! New chat created.'),
-                backgroundColor: theme.colorScheme.primary,
-              ),
-            );
-            Navigator.pop(context); // Go back to chat screen
-          }
-        },
-        onFailed: (error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Ad failed: $error'),
-                backgroundColor: theme.colorScheme.error,
-              ),
-            );
-          }
-        },
-      );
-    }
-  }
-
   Future<void> _deleteSession(String id) async {
     final theme = Theme.of(context);
-    // Show confirmation with ad requirement
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Chat?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('This chat will be permanently deleted.'),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.play_circle,
-                    size: 18,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Watch a short ad to confirm',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        content: const Text('This chat will be permanently deleted.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          FilledButton.icon(
+          FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: theme.colorScheme.error,
               foregroundColor: theme.colorScheme.onError,
             ),
             onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.play_circle, size: 18),
-            label: const Text('Watch Ad & Delete'),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
 
     if (confirm == true && mounted) {
-      if (!await _adService.hasInternetConnection()) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Connect to internet to watch ad and delete.',
-              ),
-              backgroundColor: theme.colorScheme.tertiary,
-            ),
-          );
-        }
-        return;
+      final storage = ref.read(storageServiceProvider);
+      await storage.deleteChatSession(id);
+      if (mounted) {
+        HapticFeedback.heavyImpact();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Chat deleted!')));
       }
-
-      await _adService.showDeletionRewardedAd(
-        onUserEarnedReward: (reward) async {
-          final storage = ref.read(storageServiceProvider);
-          await storage.deleteChatSession(id);
-          if (mounted) {
-            HapticFeedback.heavyImpact();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Chat deleted!'),
-                backgroundColor: theme.colorScheme.primary,
-              ),
-            );
-          }
-        },
-        onFailed: (error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Ad failed: $error'),
-                backgroundColor: theme.colorScheme.error,
-              ),
-            );
-          }
-        },
-      );
     }
   }
 
@@ -1405,15 +1024,6 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
 
   Future<void> _handleNewChat() async {
     HapticFeedback.mediumImpact();
-
-    // Check chat limit
-    final limitsNotifier = ref.read(usageLimitsProvider.notifier);
-    if (!limitsNotifier.canCreateChat()) {
-      await _showChatLimitDialog();
-      return;
-    }
-
-    await limitsNotifier.incrementChatCount();
     ref.read(chatProvider.notifier).newChat();
     if (mounted) Navigator.pop(context);
   }
@@ -1426,104 +1036,41 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Selected?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Delete ${_selectedIds.length} chats? This cannot be undone.'),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.play_circle,
-                    size: 18,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Watch a short ad to confirm deletion',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        content: Text(
+          'Delete ${_selectedIds.length} chats? This cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          FilledButton.icon(
+          FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: theme.colorScheme.error,
               foregroundColor: theme.colorScheme.onError,
             ),
             onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.play_circle, size: 18),
-            label: const Text('Watch Ad & Delete'),
+            child: const Text('Delete All'),
           ),
         ],
       ),
     );
 
     if (confirm == true && mounted) {
-      // Check internet and show rewarded ad
-      if (!await _adService.hasInternetConnection()) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Connect to internet to watch ad and delete.',
-              ),
-              backgroundColor: theme.colorScheme.tertiary,
-            ),
-          );
-        }
-        return;
+      final storage = ref.read(storageServiceProvider);
+      for (final id in _selectedIds) {
+        await storage.deleteChatSession(id);
       }
-
-      await _adService.showDeletionRewardedAd(
-        onUserEarnedReward: (reward) async {
-          final storage = ref.read(storageServiceProvider);
-          for (final id in _selectedIds) {
-            await storage.deleteChatSession(id);
-          }
-          if (mounted) {
-            setState(() {
-              _selectedIds.clear();
-              _isSelectionMode = false;
-            });
-            HapticFeedback.heavyImpact();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Chats deleted successfully!'),
-                backgroundColor: theme.colorScheme.primary,
-              ),
-            );
-          }
-        },
-        onFailed: (error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Ad failed: $error'),
-                backgroundColor: theme.colorScheme.error,
-              ),
-            );
-          }
-        },
-      );
+      if (mounted) {
+        setState(() {
+          _selectedIds.clear();
+          _isSelectionMode = false;
+        });
+        HapticFeedback.heavyImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Chats deleted successfully!')),
+        );
+      }
     }
   }
 

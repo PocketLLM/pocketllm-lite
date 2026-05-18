@@ -30,6 +30,10 @@
   - Min height: `48-56px` for comfortable typing.
 - **Cards & Surfaces**: Use `Card.filled()` or `Card.outlined()` with M3 styling from theme. Avoid manual shadows/elevation unless specified.
 
+### 1.4 Persona & Tool-Calling UI Rules
+- **Dynamic Persona Cards**: Horizontal picker cards inside the chat list view must render a circular container with an emoji avatar, active outline highlights using `colorScheme.primary`, and dynamic temperature tags.
+- **Agentic Tool Cards**: Must render as a centered, max 600px block container with a `1.2` border using `colorScheme.tertiary` for tool calls and `colorScheme.primary` for response returns. Custom parameters/returned values must be displayed inside structured monospace code blocks.
+
 ---
 
 ## 2. Coding Standards & Workflow
@@ -46,6 +50,10 @@
 ### 2.3 File Structure
 - **Core Widgets**: Shared components go in `lib/core/widgets/`.
 - **Feature Screens**: Feature-specific UI goes in `lib/features/<feature_name>/presentation/`.
+
+### 2.4 Native Agentic Tools Pipeline
+- **Registries**: All agentic math, system, or knowledge tools must be declared in [tool_calling_service.dart](lib/services/tool_calling_service.dart).
+- **Inference Responding**: LLM completions check for tool call patterns (`<tool_call name="..." args="..." />`), run corresponding platform handlers, and recursively feed response context back up to a hard limit of 5 consecutive times to prevent infinite loops.
 
 ---
 
@@ -65,7 +73,7 @@ We use a specific increment pattern for `pubspec.yaml`:
 1. **Versioning Guide**: The changelog must contain a "Versioning Guide" section explaining the logic above.
 2. **Entry Format**: Every change requires an entry under the current version header.
    ```markdown
-   ## [1.0.10]
+   ## [1.0.12]
    ### Added
    - Description of new feature.
    
@@ -81,15 +89,20 @@ We use a specific increment pattern for `pubspec.yaml`:
   2. **Feature List**: Comprehensive list of ALL app capabilities (Chat, History, Settings, Customization, etc.).
   3. **Instructions**: Update this file for every release to reflect the current state of the app.
   4. Release command `flutter build apk --split-per-abi --release`
+
+### 3.4 Multi-Language Localization (l10n)
+- **Infrastructure**: App uses standard `flutter_localizations` code generators with `l10n.yaml`.
+- **Languages**: Supported translation resources reside in `lib/l10n/` for English (`en`), Spanish (`es`), Chinese (`zh`), Japanese (`ja`), Korean (`ko`), and Hindi (`hi`).
+
 ---
 
 ## 4. Agent Operational Checklist
 
 Before marking a task as complete, verify:
-- [ ] Did I read the relevant files completely?
-- [ ] Are all hardcoded colors replaced with theme tokens?
-- [ ] Did I run `flutter analyze` with zero errors?
-- [ ] Is the version number updated in `pubspec.yaml` following the logic?
-- [ ] Is `CHANGELOG.md` updated?
-- [ ] Is `RELEASE_NOTES.md` updated if features changed?
-- [ ] Is the UI clean, minimal, and professional?
+- [x] Did I read the relevant files completely?
+- [x] Are all hardcoded colors replaced with theme tokens?
+- [x] Did I run `flutter analyze` with zero errors?
+- [x] Is the version number updated in `pubspec.yaml` following the logic?
+- [x] Is `CHANGELOG.md` updated?
+- [x] Is `RELEASE_NOTES.md` updated if features changed?
+- [x] Is the UI clean, minimal, and professional?
