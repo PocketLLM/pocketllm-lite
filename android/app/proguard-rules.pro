@@ -197,6 +197,7 @@
 # ANNOTATIONS
 # ============================================================================
 -dontwarn javax.annotation.**
+-dontwarn javax.lang.model.**
 -dontwarn android.annotation.**
 -keep class androidx.annotation.** { *; }
 -keep interface androidx.annotation.** { *; }
