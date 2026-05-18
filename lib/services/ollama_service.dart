@@ -71,6 +71,7 @@ class OllamaService {
     final url = Uri.parse('$_baseUrl/api/chat');
 
     final request = http.Request('POST', url);
+    request.headers['Content-Type'] = 'application/json';
     final Map<String, dynamic> body = {
       "model": model,
       "messages": messages,
@@ -129,11 +130,17 @@ class OllamaService {
           }
         }
       } else {
+        if (streamedResponse.statusCode == 404) {
+          throw Exception(
+            'Model "$model" not found. Please ensure it is pulled in Ollama.',
+          );
+        }
         throw Exception(
           'Error generating response: ${streamedResponse.statusCode}',
         );
       }
     } catch (e) {
+      if (e is Exception) rethrow;
       throw Exception('Network error: $e');
     }
   }

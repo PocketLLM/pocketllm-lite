@@ -1,7 +1,7 @@
-# Release Notes - Version 1.0.13
+# Release Notes - Version 1.0.14
 
-## **Highlights: Premium Capsule Chat Input, Quick-Picker Persona Sheets, Dynamic Personas, and Native Agentic Tools**
-This release introduces a stunning premium **Capsule Chat Input Bar** with minimalist outline action buttons, a gorgeous 40x40 dark contrast Send button, and an interactive centered AI disclaimer panel. It also integrates an **Embedded Persona Quick-Picker** displaying the active emoji avatar that lets you swap active helpers on-the-fly via slide-up bottom sheets!
+## **Highlights: Real-time SST Dictation & Waveform Relocation, Premium Capsule Chat Input, and Native Agentic Tools**
+This release refines the voice typing experience by relocating the dynamic voice input waveform animation next to the microphone icon in the bottom toolbar. This keeps the primary message input field fully visible and active during dictation, allowing you to see your spoken words transcribed in real time! This builds on top of our premium **Capsule Chat Input Bar** and **Embedded Persona Quick-Picker**!
 
 ---
 

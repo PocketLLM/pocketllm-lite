@@ -12,6 +12,11 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.14] - 2026-05-18
+
+### Changed
+- **SST Dictation & Waveform Relocation**: Relocated the dynamic voice input waveform animation next to the microphone icon in the bottom toolbar row. This keeps the primary message TextField always visible during Speech-to-Text, allowing real-time transcription/dictation to be visible in the main chat input field as the user speaks.
+
 ## [1.0.13] - 2026-05-18
 
 ### Changed

@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:waveform_flutter/waveform_flutter.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
 import '../providers/chat_provider.dart';
@@ -503,6 +504,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             ),
     );
 
+    final sttState = ref.watch(sttProvider);
+    final isListening = sttState.isListening;
+
     return Container(
       color: Colors.transparent,
       child: SafeArea(
@@ -704,6 +708,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: TextField(
+                              key: const ValueKey('textfield'),
                               controller: _controller,
                               focusNode: _focusNode,
                               enabled: !isGenerating && !_isEnhancing,
@@ -826,46 +831,65 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                 ),
                                 const SizedBox(width: 4),
                                 // 5. Voice Input Button
-                                Consumer(
-                                  builder: (context, ref, child) {
-                                    final sttState = ref.watch(sttProvider);
-                                    final isListening = sttState.isListening;
-
-                                    return _InputActionButton(
-                                      icon: isListening
-                                          ? Icons.mic_rounded
-                                          : Icons.mic_none_rounded,
-                                      tooltip: isListening
-                                          ? 'Listening...'
-                                          : 'Voice Input',
-                                      onTap: () {
-                                        final notifier = ref.read(
-                                          sttProvider.notifier,
-                                        );
-                                        if (isListening) {
-                                          notifier.stopListening();
-                                        } else {
-                                          notifier.startListening((words) {
-                                            if (words.isNotEmpty) {
-                                              _controller.text = words;
-                                              _controller.selection =
-                                                  TextSelection.fromPosition(
-                                                    TextPosition(
-                                                      offset: words.length,
-                                                    ),
-                                                  );
-                                            }
-                                          });
-                                        }
-                                      },
-                                      isDisabled: isGenerating,
-                                      colorScheme: colorScheme,
-                                      iconColor: isListening
-                                          ? colorScheme.error
-                                          : null,
+                                _InputActionButton(
+                                  icon: isListening
+                                      ? Icons.mic_rounded
+                                      : Icons.mic_none_rounded,
+                                  tooltip: isListening
+                                      ? 'Listening...'
+                                      : 'Voice Input',
+                                  onTap: () {
+                                    final notifier = ref.read(
+                                      sttProvider.notifier,
                                     );
+                                    if (isListening) {
+                                      notifier.stopListening();
+                                    } else {
+                                      notifier.startListening((words) {
+                                        if (words.isNotEmpty) {
+                                          _controller.text = words;
+                                          _controller.selection =
+                                              TextSelection.fromPosition(
+                                                TextPosition(
+                                                  offset: words.length,
+                                                ),
+                                              );
+                                        }
+                                      });
+                                    }
                                   },
+                                  isDisabled: isGenerating,
+                                  colorScheme: colorScheme,
+                                  iconColor: isListening
+                                      ? colorScheme.error
+                                      : null,
                                 ),
+                                if (isListening) ...[
+                                  const SizedBox(width: 4),
+                                  SizedBox(
+                                    width: 70,
+                                    height: 24,
+                                    child: sttState.amplitudeStream != null
+                                        ? AnimatedWaveList(
+                                            stream: sttState.amplitudeStream!,
+                                            barBuilder: (anim, amp) =>
+                                                WaveFormBar(
+                                                  animation: anim,
+                                                  amplitude: amp,
+                                                  color: colorScheme.error,
+                                                ),
+                                          )
+                                        : const Center(
+                                            child: SizedBox(
+                                              width: 12,
+                                              height: 12,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 1.5,
+                                              ),
+                                            ),
+                                          ),
+                                  ),
+                                ],
                                 // 6. Enhance Prompt Button
                                 Consumer(
                                   builder: (context, ref, child) {

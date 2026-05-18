@@ -574,7 +574,13 @@ class ChatNotifier extends Notifier<ChatState> {
       );
     } catch (e) {
       // Handle potential errors, e.g., show a message to the user
-      print('Inference Error: $e');
+      debugPrint('Inference Error: $e');
+      final errorMessage = ChatMessage(
+        role: 'assistant',
+        content: '⚠️ Error: $e',
+        timestamp: DateTime.now(),
+      );
+      state = state.copyWith(messages: [...state.messages, errorMessage]);
     } finally {
       state = state.copyWith(
         isGenerating: false,
