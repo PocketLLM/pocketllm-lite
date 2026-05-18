@@ -236,10 +236,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           .withValues(alpha: 0.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
-                      ),
-                      border: BorderSide(
-                        color: colorScheme.outlineVariant.withValues(
-                          alpha: 0.3,
+                        side: BorderSide(
+                          color: colorScheme.outlineVariant.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                       ),
                       padding: const EdgeInsets.symmetric(

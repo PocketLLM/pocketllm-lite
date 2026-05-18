@@ -725,7 +725,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Center(
         child: Container(
-          maxWidth: 600,
+          constraints: const BoxConstraints(maxWidth: 600),
           decoration: BoxDecoration(
             color: containerColor,
             borderRadius: BorderRadius.circular(16),

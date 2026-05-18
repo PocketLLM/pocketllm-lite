@@ -68,16 +68,15 @@
   <!-- Hero Section -->
   <section class="hero">
     <div class="container">
-      <span class="hero__badge">✨ Version 1.0.10 Available</span>
+      <span class="hero__badge" id="latestReleaseBadge">✨ Version 1.0.12 Available</span>
       <p class="hero__subtitle">Your AI, in Perfect Privacy.</p>
       <h1 class="hero__title">AI That Works<br>Where You Do</h1>
       <p class="hero__description">
         Experience the power of AI right on your device. PocketLLM Lite brings intelligent conversations,
-        complete privacy, and offline capability to your fingertips. Now with Material 3 Design and System Prompt
-        Library.
+        complete privacy, offline capability, and recursive agentic tools to your fingertips. Now with Material 3 Design, Custom Personas, and Multi-language Localization.
       </p>
-      <a href="https://github.com/PocketLLM/pocketllm-lite/releases" class="hero__cta">
-        Download v1.0.10
+      <a href="https://github.com/PocketLLM/pocketllm-lite/releases" class="hero__cta" id="heroDownloadBtn">
+        Download v1.0.12
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
         </svg>
@@ -136,13 +135,12 @@
         <div class="feature-card">
           <div class="feature-card__icon">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
           </div>
-          <h3 class="feature-card__title">Lightning Fast</h3>
+          <h3 class="feature-card__title">Neural TTS & STT</h3>
           <p class="feature-card__description">
-            Optimized for mobile devices, PocketLLM Lite delivers quick responses without draining your battery or
-            consuming excessive resources.
+            Hands-free interactions. Dictate prompts natively with local speech-to-text, and listen to AI answers using high-fidelity offline text-to-speech.
           </p>
         </div>
 
@@ -164,13 +162,12 @@
           <div class="feature-card__icon">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h3 class="feature-card__title">System Prompts</h3>
+          <h3 class="feature-card__title">Custom AI Personas</h3>
           <p class="feature-card__description">
-            Create, edit, and manage custom system prompts to define unique AI personas. Save your favorite instructions
-            for quick access.
+            Design customizable assistants with specialized instructions, custom emoji avatars, and granular temperature/parameter overrides.
           </p>
         </div>
 
@@ -178,13 +175,13 @@
           <div class="feature-card__icon">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <h3 class="feature-card__title">Multimodal Chat</h3>
+          <h3 class="feature-card__title">Agentic Tools Calling</h3>
           <p class="feature-card__description">
-            Attach images and text files to your chats. Use Vision-capable models to analyze photos and documents
-            instantly.
+            Supports local recursive function calling, arithmetic calculations, system parameters analysis, and offline knowledge searches.
           </p>
         </div>
       </div>
@@ -226,26 +223,26 @@
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              Manage Ollama models effortlessly
+              Manage Ollama & Cactus models effortlessly
             </li>
             <li class="about__list-item">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              Chat History, Archiving, and Search
+              Offline Vector Search & Document RAG Ingestions
             </li>
             <li class="about__list-item">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              Regular updates and community driven
+              Standard multi-language l10n resource bundles
             </li>
           </ul>
         </div>
 
         <div class="about__image">
           <img src="pocketllm-website/assets/logo.png" alt="PocketLLM Lite Features"
-            style="background: linear-gradient(135deg, #FFEF4D 0%, #FFF7A0 100%); padding: 3rem; border-radius: 1.5rem;">
+            style="background: linear-gradient(135deg, #6750A4 0%, #EADDFF 100%); padding: 3rem; border-radius: 1.5rem;">
         </div>
       </div>
     </div>
@@ -259,19 +256,15 @@
         <p class="section__subtitle">Latest updates and improvements</p>
       </div>
 
-      <div
+      <div id="changelogBox"
         style="background: var(--surface-card); padding: 2rem; border-radius: 1rem; border: 1px solid var(--border-color);">
-        <h3 style="color: var(--primary-color); margin-bottom: 1rem;">Version 1.0.10</h3>
-        <ul style="list-style-type: disc; padding-left: 1.5rem; color: var(--text-secondary); line-height: 1.6;">
-          <li><strong>Material 3 Expressive Redesign:</strong> Complete visual overhaul strictly following Material 3
-            principles.</li>
-          <li><strong>New Customization Page:</strong> Live previews, theme presets (Ocean Breeze, Midnight Glow), and
-            granular color/typography controls.</li>
-          <li><strong>System Prompt Library:</strong> Dedicated page to create, edit, and manage your AI personas and
-            system instructions.</li>
-          <li><strong>Improved Navigation:</strong> Unified headers with new M3AppBar and consistent styling across all
-            screens.</li>
-          <li><strong>Code Quality:</strong> Enhanced stability with various bug fixes and lint improvements.</li>
+        <h3 id="changelogVersionHeader" style="color: var(--primary-color); margin-bottom: 1rem;">Version 1.0.12 (Latest)</h3>
+        <ul id="changelogList" style="list-style-type: disc; padding-left: 1.5rem; color: var(--text-secondary); line-height: 1.6;">
+          <li><strong>Dynamic AI Persona System:</strong> Seeded templates (Coder, Storyteller, Tutor) and custom profile builders featuring Hex colors, emoji avatar selections, and parameter overrides.</li>
+          <li><strong>Native Function Calling Pipeline:</strong> Empowers local models to parse XML tokens and execute calculators, hardware telemetry info requests, and Wikipedia searches recursively up to 5 times deep.</li>
+          <li><strong>collapsible DeepSeek R1 accordions:</strong> Seamlessly matches `<think>` blocks into stylish expandable details sections.</li>
+          <li><strong>TTS & STT Voice Services:</strong> Fully integrated offline Speech-to-Text inputs and Text-to-Speech playback buttons on every bubble.</li>
+          <li><strong>Multi-Language Localization:</strong> Full localized support in English, Spanish, Simplified Chinese, Japanese, Korean, and Hindi.</li>
         </ul>
       </div>
     </div>
@@ -286,12 +279,12 @@
           Download PocketLLM Lite today and experience the freedom of private, offline AI assistance.
         </p>
         <div class="download__buttons">
-          <a href="https://github.com/PocketLLM/pocketllm-lite/releases" class="download__btn">
+          <a href="https://github.com/PocketLLM/pocketllm-lite/releases" class="download__btn" id="mainDownloadBtn">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
               <path
                 d="M17.523 2c1.636 0 2.306.158 2.981.478a3.604 3.604 0 011.518 1.518c.32.675.478 1.345.478 2.981v10.046c0 1.636-.158 2.306-.478 2.981a3.604 3.604 0 01-1.518 1.518c-.675.32-1.345.478-2.981.478H6.477c-1.636 0-2.306-.158-2.981-.478a3.604 3.604 0 01-1.518-1.518C1.658 19.329 1.5 18.659 1.5 17.023V6.977c0-1.636.158-2.306.478-2.981A3.604 3.604 0 013.496 2.478C4.171 2.158 4.841 2 6.477 2h11.046zm-4.478 4.5l-6.045 7h3.545v5l6.045-7h-3.545v-5z" />
             </svg>
-            Download v1.0.10
+            Download v1.0.12
           </a>
         </div>
         <p class="download__note">Available now on Android devices</p>
@@ -339,7 +332,7 @@
       </div>
 
       <div class="footer__bottom">
-        <p class="footer__copyright">© 2024 PocketLLM Lite. All rights reserved. Developed by Prashant C.</p>
+        <p class="footer__copyright">© 2026 PocketLLM Lite. All rights reserved. Developed by Prashant C.</p>
         <div class="footer__social">
           <a href="https://github.com/Mr-Dark-debug" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
             <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
@@ -399,6 +392,74 @@
         }
       });
     });
+
+    // Dynamically fetch latest release information from GitHub Releases API
+    async function fetchLatestRelease() {
+      const releaseBadge = document.getElementById('latestReleaseBadge');
+      const heroBtn = document.getElementById('heroDownloadBtn');
+      const mainBtn = document.getElementById('mainDownloadBtn');
+      const changelogHeader = document.getElementById('changelogVersionHeader');
+      const changelogList = document.getElementById('changelogList');
+
+      try {
+        const response = await fetch('https://api.github.com/repos/PocketLLM/pocketllm-lite/releases/latest');
+        if (!response.ok) throw new Error('API Rate Limited or Offline');
+
+        const data = await response.json();
+        const version = data.tag_name;
+        const htmlUrl = data.html_url;
+        const publishDate = new Date(data.published_at).toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+
+        // Try to find apk download asset
+        let downloadUrl = htmlUrl;
+        if (data.assets && data.assets.length > 0) {
+          const apkAsset = data.assets.find(asset => asset.name.endsWith('.apk'));
+          if (apkAsset) {
+            downloadUrl = apkAsset.browser_download_url;
+          }
+        }
+
+        // Update elements dynamically
+        if (releaseBadge) releaseBadge.innerHTML = `✨ Latest: ${version} (Released ${publishDate})`;
+        if (heroBtn) {
+          heroBtn.href = downloadUrl;
+          heroBtn.innerHTML = `Download ${version} <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>`;
+        }
+        if (mainBtn) {
+          mainBtn.href = downloadUrl;
+          mainBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 2c1.636 0 2.306.158 2.981.478a3.604 3.604 0 011.518 1.518c.32.675.478 1.345.478 2.981v10.046c0 1.636-.158 2.306-.478 2.981a3.604 3.604 0 01-1.518 1.518c-.675.32-1.345.478-2.981.478H6.477c-1.636 0-2.306-.158-2.981-.478a3.604 3.604 0 01-1.518-1.518C1.658 19.329 1.5 18.659 1.5 17.023V6.977c0-1.636.158-2.306.478-2.981A3.604 3.604 0 013.496 2.478C4.171 2.158 4.841 2 6.477 2h11.046zm-4.478 4.5l-6.045 7h3.545v5l6.045-7h-3.545v-5z" /></svg> Download ${version}`;
+        }
+        if (changelogHeader) changelogHeader.innerText = `${version} Release Notes (${publishDate})`;
+
+        // Parse markdown logs to simple list items if available
+        if (changelogList && data.body) {
+          const lines = data.body.split('\n');
+          const listItems = [];
+          for (let line of lines) {
+            line = line.trim();
+            if (line.startsWith('- ') || line.startsWith('* ')) {
+              const cleaned = line.substring(2)
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>');
+              listItems.push(`<li>${cleaned}</li>`);
+            }
+          }
+          if (listItems.length > 0) {
+            changelogList.innerHTML = listItems.join('\n');
+          }
+        }
+      } catch (error) {
+        console.warn('Could not fetch latest release info dynamically, using built-in v1.0.12 fallback.');
+      }
+    }
+
+    // Run dynamic release information fetching on load
+    window.addEventListener('DOMContentLoaded', fetchLatestRelease);
   </script>
 </body>
 

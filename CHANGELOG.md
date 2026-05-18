@@ -19,6 +19,7 @@ We use a specific versioning pattern:
 - **Horizontal Persona Picker HUD**: Implemented an elegant scrollable selector HUD at the top of empty chat states for lightning-fast persona switches with haptic selections.
 - **Native Tool/Function Calling System**: Built a robust native `ToolCallingService` allowing local models to query local math calculators, search system/time info, and browse simulated mock offline knowledge databases.
 - **Adaptive Tool UI Cards**: Beautiful custom Material 3 cards rendered within the chat list to visualize tool calls and returning response data dynamically.
+- **Multi-Model Thinking Accordion Parsing**: Integrated a universal thinking token parser capable of handling `<think>`, `<thought>`, `<thinking>`, `[thought]` blocks, and custom CoT headers across any open-source model (DeepSeek, Gemma, Kimi, etc.).
 
 ## [1.0.11] - 2026-05-18
 

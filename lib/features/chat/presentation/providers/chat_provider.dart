@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -9,6 +11,73 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../services/inference_service.dart';
 import '../../../../services/rag_service.dart';
 import '../../domain/models/chat_persona.dart';
+
+class ThinkingParseResult {
+  final String thinking;
+  final String mainContent;
+  ThinkingParseResult({required this.thinking, required this.mainContent});
+}
+
+ThinkingParseResult parseThinking(String rawText) {
+  final List<MapEntry<String, String>> tags = [
+    const MapEntry('<think>', '</think>'),
+    const MapEntry('<thought>', '</thought>'),
+    const MapEntry('<thinking>', '</thinking>'),
+    const MapEntry('[thought]', '[/thought]'),
+    const MapEntry('[thinking]', '[/thinking]'),
+  ];
+
+  for (final tag in tags) {
+    if (rawText.contains(tag.key)) {
+      final startIdx = rawText.indexOf(tag.key);
+      final startLen = tag.key.length;
+      if (rawText.contains(tag.value)) {
+        final endIdx = rawText.indexOf(tag.value);
+        final endLen = tag.value.length;
+        final thinking = rawText.substring(startIdx + startLen, endIdx).trim();
+        final mainContent =
+            (rawText.substring(0, startIdx) +
+                    rawText.substring(endIdx + endLen))
+                .trim();
+        return ThinkingParseResult(
+          thinking: thinking,
+          mainContent: mainContent,
+        );
+      } else {
+        final thinking = rawText.substring(startIdx + startLen).trim();
+        final mainContent = rawText.substring(0, startIdx).trim();
+        return ThinkingParseResult(
+          thinking: thinking,
+          mainContent: mainContent,
+        );
+      }
+    }
+  }
+
+  final List<String> prefixes = ['thinking process:', 'thought:', 'thinking:'];
+
+  final rawLower = rawText.toLowerCase().trim();
+  for (final prefix in prefixes) {
+    if (rawLower.startsWith(prefix)) {
+      final startIndex = rawText.toLowerCase().indexOf(prefix) + prefix.length;
+      int splitIndex = rawText.indexOf('\n\n', startIndex);
+      if (splitIndex == -1) {
+        splitIndex = rawText.indexOf('\r\n\r\n', startIndex);
+      }
+
+      if (splitIndex != -1) {
+        final thinking = rawText.substring(startIndex, splitIndex).trim();
+        final mainContent = rawText.substring(splitIndex).trim();
+        return ThinkingParseResult(
+          thinking: thinking,
+          mainContent: mainContent,
+        );
+      }
+    }
+  }
+
+  return ThinkingParseResult(thinking: '', mainContent: rawText);
+}
 
 class ChatState {
   final List<ChatMessage> messages;
@@ -387,22 +456,9 @@ class ChatNotifier extends Notifier<ChatState> {
         buffer.write(chunk.text);
 
         final rawText = buffer.toString();
-        String thinking = '';
-        String mainContent = rawText;
-
-        if (rawText.contains('<think>')) {
-          final thinkStart = rawText.indexOf('<think>');
-          if (rawText.contains('</think>')) {
-            final thinkEnd = rawText.indexOf('</think>');
-            thinking = rawText.substring(thinkStart + 7, thinkEnd);
-            mainContent =
-                rawText.substring(0, thinkStart) +
-                rawText.substring(thinkEnd + 8);
-          } else {
-            thinking = rawText.substring(thinkStart + 7);
-            mainContent = rawText.substring(0, thinkStart);
-          }
-        }
+        final parseResult = parseThinking(rawText);
+        final thinking = parseResult.thinking;
+        final mainContent = parseResult.mainContent;
 
         // Optimize: Throttle UI updates to ~20 FPS (50ms) to prevent excessive
         // rebuilds and Markdown re-parsing on every token.
@@ -425,22 +481,9 @@ class ChatNotifier extends Notifier<ChatState> {
       }
 
       final finalRaw = buffer.toString();
-      String finalThinking = '';
-      String finalMainContent = finalRaw;
-
-      if (finalRaw.contains('<think>')) {
-        final thinkStart = finalRaw.indexOf('<think>');
-        if (finalRaw.contains('</think>')) {
-          final thinkEnd = finalRaw.indexOf('</think>');
-          finalThinking = finalRaw.substring(thinkStart + 7, thinkEnd);
-          finalMainContent =
-              finalRaw.substring(0, thinkStart) +
-              finalRaw.substring(thinkEnd + 8);
-        } else {
-          finalThinking = finalRaw.substring(thinkStart + 7);
-          finalMainContent = finalRaw.substring(0, thinkStart);
-        }
-      }
+      final finalResult = parseThinking(finalRaw);
+      final finalThinking = finalResult.thinking;
+      final finalMainContent = finalResult.mainContent;
 
       final elapsed = DateTime.now().difference(startTime).inMilliseconds;
       final words = _wordRegExp.allMatches(finalMainContent).length;
