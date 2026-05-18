@@ -12,6 +12,24 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.12] - 2026-05-18
+
+### Added
+- **Dynamic Persona System**: Premium architecture to create, edit, and use AI personas with distinct custom emoji avatars, system instructions, temperature overrides, and default model associations.
+- **Horizontal Persona Picker HUD**: Implemented an elegant scrollable selector HUD at the top of empty chat states for lightning-fast persona switches with haptic selections.
+- **Native Tool/Function Calling System**: Built a robust native `ToolCallingService` allowing local models to query local math calculators, search system/time info, and browse simulated mock offline knowledge databases.
+- **Adaptive Tool UI Cards**: Beautiful custom Material 3 cards rendered within the chat list to visualize tool calls and returning response data dynamically.
+
+## [1.0.11] - 2026-05-18
+
+### Added
+- **Ad-Free Privacy Focus**: Aggressively purged all legacy Google Mobile Ads monetization SDK dependencies, rewarded triggers, and banner constraints for a pure privacy-first offline experience.
+- **DeepSeek R1 thinking parsing & UI rendering**: Added direct stream parsing for <think> tags and a beautifully designed collapsible reasoning bubble with live-pulsing state transitions.
+- **Knowledge Base RAG Toggle**: Integrated a document augmentation toggle inside the Chat Settings dialog to query local vector stores.
+- **Interactive Performance Benchmarker**: Built a beautiful M3 screen to profile, graph, and compare generation speeds (tokens/sec) and Time to First Token (TTFT) latency.
+- **Offline Text-to-Speech (TTS)**: Added a "Speak/Stop" action chip to any message bubble to read AI responses aloud.
+- **Speech-to-Text (STT) Voice Input**: Integrated voice typing directly into the Chat Input bar with a premium pulsing mic feedback loop.
+
 ## [1.0.10] - 2026-02-18
 
 ### Added

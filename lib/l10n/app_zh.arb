@@ -1,0 +1,18 @@
+{
+  "@@locale": "zh",
+  "appTitle": "PocketLLM 精简版",
+  "chatSettings": "对话设置",
+  "enableTools": "原生智能代理工具",
+  "enableRag": "离线知识库 (RAG)",
+  "temperature": "温度",
+  "topP": "核采样 (Top P)",
+  "systemPrompt": "系统提示词",
+  "applyChanges": "保存并应用",
+  "cancel": "取消",
+  "deleteMessage": "删除消息",
+  "clearChat": "清空对话记录",
+  "settings": "设置",
+  "benchmarks": "性能测试",
+  "history": "历史记录",
+  "chat": "对话"
+}

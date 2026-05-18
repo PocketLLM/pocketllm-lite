@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_m3shapes/flutter_m3shapes.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../domain/models/chat_message.dart';
+import '../../domain/models/chat_persona.dart';
+import '../../../../core/providers.dart';
 import '../providers/chat_provider.dart';
 import '../providers/connection_status_provider.dart';
 import '../providers/draft_message_provider.dart';
@@ -299,7 +301,123 @@ class _EmptyState extends ConsumerWidget {
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 36),
+              const SizedBox(height: 24),
+              Text(
+                'Choose a Persona',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 72,
+                child: ValueListenableBuilder(
+                  valueListenable: ref
+                      .read(storageServiceProvider)
+                      .personaBoxListenable,
+                  builder: (context, box, child) {
+                    final personas = ref
+                        .read(storageServiceProvider)
+                        .getPersonas();
+                    final activePersonaId = ref.watch(
+                      chatProvider.select((s) => s.activePersonaId),
+                    );
+
+                    return ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      shrinkWrap: true,
+                      itemCount: personas.length,
+                      itemBuilder: (context, index) {
+                        final persona = personas[index];
+                        final isSel = activePersonaId == persona.id;
+
+                        return GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            ref.read(chatProvider.notifier).setPersona(persona);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.only(right: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSel
+                                  ? colorScheme.primaryContainer.withValues(
+                                      alpha: 0.6,
+                                    )
+                                  : colorScheme.surfaceContainerHigh.withValues(
+                                      alpha: 0.4,
+                                    ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSel
+                                    ? colorScheme.primary
+                                    : colorScheme.outlineVariant.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                width: isSel ? 2 : 1,
+                              ),
+                              boxShadow: isSel
+                                  ? [
+                                      BoxShadow(
+                                        color: colorScheme.primary.withValues(
+                                          alpha: 0.15,
+                                        ),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  persona.avatarIcon,
+                                  style: const TextStyle(fontSize: 22),
+                                ),
+                                const SizedBox(width: 8),
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      persona.name,
+                                      style: theme.textTheme.labelMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: isSel
+                                                ? colorScheme.onPrimaryContainer
+                                                : colorScheme.onSurface,
+                                          ),
+                                    ),
+                                    Text(
+                                      'Temp: ${persona.temperature}',
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            fontSize: 9,
+                                            color: isSel
+                                                ? colorScheme.onPrimaryContainer
+                                                      .withValues(alpha: 0.7)
+                                                : colorScheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 28),
               // Staggered suggestion chips
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: 1.0),
@@ -360,12 +478,16 @@ class _StreamingChatBubbleState extends ConsumerState<_StreamingChatBubble> {
   @override
   Widget build(BuildContext context) {
     final content = ref.watch(chatProvider.select((s) => s.streamingContent));
+    final thinking = ref.watch(
+      chatProvider.select((s) => s.streamingThinkingContent),
+    );
 
     return ChatBubble(
       message: ChatMessage(
         role: 'assistant',
         content: content,
         timestamp: _timestamp,
+        thinkingContent: thinking.isNotEmpty ? thinking : null,
       ),
     );
   }

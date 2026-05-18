@@ -15,6 +15,8 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
   double _temp = 0.7;
   double _topP = 0.9;
   String? _selectedSystemPromptId;
+  bool _useRag = false;
+  bool _useTools = false;
 
   @override
   void initState() {
@@ -22,6 +24,8 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
     final state = ref.read(chatProvider);
     _temp = state.temperature;
     _topP = state.topP;
+    _useRag = state.useRag;
+    _useTools = state.useTools;
 
     // We don't store prompt ID in chat state, just string content.
     // So we can't easily pre-select the dropbox unless we search content match.
@@ -246,6 +250,29 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                 ),
               ),
             ),
+            const SizedBox(height: 24),
+            SwitchListTile(
+              title: const Text('Knowledge Base (RAG)'),
+              subtitle: const Text(
+                'Search and include offline documents in answers',
+              ),
+              value: _useRag,
+              onChanged: (val) {
+                HapticFeedback.selectionClick();
+                setState(() => _useRag = val);
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Native Agentic Tools'),
+              subtitle: const Text(
+                'Allow local models to query math and system tools',
+              ),
+              value: _useTools,
+              onChanged: (val) {
+                HapticFeedback.selectionClick();
+                setState(() => _useTools = val);
+              },
+            ),
           ],
         ),
       ),
@@ -268,6 +295,14 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                 );
                 promptContent = prompt.content;
               } catch (_) {}
+            }
+
+            if (ref.read(chatProvider).useRag != _useRag) {
+              ref.read(chatProvider.notifier).toggleRag();
+            }
+
+            if (ref.read(chatProvider).useTools != _useTools) {
+              ref.read(chatProvider.notifier).toggleTools();
             }
 
             ref

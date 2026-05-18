@@ -10,12 +10,14 @@ import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
+import '../features/chat/domain/models/chat_persona.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 
 class StorageService {
   late Box<ChatSession> _chatBox;
   late Box<SystemPrompt> _systemPromptBox;
+  late Box<ChatPersona> _personaBox;
   late Box _settingsBox;
   late Box _activityLogBox;
 
@@ -34,11 +36,13 @@ class StorageService {
     Hive.registerAdapter(TextFileAttachmentAdapter());
     Hive.registerAdapter(ChatSessionAdapter());
     Hive.registerAdapter(SystemPromptAdapter());
+    Hive.registerAdapter(ChatPersonaAdapter());
 
     _chatBox = await Hive.openBox<ChatSession>(AppConstants.chatBoxName);
     _systemPromptBox = await Hive.openBox<SystemPrompt>(
       AppConstants.systemPromptsBoxName,
     );
+    _personaBox = await Hive.openBox<ChatPersona>(AppConstants.personasBoxName);
     _settingsBox = await Hive.openBox(AppConstants.settingsBoxName);
     _activityLogBox = await Hive.openBox(AppConstants.activityLogBoxName);
 
@@ -48,6 +52,41 @@ class StorageService {
       await _systemPromptBox.putAll({
         for (final prompt in initialPrompts) prompt.id: prompt,
       });
+    }
+
+    // Seed personas if empty
+    if (_personaBox.isEmpty) {
+      final initialPersonas = [
+        ChatPersona(
+          id: 'general_assistant',
+          name: 'General Assistant',
+          systemPrompt:
+              'You are a helpful, respectful, and honest local AI assistant. Always assist the user as best as you can.',
+          avatarIcon: '🤖',
+        ),
+        ChatPersona(
+          id: 'python_coder',
+          name: 'Python Coder',
+          systemPrompt:
+              'You are a world-class Python software engineer. Write clean, idiomatic, PEP 8 compliant, well-commented code. Explain your logic concisely.',
+          avatarIcon: '🐍',
+        ),
+        ChatPersona(
+          id: 'socratic_tutor',
+          name: 'Socratic Tutor',
+          systemPrompt:
+              'You are a patient Socratic tutor. Do not give direct answers; instead, ask helpful, progressive questions that guide the user to discover the answers themselves.',
+          avatarIcon: '🎓',
+        ),
+        ChatPersona(
+          id: 'creative_writer',
+          name: 'Creative Writer',
+          systemPrompt:
+              'You are an award-winning creative writer and storyteller. Use rich metaphors, vivid descriptions, and captivating narrative structures.',
+          avatarIcon: '✍️',
+        ),
+      ];
+      await _personaBox.putAll({for (final p in initialPersonas) p.id: p});
     }
 
     // Update cache when chat box changes
@@ -184,6 +223,36 @@ class StorageService {
 
   List<SystemPrompt> getSystemPrompts() {
     return _systemPromptBox.values.toList();
+  }
+
+  // Personas
+  ValueListenable<Box<ChatPersona>> get personaBoxListenable =>
+      _personaBox.listenable();
+
+  List<ChatPersona> getPersonas() {
+    return _personaBox.values.toList();
+  }
+
+  Future<void> savePersona(ChatPersona persona) async {
+    final isNew = !_personaBox.containsKey(persona.id);
+    await _personaBox.put(persona.id, persona);
+    if (isNew) {
+      await logActivity(
+        'Persona Created',
+        'Created persona "${persona.name}" (ID: ${persona.id})',
+      );
+    } else {
+      await logActivity(
+        'Persona Updated',
+        'Updated persona "${persona.name}" (ID: ${persona.id})',
+      );
+    }
+  }
+
+  Future<void> deletePersona(String id) async {
+    final name = _personaBox.get(id)?.name ?? id;
+    await _personaBox.delete(id);
+    await logActivity('Persona Deleted', 'Deleted persona "$name" (ID: $id)');
   }
 
   // Search & Filter
@@ -1178,7 +1247,7 @@ class StorageService {
     }
 
     final totalTokensUsed =
-        getSetting(AppConstants.totalTokensUsedKey, defaultValue: 0) as int;
+        getSetting('totalTokensUsedKey', defaultValue: 0) as int;
 
     // Calculate Daily Activity (Last 7 Days)
     final now = DateTime.now();

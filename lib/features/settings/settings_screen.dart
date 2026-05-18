@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../core/widgets/m3_app_bar.dart';
 import '../../../../core/constants/legal_constants.dart';
 import '../../core/utils/url_validator.dart';
@@ -15,9 +14,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/widgets/update_dialog.dart';
-import '../../services/ad_service.dart';
 import '../../services/update_service.dart';
-import '../../services/usage_limits_provider.dart';
 import '../chat/presentation/providers/models_provider.dart';
 import '../chat/presentation/providers/prompt_enhancer_provider.dart';
 import 'presentation/widgets/export_dialog.dart';
@@ -37,14 +34,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _version = 'Loading...';
   bool _isConnecting = false;
   bool? _isConnected;
-  bool _isRefreshingModels = false; // Add this to track refresh state
-
-  // Banner Ad
-  final AdService _adService = AdService();
-  bool _isBannerLoaded = false;
-  BannerAd? _bannerAd;
-  int _bannerRetryCount = 0;
-  static const int _maxBannerRetries = 5;
+  bool _isRefreshingModels = false;
 
   // Update Service
   final UpdateService _updateService = UpdateService();
@@ -63,37 +53,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _loadVersion();
     _checkConnection();
 
-    // Add a small delay to ensure the widget is built before loading the banner
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadBannerAd();
-    });
-
-    // Load update settings
     _loadUpdateSettings();
 
-    // Automatically refresh usage limits and models when settings page is opened
-    // Use Future.delayed to avoid modifying providers during widget build
     Future.delayed(Duration.zero, () {
-      _refreshUsageLimits();
       _refreshModels();
     });
   }
 
-  // Add this method to refresh usage limits
-  void _refreshUsageLimits() {
-    ref.read(usageLimitsProvider.notifier).reload();
-  }
-
-  // Add this method to refresh models
   Future<void> _refreshModels() async {
     setState(() {
       _isRefreshingModels = true;
     });
 
-    // Refresh the models provider
     ref.invalidate(modelsProvider);
 
-    // Small delay to ensure UI updates
     await Future.delayed(const Duration(milliseconds: 500));
 
     if (mounted) {
@@ -130,7 +103,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
 
     try {
-      // Clear any dismissed version to force showing update even if previously skipped
       await _updateService.clearDismissedVersion();
 
       final result = await _updateService.checkForUpdates(force: true);
@@ -168,39 +140,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void dispose() {
     _urlController.dispose();
-    _bannerAd?.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadBannerAd() async {
-    _bannerAd?.dispose();
-    _bannerAd = await _adService.createAndLoadBannerAd(
-      onLoaded: () {
-        if (mounted) {
-          setState(() {
-            _isBannerLoaded = true;
-            _bannerRetryCount = 0; // Reset retry count on success
-          });
-        }
-      },
-      onFailed: (error) {
-        if (kDebugMode) {
-          // print('Banner ad failed to load: $error');
-        }
-        if (mounted) {
-          setState(() => _isBannerLoaded = false);
-          // Retry loading the banner ad after a longer delay with max retries
-          if (_bannerRetryCount < _maxBannerRetries) {
-            _bannerRetryCount++;
-            Future.delayed(const Duration(seconds: 5), () {
-              if (mounted && !_isBannerLoaded) {
-                _loadBannerAd();
-              }
-            });
-          }
-        }
-      },
-    );
   }
 
   Future<void> _loadVersion() async {
@@ -224,7 +164,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _saveUrl() async {
     final url = _urlController.text.trim();
 
-    // Security: Validate URL scheme to prevent non-HTTP protocols (e.g. file://, javascript:)
     if (!UrlValidator.isHttpUrlString(url)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -244,7 +183,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await storage.saveSetting(AppConstants.ollamaBaseUrlKey, url);
     ref.read(ollamaServiceProvider).updateBaseUrl(url);
 
-    // Test again
     await _checkConnection();
     ref.invalidate(modelsProvider);
   }
@@ -256,11 +194,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return PopScope(
       onPopInvokedWithResult: (didPop, result) async {
-        // Use GoRouter's pop method instead of Navigator.pop to avoid stack issues
         if (GoRouter.of(context).canPop()) {
           context.pop();
         } else {
-          // If we can't pop, go to the chat screen directly
           context.go('/chat');
         }
       },
@@ -275,97 +211,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             }
           },
         ),
-        body: Column(
+        body: ListView(
+          padding: const EdgeInsets.all(16),
           children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _buildConnectionSection(theme),
-                  const SizedBox(height: 24),
-                  _buildPromptSection(theme),
-                  const SizedBox(height: 24),
-                  _buildModelsSection(theme),
-                  const SizedBox(height: 24),
-                  _buildPromptEnhancerSection(theme),
-                  const SizedBox(height: 24),
-                  _buildUsageLimitsSection(theme),
-                  const SizedBox(height: 24),
-                  _buildStorageSection(theme, storage),
-                  const SizedBox(height: 24),
-                  _buildAppearanceSection(theme, storage),
-                  const SizedBox(height: 24),
-                  _buildUpdatesSection(theme),
-                  const SizedBox(height: 24),
-                  _buildAboutSection(theme),
-                  const SizedBox(height: 60), // Space for banner
-                ],
-              ),
-            ),
-            // Banner Ad at bottom
-            _buildBannerAd(),
+            _buildConnectionSection(theme),
+            const SizedBox(height: 24),
+            _buildPromptSection(theme),
+            const SizedBox(height: 24),
+            _buildModelsSection(theme),
+            const SizedBox(height: 24),
+            _buildRagSection(theme),
+            const SizedBox(height: 24),
+            _buildPromptEnhancerSection(theme),
+            const SizedBox(height: 24),
+            _buildStorageSection(theme, storage),
+            const SizedBox(height: 24),
+            _buildAppearanceSection(theme, storage),
+            const SizedBox(height: 24),
+            _buildUpdatesSection(theme),
+            const SizedBox(height: 24),
+            _buildAboutSection(theme),
+            const SizedBox(height: 60),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildBannerAd() {
-    if (_isBannerLoaded && _bannerAd != null) {
-      return SafeArea(
-        child: Container(
-          alignment: Alignment.center,
-          width: double.infinity,
-          height: 60,
-          child: Stack(
-            alignment: Alignment.topRight,
-            children: [
-              SizedBox(height: 60, child: AdWidget(ad: _bannerAd!)),
-              Positioned(
-                top: -10,
-                right: 0,
-                child: Container(
-                  padding: EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[600],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: IconButton(
-                    icon: Icon(Icons.refresh, size: 16, color: Colors.white),
-                    onPressed: () {
-                      _bannerRetryCount = 0; // Reset retry count
-                      _loadBannerAd();
-                    },
-                    padding: EdgeInsets.all(4),
-                    constraints: BoxConstraints.tight(Size(20, 20)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    return Container(
-      height: 60,
-      alignment: Alignment.center,
-      color: Colors.grey[200],
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            'Ad loading...',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
-          ),
-          IconButton(
-            icon: Icon(Icons.refresh, size: 16),
-            onPressed: () {
-              _bannerRetryCount = 0; // Reset retry count
-              _loadBannerAd();
-            },
-            padding: EdgeInsets.all(4),
-          ),
-        ],
       ),
     );
   }
@@ -484,8 +352,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onPressed: _isConnecting
                           ? null
                           : () async {
-                              await _saveUrl(); // Save and test
-                              // Also refresh models after connection test
+                              await _saveUrl();
                               await _refreshModels();
                             },
                       style: ElevatedButton.styleFrom(
@@ -513,7 +380,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     child: OutlinedButton(
                       onPressed: () async {
                         await _saveUrl();
-                        // Also refresh models after saving URL
                         await _refreshModels();
                       },
                       style: OutlinedButton.styleFrom(
@@ -548,6 +414,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           child: Column(
             children: [
+              ListTile(
+                title: const Text('Manage AI Personas'),
+                subtitle: const Text(
+                  'Custom instructions, icons, and temperature overrides',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                leading: const Icon(Icons.face_retouching_natural),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/personas');
+                },
+              ),
+              const Divider(height: 1, indent: 56),
               ListTile(
                 title: const Text('Manage System Prompts'),
                 subtitle: const Text('Create and edit reusable AI personas'),
@@ -592,13 +471,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 tooltip: 'Download Model',
                 onPressed: () async {
                   HapticFeedback.lightImpact();
-                  final success = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => const ModelDownloadDialog(),
-                  );
-                  if (success == true) {
-                    await _refreshModels();
-                  }
+                  context.push('/model-browser');
                 },
                 style: IconButton.styleFrom(
                   backgroundColor: theme.colorScheme.primaryContainer,
@@ -703,9 +576,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             children: [
                               Radio<String>(
                                 value: model.name,
-                                // ignore: deprecated_member_use
                                 groupValue: defaultModel,
-                                // ignore: deprecated_member_use
                                 onChanged: (val) {
                                   storage.saveSetting(
                                     AppConstants.defaultModelKey,
@@ -767,6 +638,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _buildRagSection(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Retrieval-Augmented Generation (RAG)'),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              ListTile(
+                title: const Text('Knowledge Base (Documents)'),
+                subtitle: const Text('Manage your PDF, TXT, and CSV files'),
+                trailing: const Icon(Icons.chevron_right),
+                leading: const Icon(Icons.library_books),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.push('/document-manager');
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPromptEnhancerSection(ThemeData theme) {
     final modelsAsync = ref.watch(modelsProvider);
     final enhancerState = ref.watch(promptEnhancerProvider);
@@ -805,7 +707,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 color: theme.colorScheme.primary,
               ),
               children: [
-                // Edit System Prompt Button
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -872,9 +773,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           RadioListTile<String?>(
                             title: const Text('None (Disabled)'),
                             value: null,
-                            // ignore: deprecated_member_use
                             groupValue: selectedModel,
-                            // ignore: deprecated_member_use
                             onChanged: (val) {
                               HapticFeedback.selectionClick();
                               ref
@@ -925,9 +824,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 ],
                               ),
                               value: m.name,
-                              // ignore: deprecated_member_use
                               groupValue: selectedModel,
-                              // ignore: deprecated_member_use
                               onChanged: (val) {
                                 HapticFeedback.selectionClick();
                                 ref
@@ -982,7 +879,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               TextField(
                 controller: controller,
                 maxLines: 10,
-                readOnly: true, // Read-only for now (fixed prompt)
+                readOnly: true,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -1035,314 +932,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildUsageLimitsSection(ThemeData theme) {
-    final limits = ref.watch(usageLimitsProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader(
-          'Usage Limits',
-          trailing: IconButton(
-            icon: const Icon(Icons.refresh, size: 20),
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              ref.read(usageLimitsProvider.notifier).reload();
-            },
-            style: IconButton.styleFrom(
-              backgroundColor: theme.colorScheme.primaryContainer,
-              padding: const EdgeInsets.all(8),
-            ),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.3,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              // Chat Creation Metrics
-              ListTile(
-                leading: Icon(
-                  Icons.chat_bubble_outline,
-                  color: limits.canCreateFreeChat
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.error,
-                ),
-                title: Text(
-                  'Chats Created: ${limits.totalChatsCreated}/${AppConstants.freeChatsAllowed}',
-                ),
-                subtitle: limits.canCreateFreeChat
-                    ? null
-                    : Text(
-                        'Limit reached - Watch ad to unlock more chats',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.error,
-                        ),
-                      ),
-                trailing: !limits.canCreateFreeChat
-                    ? TextButton.icon(
-                        onPressed: () => _watchAdForChats(),
-                        icon: const Icon(Icons.play_circle, size: 18),
-                        label: const Text('Watch Ad'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.blue,
-                        ),
-                      )
-                    : null,
-              ),
-              const Divider(height: 1),
-              // Prompt Enhancements
-              ListTile(
-                leading: Icon(
-                  Icons.auto_awesome,
-                  color: limits.hasEnhancerUses
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.tertiary,
-                ),
-                title: Text(
-                  'Prompt Enhancements: ${limits.enhancerRemaining}/${AppConstants.freeEnhancementsPerDay}',
-                ),
-                subtitle: limits.enhancerRemaining > 0
-                    ? null
-                    : Text(
-                        'Resets in ~${limits.hoursUntilEnhancerReset} hours',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                trailing: limits.hasEnhancerUses
-                    ? null
-                    : TextButton.icon(
-                        onPressed: () => _watchAdForEnhancements(),
-                        icon: const Icon(Icons.play_circle, size: 18),
-                        label: const Text('Watch Ad'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.blue,
-                        ),
-                      ),
-              ),
-              const Divider(height: 1),
-              // Token Balance
-              ListTile(
-                leading: Icon(
-                  Icons.token,
-                  color: limits.remainingTokens > 1000
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.tertiary,
-                ),
-                title: Text(
-                  'Token Balance: ${limits.remainingTokens}/${limits.tokenBalance}',
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    LinearProgressIndicator(
-                      value: limits.tokenBalance > 0
-                          ? limits.remainingTokens / limits.tokenBalance
-                          : 0,
-                      backgroundColor:
-                          theme.colorScheme.surfaceContainerHighest,
-                      valueColor: AlwaysStoppedAnimation(
-                        limits.remainingTokens > 1000
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.tertiary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Total used: ${limits.totalTokensUsed}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-                trailing: limits.remainingTokens < 1000
-                    ? TextButton.icon(
-                        onPressed: () => _watchAdForTokens(),
-                        icon: const Icon(Icons.play_circle, size: 18),
-                        label: const Text('+10K'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: theme.colorScheme.primary,
-                        ),
-                      )
-                    : null,
-              ),
-              const Divider(height: 1),
-              // Info text
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 14,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Ads help support development—thanks!',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.info, size: 16),
-                      onPressed: _showAdsInfoDialog,
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _watchAdForChats() async {
-    HapticFeedback.lightImpact();
-
-    if (!await _adService.hasInternetConnection()) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Connect to WiFi/Data to watch ad and unlock.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return;
-    }
-
-    await _adService.showRewardedAd(
-      onUserEarnedReward: (reward) async {
-        await ref
-            .read(usageLimitsProvider.notifier)
-            .addChatCredits(AppConstants.chatsPerAdWatch);
-        if (mounted) {
-          HapticFeedback.heavyImpact();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Unlocked 5 more chats!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      },
-      onFailed: (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Ad failed: $error'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
-    );
-  }
-
-  Future<void> _watchAdForEnhancements() async {
-    HapticFeedback.lightImpact();
-
-    if (!await _adService.hasInternetConnection()) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Connect to WiFi/Data to watch ad and unlock.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return;
-    }
-
-    await _adService.showRewardedAd(
-      onUserEarnedReward: (reward) async {
-        await ref
-            .read(usageLimitsProvider.notifier)
-            .addEnhancerUses(AppConstants.enhancementsPerAdWatch);
-        if (mounted) {
-          HapticFeedback.heavyImpact();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Unlocked 5 more enhancements!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      },
-      onFailed: (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Ad failed: $error'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
-    );
-  }
-
-  Future<void> _watchAdForTokens() async {
-    HapticFeedback.lightImpact();
-
-    if (!await _adService.hasInternetConnection()) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Connect to WiFi/Data to watch ad and unlock.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return;
-    }
-
-    await _adService.showRewardedAd(
-      onUserEarnedReward: (reward) async {
-        await ref
-            .read(usageLimitsProvider.notifier)
-            .addTokens(AppConstants.tokensPerAdWatch);
-        if (mounted) {
-          HapticFeedback.heavyImpact();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Added 10,000 tokens!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      },
-      onFailed: (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Ad failed: $error'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
     );
   }
 
@@ -1431,6 +1020,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
               ListTile(
+                title: const Text('Performance Benchmark'),
+                subtitle: const Text(
+                  'Measure local inference speed (t/s) and latency',
+                ),
+                leading: const Icon(Icons.rocket_launch_outlined),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/benchmark');
+                },
+              ),
+              ListTile(
                 title: const Text('Activity Log'),
                 subtitle: const Text('View app usage history'),
                 leading: const Icon(Icons.history),
@@ -1438,6 +1039,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () {
                   HapticFeedback.lightImpact();
                   context.go('/settings/activity-log');
+                },
+              ),
+              ListTile(
+                title: const Text('Error Log'),
+                subtitle: const Text('View and export app errors'),
+                leading: const Icon(Icons.bug_report_outlined),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/error-log');
                 },
               ),
               ListTile(
@@ -1653,7 +1264,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   }
                 },
               ),
-              // Info box
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Container(
@@ -1701,13 +1311,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           child: Column(
             children: [
-              // ListTile(
-              //   title: const Text('App Version'),
-              //   trailing: Text(
-              //     _version,
-              //     style: const TextStyle(color: Colors.grey),
-              //   ),
-              // ),
               ListTile(
                 title: const Text('Privacy Policy'),
                 leading: const Icon(Icons.privacy_tip_outlined, size: 20),
@@ -1756,93 +1359,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  void _showAdsInfoDialog() {
-    HapticFeedback.lightImpact();
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        insetPadding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Why Ads?',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Supporting Development',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Even though Pocket LLM Lite works completely offline, '
-                    'there are still costs associated with developing and maintaining the app:',
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    '• Development time and effort',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                  const Text(
-                    '• Testing across devices and platforms',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                  const Text(
-                    '• App store fees and platform costs',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                  const Text(
-                    '• Ongoing maintenance and updates',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Ads help us continue improving the app and adding new features '
-                    'while keeping it free to use. Thank you for your support!',
-                    style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                  child: const Text('Got it'),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
