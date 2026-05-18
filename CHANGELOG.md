@@ -12,6 +12,12 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.13] - 2026-05-18
+
+### Changed
+- **Premium Capsule Chat Input**: Completely refactored the chat input to a floating rounded capsule container (`BorderRadius.circular(28)`) with minimalist outline action buttons, a sleek contrast 40x40 circular send button (`Icons.send_rounded`), and a center-aligned interactive disclaimer block (`This is A.I. and not a real person...`) as shown in the design mockup.
+- **Embedded Persona Quick-Picker**: Added a dynamic, clickable persona indicator displaying the active emoji avatar that opens a custom modal bottom sheet selection panel for instant active persona swaps.
+
 ## [1.0.12] - 2026-05-18
 
 ### Added

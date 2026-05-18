@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
 import '../../domain/models/chat_session.dart';
@@ -557,10 +556,28 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
       ),
       floatingActionButton: _isSelectionMode
           ? null
-          : FloatingActionButton.extended(
-              onPressed: _handleNewChat,
-              label: const Text('New Chat'),
-              icon: const Icon(Icons.add),
+          : ValueListenableBuilder<Box<ChatSession>>(
+              valueListenable: storage.chatBoxListenable,
+              builder: (context, box, _) {
+                final sessions = storage
+                    .searchSessions(
+                      query: _searchQuery,
+                      model: _selectedModelFilter,
+                      fromDate: _selectedDateFilter,
+                      tag: _selectedTagFilter,
+                    )
+                    .where((s) => !storage.isArchived(s.id));
+
+                if (sessions.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return FloatingActionButton.extended(
+                  onPressed: _handleNewChat,
+                  label: const Text('New Chat'),
+                  icon: const Icon(Icons.add),
+                );
+              },
             ),
     );
   }
@@ -741,15 +758,6 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 32,
-              height: 4,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
             const SizedBox(height: 16),
             Text(
               'Chat Options',

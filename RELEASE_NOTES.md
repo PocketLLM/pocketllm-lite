@@ -1,7 +1,7 @@
-# Release Notes - Version 1.0.12
+# Release Notes - Version 1.0.13
 
-## **Highlights: Dynamic Persona System, Horizontal Picker HUD, Native Agentic Tools, and Adaptive UI Cards**
-This release supercharges local inference interactions, introducing a premium **Dynamic Persona System** where you can build customizable AI helpers with emoji avatars and behavioral overrides, an interactive **Horizontal Persona HUD** to select them instantly on new chats, and a complete **Native Agentic Tool calling pipeline** that empowers local models to execute mathematics, query system information, and perform general-knowledge simulated Wikipedia searches offline!
+## **Highlights: Premium Capsule Chat Input, Quick-Picker Persona Sheets, Dynamic Personas, and Native Agentic Tools**
+This release introduces a stunning premium **Capsule Chat Input Bar** with minimalist outline action buttons, a gorgeous 40x40 dark contrast Send button, and an interactive centered AI disclaimer panel. It also integrates an **Embedded Persona Quick-Picker** displaying the active emoji avatar that lets you swap active helpers on-the-fly via slide-up bottom sheets!
 
 ---
 

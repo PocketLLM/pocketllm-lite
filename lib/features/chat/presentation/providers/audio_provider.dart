@@ -59,9 +59,7 @@ class TtsNotifier extends Notifier<String?> {
   }
 }
 
-final ttsProvider = NotifierProvider<TtsNotifier, String?>(
-  TtsNotifier.new,
-);
+final ttsProvider = NotifierProvider<TtsNotifier, String?>(TtsNotifier.new);
 
 class SttState {
   final bool isListening;
@@ -135,6 +133,4 @@ class SttNotifier extends Notifier<SttState> {
   }
 }
 
-final sttProvider = NotifierProvider<SttNotifier, SttState>(
-  SttNotifier.new,
-);
+final sttProvider = NotifierProvider<SttNotifier, SttState>(SttNotifier.new);
