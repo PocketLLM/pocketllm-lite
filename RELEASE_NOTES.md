@@ -1,7 +1,7 @@
-# Release Notes - Version 1.0.17
+# Release Notes - Version 1.0.19
 
-## **Highlights: CI/CD Build Compatibility Fix, Immediate Bouncing-Dots Typing Animation, Minimalist Model Selector (No Icons), and Gemini-style Empty State**
-This release resolves a version solver conflict in the GitHub Actions runner (where the runner's Flutter SDK has `flutter_localizations` pinned to `intl 0.19.0` while local development requires `intl 0.20.2`) by broadening the package version constraint to `">=0.19.0 <0.21.0"`. This runs alongside our stunning immediate bouncing-dots typing indicator, minimalist model selector, and personalized empty chat screens!
+## **Highlights: Local LLM Load Timeout Fix, Dart SDK Compatibility, and Sleek Offline UI Enhancements**
+This release fixes connection aborts (where Ollama terminates completion requests early with a `500` status because the client closed the socket) by increasing `apiConnectionTimeout` to **120 seconds** and `apiGenerationTimeout` to **180 seconds** inside `AppConstants`. This gives local models (like Gemma or Llama) plenty of time to spin up and offload weights without triggering early client-side cut-offs, while preserving our direct animations compatibility, immediate bouncing-dots typing indicator, minimalist model selector, and personalized empty chat screens!
 
 ---
 

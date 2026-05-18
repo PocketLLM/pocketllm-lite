@@ -52,7 +52,7 @@ class AppConstants {
 
   // Security Limits
   static const int maxInputLength = 50000;
-  static const Duration apiConnectionTimeout = Duration(seconds: 10);
-  static const Duration apiGenerationTimeout = Duration(seconds: 30);
+  static const Duration apiConnectionTimeout = Duration(seconds: 120);
+  static const Duration apiGenerationTimeout = Duration(seconds: 180);
   static const int maxTextFileAttachmentBytes = 200 * 1024;
 }

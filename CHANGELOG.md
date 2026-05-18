@@ -12,6 +12,16 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.19] - 2026-05-18
+
+### Fixed
+- **Local LLM Model Load Timeout**: Increased the HTTP apiConnectionTimeout to 120 seconds and apiGenerationTimeout to 180 seconds in AppConstants. This prevents the client-side socket from aborting requests early when local LLMs (like Gemma or Llama) take more than 10 seconds to spin up, allocate layers, and offload to CUDA/CPU.
+
+## [1.0.18] - 2026-05-18
+
+### Fixed
+- **CI/CD SDK animations Compatibility**: Downgraded the `animations` package version to `^2.0.11`. This avoids the newer `animations 2.2.0` package which strictly requires a Dart SDK of `^3.9.0` (causing build failure on the runner's Dart SDK 3.6.0 environment).
+
 ## [1.0.17] - 2026-05-18
 
 ### Fixed
