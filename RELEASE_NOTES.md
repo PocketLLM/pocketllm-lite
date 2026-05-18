@@ -1,7 +1,7 @@
-# Release Notes - Version 1.0.14
+# Release Notes - Version 1.0.15
 
-## **Highlights: Real-time SST Dictation & Waveform Relocation, Premium Capsule Chat Input, and Native Agentic Tools**
-This release refines the voice typing experience by relocating the dynamic voice input waveform animation next to the microphone icon in the bottom toolbar. This keeps the primary message input field fully visible and active during dictation, allowing you to see your spoken words transcribed in real time! This builds on top of our premium **Capsule Chat Input Bar** and **Embedded Persona Quick-Picker**!
+## **Highlights: Gemini-style Personalized Empty State, Real-time SST Dictation & Waveform Relocation, and Premium Capsule Chat Input**
+This release introduces a stunning, premium **Gemini-style empty state** for new chats! It welcomes you with a personalized *"Hi [Name], what's on your mind?"* header (reading dynamically from your Profile settings name, or falling back elegantly if not set). It also swaps out old recommendation chips for gorgeous vertical **Premium Suggestion Cards** with search sparkle action icons. This builds on top of our relocated voice typing waveform row and the capsule chat input bar!
 
 ---
 

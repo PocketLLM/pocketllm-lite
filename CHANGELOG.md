@@ -12,6 +12,12 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.15] - 2026-05-18
+
+### Changed
+- **Gemini-Style Personalized Empty State**: Refactored the empty chat screen to use a personalized "Hi [Name], what's on your mind?" header, which dynamically adjusts to the user's name set in Profile settings, or falls back to "Hi, what's on your mind?".
+- **Premium Suggestion Cards**: Replaced old wrap-style suggestion chips with a clean vertical list of high-fidelity rounded card containers with modern sparkle search icons, matching the sleek Gemini-inspired design mockup.
+
 ## [1.0.14] - 2026-05-18
 
 ### Changed

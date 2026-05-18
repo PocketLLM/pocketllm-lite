@@ -2,10 +2,10 @@ name: pocketllm_lite
 description: "A premium, privacy-first, offline AI chat application"
 publish_to: "none"
 
-version: 1.0.14+14
+version: 1.0.15+15
 
 environment:
-  sdk: ^3.9.2
+  sdk: ^3.6.0
 
 dependencies:
   flutter:

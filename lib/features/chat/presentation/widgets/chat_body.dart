@@ -5,12 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_m3shapes/flutter_m3shapes.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../domain/models/chat_message.dart';
-import '../../domain/models/chat_persona.dart';
-import '../../../../core/providers.dart';
 import '../providers/chat_provider.dart';
 import '../providers/connection_status_provider.dart';
 import '../providers/draft_message_provider.dart';
 import 'chat_bubble.dart';
+import 'package:pocketllm_lite/features/profile/presentation/providers/profile_provider.dart';
 
 class ChatBody extends ConsumerStatefulWidget {
   const ChatBody({super.key});
@@ -113,8 +112,7 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
               controller: _scrollController,
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.only(top: 16, bottom: 16),
-              itemCount:
-                  messages.length +
+              itemCount: messages.length +
                   (isGenerating && hasStreamingContent ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index < messages.length) {
@@ -235,7 +233,7 @@ class _DisconnectedState extends StatelessWidget {
   }
 }
 
-/// Empty state — M3 themed with staggered suggestion chips
+/// Empty state — M3 themed with Gemini-style personalized greeting and suggestions
 class _EmptyState extends ConsumerWidget {
   const _EmptyState();
 
@@ -243,213 +241,110 @@ class _EmptyState extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final profile = ref.watch(profileProvider);
+    final displayName = profile.name.trim();
+
+    final greeting = displayName.isNotEmpty
+        ? 'Hi $displayName, what\'s on your mind?'
+        : 'Hi, what\'s on your mind?';
 
     final suggestions = [
-      (icon: Icons.sentiment_satisfied_rounded, text: 'Tell me a joke'),
-      (icon: Icons.science_rounded, text: 'Explain quantum computing'),
-      (icon: Icons.code_rounded, text: 'Write a python script'),
-      (icon: Icons.menu_book_rounded, text: 'Summarize a book'),
+      'What are the different types of shots in ice hockey?',
+      'Create an image of a snowboarder in the Alps',
+      'Tell me about the must see athletes from team usa',
     ];
 
     return Center(
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(32.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // M3 Expressive shape icon
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: AppMotion.durationXL,
-                curve: AppMotion.curveOvershoot,
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: Opacity(opacity: value.clamp(0, 1), child: child),
-                  );
-                },
-                child: M3Container(
-                  Shapes.flower,
-                  width: 100,
-                  height: 100,
-                  color: colorScheme.primaryContainer.withValues(alpha: 0.5),
-                  child: Center(
-                    child: Icon(
-                      Icons.chat_bubble_outline_rounded,
-                      size: 44,
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
+              // Beautiful Gemini-style Heading
               Semantics(
                 header: true,
-                child: Text(
-                  'How can I help you?',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 32.0),
+                  child: Text(
+                    greeting,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                      letterSpacing: -0.5,
+                      fontSize: 26,
+                    ),
+                    textAlign: TextAlign.left,
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'PocketLLM is ready to chat.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Choose a Persona',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 72,
-                child: ValueListenableBuilder(
-                  valueListenable: ref
-                      .read(storageServiceProvider)
-                      .personaBoxListenable,
-                  builder: (context, box, child) {
-                    final personas = ref
-                        .read(storageServiceProvider)
-                        .getPersonas();
-                    final activePersonaId = ref.watch(
-                      chatProvider.select((s) => s.activePersonaId),
-                    );
-
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      shrinkWrap: true,
-                      itemCount: personas.length,
-                      itemBuilder: (context, index) {
-                        final persona = personas[index];
-                        final isSel = activePersonaId == persona.id;
-
-                        return GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            ref.read(chatProvider.notifier).setPersona(persona);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.only(right: 12),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSel
-                                  ? colorScheme.primaryContainer.withValues(
-                                      alpha: 0.6,
-                                    )
-                                  : colorScheme.surfaceContainerHigh.withValues(
-                                      alpha: 0.4,
-                                    ),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isSel
-                                    ? colorScheme.primary
-                                    : colorScheme.outlineVariant.withValues(
-                                        alpha: 0.4,
-                                      ),
-                                width: isSel ? 2 : 1,
-                              ),
-                              boxShadow: isSel
-                                  ? [
-                                      BoxShadow(
-                                        color: colorScheme.primary.withValues(
-                                          alpha: 0.15,
-                                        ),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  persona.avatarIcon,
-                                  style: const TextStyle(fontSize: 22),
-                                ),
-                                const SizedBox(width: 8),
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      persona.name,
-                                      style: theme.textTheme.labelMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: isSel
-                                                ? colorScheme.onPrimaryContainer
-                                                : colorScheme.onSurface,
-                                          ),
-                                    ),
-                                    Text(
-                                      'Temp: ${persona.temperature}',
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            fontSize: 9,
-                                            color: isSel
-                                                ? colorScheme.onPrimaryContainer
-                                                      .withValues(alpha: 0.7)
-                                                : colorScheme.onSurfaceVariant,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+              // Suggestions column
+              ...suggestions.map((suggestion) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        ref.read(draftMessageProvider.notifier).state =
+                            suggestion;
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 18,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHigh.withValues(
+                            alpha: 0.6,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: 0.15,
                             ),
                           ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 28),
-              // Staggered suggestion chips
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 900),
-                curve: Curves.easeOutQuart,
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 24 * (1 - value)),
-                    child: Opacity(opacity: value, child: child),
-                  );
-                },
-                child: Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  alignment: WrapAlignment.center,
-                  children: suggestions.map((suggestion) {
-                    return Semantics(
-                      button: true,
-                      hint: 'Populates the message input',
-                      child: ActionChip(
-                        label: Text(suggestion.text),
-                        avatar: Icon(suggestion.icon, size: 18),
-                        onPressed: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(draftMessageProvider.notifier).state =
-                              suggestion.text;
-                        },
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                suggestion,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.85,
+                                  ),
+                                  fontSize: 15,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: colorScheme.onSurface.withValues(
+                                  alpha: 0.05,
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.auto_awesome_rounded,
+                                size: 16,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
+                    ),
+                  ),
+                );
+              }),
             ],
           ),
         ),
