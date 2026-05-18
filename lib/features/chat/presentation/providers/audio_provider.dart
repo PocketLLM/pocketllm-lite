@@ -3,11 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
-class TtsNotifier extends StateNotifier<String?> {
+class TtsNotifier extends Notifier<String?> {
   final FlutterTts _flutterTts = FlutterTts();
 
-  TtsNotifier() : super(null) {
+  @override
+  String? build() {
     _initTts();
+    ref.onDispose(() {
+      _flutterTts.stop();
+    });
+    return null;
   }
 
   Future<void> _initTts() async {
@@ -52,17 +57,9 @@ class TtsNotifier extends StateNotifier<String?> {
     } catch (_) {}
     state = null;
   }
-
-  @override
-  void dispose() {
-    _flutterTts.stop();
-    super.dispose();
-  }
 }
 
-final ttsProvider = StateNotifierProvider<TtsNotifier, String?>((ref) {
-  return TtsNotifier();
-});
+final ttsProvider = NotifierProvider<TtsNotifier, String?>(TtsNotifier.new);
 
 class SttState {
   final bool isListening;
@@ -84,11 +81,13 @@ class SttState {
   }
 }
 
-class SttNotifier extends StateNotifier<SttState> {
+class SttNotifier extends Notifier<SttState> {
   final SpeechToText _speechToText = SpeechToText();
 
-  SttNotifier() : super(SttState()) {
+  @override
+  SttState build() {
     _initSpeech();
+    return SttState();
   }
 
   Future<void> _initSpeech() async {
@@ -134,6 +133,4 @@ class SttNotifier extends StateNotifier<SttState> {
   }
 }
 
-final sttProvider = StateNotifierProvider<SttNotifier, SttState>((ref) {
-  return SttNotifier();
-});
+final sttProvider = NotifierProvider<SttNotifier, SttState>(SttNotifier.new);
