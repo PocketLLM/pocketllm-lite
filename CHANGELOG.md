@@ -12,6 +12,11 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.17] - 2026-05-18
+
+### Fixed
+- **CI/CD Build System Dependency Compatibility**: Broadened the `intl` package version constraint to `">=0.19.0 <0.21.0"`. This resolves a version solver conflict in the GitHub Actions runner where the runner's Flutter SDK has `flutter_localizations` pinned to `intl 0.19.0`, while keeping support for `intl 0.20.2` in local development environment.
+
 ## [1.0.16] - 2026-05-18
 
 ### Added

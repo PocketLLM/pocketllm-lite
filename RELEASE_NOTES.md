@@ -1,7 +1,7 @@
-# Release Notes - Version 1.0.16
+# Release Notes - Version 1.0.17
 
-## **Highlights: Immediate Bouncing-Dots Typing Animation, Minimalist Model Selector (No Icons), and Gemini-style Personalized Empty State**
-This release refines visual feedback during offline inference by rendering a pulsing **three-dot typing indicator bubble** immediately after sending a message. This ensures the user sees an active loading state while the local LLM loads or processes context, before the first token stream begins! Additionally, we have cleaned up the **Top App Bar Model Selector** by removing the robot icons, showing a sleek, text-only model name dropdown. This works alongside the personalized empty chat state and premium suggestion cards!
+## **Highlights: CI/CD Build Compatibility Fix, Immediate Bouncing-Dots Typing Animation, Minimalist Model Selector (No Icons), and Gemini-style Empty State**
+This release resolves a version solver conflict in the GitHub Actions runner (where the runner's Flutter SDK has `flutter_localizations` pinned to `intl 0.19.0` while local development requires `intl 0.20.2`) by broadening the package version constraint to `">=0.19.0 <0.21.0"`. This runs alongside our stunning immediate bouncing-dots typing indicator, minimalist model selector, and personalized empty chat screens!
 
 ---
 
