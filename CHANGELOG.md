@@ -12,6 +12,14 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.16] - 2026-05-18
+
+### Added
+- **Immediate Generation Loading Indicator**: Configured the chat timeline to render the assistant's typing indicator bubble (pulsing three bouncing dots animation) immediately from the moment the prompt is sent, rather than waiting for the first token stream to arrive. This provides seamless offline visual feedback to the user during local model loading and context processing.
+
+### Changed
+- **Clean Model Dropdown UI**: Removed the `smart_toy` robot icon inside the top app bar's model dropdown button and popups, displaying a clean, minimal text representation showing only the name of the active local LLM model.
+
 ## [1.0.15] - 2026-05-18
 
 ### Changed

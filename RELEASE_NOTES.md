@@ -1,7 +1,7 @@
-# Release Notes - Version 1.0.15
+# Release Notes - Version 1.0.16
 
-## **Highlights: Gemini-style Personalized Empty State, Real-time SST Dictation & Waveform Relocation, and Premium Capsule Chat Input**
-This release introduces a stunning, premium **Gemini-style empty state** for new chats! It welcomes you with a personalized *"Hi [Name], what's on your mind?"* header (reading dynamically from your Profile settings name, or falling back elegantly if not set). It also swaps out old recommendation chips for gorgeous vertical **Premium Suggestion Cards** with search sparkle action icons. This builds on top of our relocated voice typing waveform row and the capsule chat input bar!
+## **Highlights: Immediate Bouncing-Dots Typing Animation, Minimalist Model Selector (No Icons), and Gemini-style Personalized Empty State**
+This release refines visual feedback during offline inference by rendering a pulsing **three-dot typing indicator bubble** immediately after sending a message. This ensures the user sees an active loading state while the local LLM loads or processes context, before the first token stream begins! Additionally, we have cleaned up the **Top App Bar Model Selector** by removing the robot icons, showing a sleek, text-only model name dropdown. This works alongside the personalized empty chat state and premium suggestion cards!
 
 ---
 

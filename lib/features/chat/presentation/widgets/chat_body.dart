@@ -73,9 +73,6 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
     final connectionStatusAsync = ref.watch(autoConnectionStatusProvider);
     final messages = ref.watch(chatProvider.select((s) => s.messages));
     final isGenerating = ref.watch(chatProvider.select((s) => s.isGenerating));
-    final hasStreamingContent = ref.watch(
-      chatProvider.select((s) => s.streamingContent.isNotEmpty),
-    );
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -112,8 +109,7 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
               controller: _scrollController,
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.only(top: 16, bottom: 16),
-              itemCount: messages.length +
-                  (isGenerating && hasStreamingContent ? 1 : 0),
+              itemCount: messages.length + (isGenerating ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index < messages.length) {
                   return ChatBubble(

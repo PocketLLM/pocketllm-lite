@@ -130,55 +130,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             elevation: 4,
                             selectedItemBuilder: (BuildContext context) {
                               return models.map<Widget>((m) {
-                                return Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.smart_toy_outlined,
-                                      size: 16,
-                                      color: colorScheme.onPrimaryContainer,
+                                return Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 150,
                                     ),
-                                    const SizedBox(width: 8),
-                                    ConstrainedBox(
-                                      constraints: const BoxConstraints(
-                                        maxWidth: 150,
-                                      ),
-                                      child: Text(
-                                        m.name,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: colorScheme
-                                                  .onPrimaryContainer,
-                                            ),
+                                    child: Text(
+                                      m.name,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.onPrimaryContainer,
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 );
                               }).toList();
                             },
                             items: models.map<DropdownMenuItem<String>>((m) {
                               return DropdownMenuItem<String>(
                                 value: m.name,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.smart_toy_outlined,
-                                      size: 16,
-                                      color: colorScheme.onSurface,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      m.name,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            color: colorScheme.onSurface,
-                                          ),
-                                    ),
-                                  ],
+                                child: Text(
+                                  m.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurface,
+                                  ),
                                 ),
                               );
                             }).toList(),
@@ -284,9 +263,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: const Icon(Icons.history_rounded),
             tooltip: 'History',
             onPressed: () {
-              if (ref
-                  .read(storageServiceProvider)
-                  .getSetting(
+              if (ref.read(storageServiceProvider).getSetting(
                     AppConstants.hapticFeedbackKey,
                     defaultValue: true,
                   )) {
@@ -303,9 +280,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: const Icon(Icons.add_comment_outlined),
             tooltip: 'New Chat',
             onPressed: () {
-              if (ref
-                  .read(storageServiceProvider)
-                  .getSetting(
+              if (ref.read(storageServiceProvider).getSetting(
                     AppConstants.hapticFeedbackKey,
                     defaultValue: true,
                   )) {
@@ -318,9 +293,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: const Icon(Icons.settings_rounded),
             tooltip: 'Settings',
             onPressed: () {
-              if (ref
-                  .read(storageServiceProvider)
-                  .getSetting(
+              if (ref.read(storageServiceProvider).getSetting(
                     AppConstants.hapticFeedbackKey,
                     defaultValue: true,
                   )) {
@@ -333,9 +306,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: const Icon(Icons.tune_rounded),
             tooltip: 'Chat Settings',
             onPressed: () {
-              if (ref
-                  .read(storageServiceProvider)
-                  .getSetting(
+              if (ref.read(storageServiceProvider).getSetting(
                     AppConstants.hapticFeedbackKey,
                     defaultValue: true,
                   )) {
