@@ -12,6 +12,12 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.21] - 2026-05-24
+
+### Changed
+- **Branding Update**: Replaced all existing logo assets with the new updated PocketLLM Lite design (`assets/logo.png`, website logos, and centered README header logo).
+- **GitHub Workflow Pruning**: Removed Java setup, keystore handling, release APK building, and debug symbol archiving from the release workflow to prevent unnecessary runner execution since releases are handled locally.
+
 ## [1.0.20] - 2026-05-24
 
 ### Added

@@ -2,7 +2,7 @@ name: pocketllm_lite
 description: "A premium, privacy-first, offline AI chat application"
 publish_to: "none"
 
-version: 1.0.20+20
+version: 1.0.21+21
 
 environment:
   sdk: ^3.6.0

@@ -1,7 +1,7 @@
-# Release Notes - Version 1.0.20
+# Release Notes - Version 1.0.21
 
-## **Highlights: Native Agent Skills (SKILL.md) Integration, Autocomplete, In-Input Highlights, and Automated LLM Conditioning**
-This release introduces a fully-fledged **Agent Skills (SKILL.md) System**! Users can now install, CRUD, and manage custom agent instructions using standard YAML frontmatter and Markdown bodies. Skills can be imported instantly from any GitHub URL or raw SKILL.md link. In the chat room, typing `/` will trigger a gorgeous horizontal Material 3 chip-HUD matching active skills. Mentioning skills like `/webdesign` inside the input will highlight them in bold blue, allow tapping to navigate to their details screen, and render them as interactive links in the message timeline. Best of all, local LLMs will automatically scan your messages for active skills and consume their markdown rules before completing replies!
+## **Highlights: Rebranded Premium Design and Refined Release Pipeline**
+This patch release updates all existing logo branding files in PocketLLM Lite with the newly designed logo, providing a fresh modern visual experience across the application splash screen, launcher icon, website landing pages, and README documentation. In addition, the CI/CD pipeline has been optimized: Java, keystore configurations, and release APK building have been pruned from the GitHub Actions workflow, speeding up online pushes while keeping automatic version bumping and release tagging intact.
 
 ---
 

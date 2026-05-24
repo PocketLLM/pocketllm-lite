@@ -37,7 +37,7 @@ env:
 
 jobs:
   build-and-release:
-    name: Build APK and Create Release
+    name: Update Metadata and Create Release Tag
     runs-on: ubuntu-latest
 
     steps:
@@ -46,12 +46,6 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for changelog generation
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -190,36 +184,6 @@ jobs:
           echo "$CHANGELOG" > changelog.md
           echo "changelog_file=changelog.md" >> $GITHUB_OUTPUT
 
-      - name: Setup Keystore
-        run: |
-          # Create key.properties with placeholder values for CI
-          # In production, use GitHub Secrets for actual keystore
-          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD || 'debug' }}" > android/key.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD || 'debug' }}" >> android/key.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS || 'androiddebugkey' }}" >> android/key.properties
-          echo "storeFile=${{ secrets.KEYSTORE_FILE_PATH || 'debug.keystore' }}" >> android/key.properties
-
-          # If using secrets, decode the keystore
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
-            echo "storeFile=upload-keystore.jks" >> android/key.properties
-          fi
-
-      - name: Build Release APK
-        run: |
-          flutter build apk --release \
-            --obfuscate \
-            --split-debug-info=./debug_symbols \
-            --no-tree-shake-icons
-
-      - name: Rename APK
-        id: rename_apk
-        run: |
-          VERSION="${{ steps.next_version.outputs.new_tag }}"
-          mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/pocketllm-lite-${VERSION}.apk
-          echo "apk_path=build/app/outputs/flutter-apk/pocketllm-lite-${VERSION}.apk" >> $GITHUB_OUTPUT
-          echo "apk_name=pocketllm-lite-${VERSION}.apk" >> $GITHUB_OUTPUT
-
       - name: Commit Version Update
         run: |
           git config user.name "github-actions[bot]"
@@ -236,16 +200,7 @@ jobs:
           body_path: changelog.md
           draft: false
           prerelease: false
-          files: |
-            ${{ steps.rename_apk.outputs.apk_path }}
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Debug Symbols Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-symbols-${{ steps.next_version.outputs.new_tag }}
-          path: debug_symbols/
-          retention-days: 90
 
       - name: Summary
         run: |
@@ -254,6 +209,4 @@ jobs:
           echo "**Version:** ${{ steps.next_version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tag:** ${{ steps.next_version.outputs.new_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**APK:** ${{ steps.rename_apk.outputs.apk_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📥 [Download from Releases](https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.new_tag }})" >> $GITHUB_STEP_SUMMARY
+          echo "📥 [View Releases](https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.new_tag }})" >> $GITHUB_STEP_SUMMARY
