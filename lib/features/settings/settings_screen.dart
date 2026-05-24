@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -20,7 +19,7 @@ import '../chat/presentation/providers/prompt_enhancer_provider.dart';
 import 'presentation/widgets/export_dialog.dart';
 import 'presentation/widgets/import_dialog.dart';
 import 'presentation/widgets/model_settings_dialog.dart';
-import 'presentation/widgets/model_download_dialog.dart';
+
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});

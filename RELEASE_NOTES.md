@@ -1,11 +1,19 @@
 # Release Notes - Version 1.0.21
 
-## **Highlights: Rebranded Premium Design and Refined Release Pipeline**
-This patch release updates all existing logo branding files in PocketLLM Lite with the newly designed logo, providing a fresh modern visual experience across the application splash screen, launcher icon, website landing pages, and README documentation. In addition, the CI/CD pipeline has been optimized: Java, keystore configurations, and release APK building have been pruned from the GitHub Actions workflow, speeding up online pushes while keeping automatic version bumping and release tagging intact.
+## **Highlights: Tavily Web Search Integration & Premium Rebranding**
+This patch release introduces the highly anticipated **Tavily Web Search** integration, allowing local AI models to query the live internet in real time. We have also added a premium **Shimmering Loading Animation** (`🔍 Searching the web...`) while queries execute, and automated **Inline Markdown Citations** for returned search results. In addition, all application branding assets (splash screens, launcher icons, and documentation headers) have been updated to a sleek, modern design, and the CI/CD release workflow has been optimized by pruning slow APK compilation steps to speed up git tag releases.
 
 ---
 
 ## **Feature List**
+
+### **🔍 Tavily Web Search (New!)**
+*   **Real-time Web Search (`web_search` tool)**: Native integration with the Tavily Search API directly inside our `ToolCallingService` to query live web data.
+*   **Web Search Toggle**: Conveniently toggle live search on and off directly from the chat input toolbar (`Icons.language_rounded`).
+*   **API Key Verification**: Built-in verification dialog guiding the user to enter their Tavily API key in settings if they attempt to search without it.
+*   **Premium Shimmer Bubble**: Shows a beautiful, dynamic `🔍 Searching the web...` shimmering bubble while fetching internet resources, keeping the UI alive and responsive.
+*   **Inline Source Citations**: Conditions local LLMs to cite sources via standard, clickable inline markdown links `[Source Name](URL)` that launch automatically in external browsers.
+*   **Secure API Configuration**: Dedicated settings field under "Web Search (Tavily)" to easily and safely enter, preview, and persist Tavily API credentials.
 
 ### **🧩 Agent Skills System (New!)**
 *   **SKILL.md Standard Format**: Follows the standard YAML frontmatter and Markdown body architecture for clean, organized, and powerful domain-specific skills.

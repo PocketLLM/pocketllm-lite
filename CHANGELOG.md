@@ -14,6 +14,13 @@ We use a specific versioning pattern:
 
 ## [1.0.21] - 2026-05-24
 
+### Added
+- **Tavily Web Search Integration**: Built a robust native HTTP-based `web_search` tool calling handler inside `ToolCallingService` to query Tavily API for live internet references.
+- **Web Search Toolbar Toggle**: Embedded a sleek browser globe toggle button (`Icons.language_rounded`) in the chat input bar.
+- **Tavily API Key Verification**: Added a modern dialog prompting the user to configure their Tavily API key in the settings before using the web search feature.
+- **Premium Shimmering Indicator**: Integrated a premium shimmering `🔍 Searching the web...` message bubble during live Tavily searches.
+- **Inline Markdown Citations**: Conditioned local LLM prompts to cite search references using standard clickable Markdown links.
+
 ### Changed
 - **Branding Update**: Replaced all existing logo assets with the new updated PocketLLM Lite design (`assets/logo.png`, website logos, and centered README header logo).
 - **GitHub Workflow Pruning**: Removed Java setup, keystore handling, release APK building, and debug symbol archiving from the release workflow to prevent unnecessary runner execution since releases are handled locally.
