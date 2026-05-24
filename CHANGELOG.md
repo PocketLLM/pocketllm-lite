@@ -23,7 +23,7 @@ We use a specific versioning pattern:
 
 ### Changed
 - **Branding Update**: Replaced all existing logo assets with the new updated PocketLLM Lite design (`assets/logo.png`, website logos, and centered README header logo).
-- **GitHub Workflow Pruning**: Removed Java setup, keystore handling, release APK building, and debug symbol archiving from the release workflow to prevent unnecessary runner execution since releases are handled locally.
+- **GitHub Actions Removal**: Completely removed the `.github/` folder and release workflows since builds and releases are handled locally, ensuring zero overhead in CI pipelines.
 
 ## [1.0.20] - 2026-05-24
 

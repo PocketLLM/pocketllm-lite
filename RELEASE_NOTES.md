@@ -1,7 +1,7 @@
 # Release Notes - Version 1.0.21
 
 ## **Highlights: Tavily Web Search Integration & Premium Rebranding**
-This patch release introduces the highly anticipated **Tavily Web Search** integration, allowing local AI models to query the live internet in real time. We have also added a premium **Shimmering Loading Animation** (`🔍 Searching the web...`) while queries execute, and automated **Inline Markdown Citations** for returned search results. In addition, all application branding assets (splash screens, launcher icons, and documentation headers) have been updated to a sleek, modern design, and the CI/CD release workflow has been optimized by pruning slow APK compilation steps to speed up git tag releases.
+This patch release introduces the highly anticipated **Tavily Web Search** integration, allowing local AI models to query the live internet in real time. We have also added a premium **Shimmering Loading Animation** (`🔍 Searching the web...`) while queries execute, and automated **Inline Markdown Citations** for returned search results. In addition, all application branding assets (splash screens, launcher icons, and documentation headers) have been updated to a sleek, modern design. Furthermore, the redundant `.github/` folder and automated release workflows have been completely removed since builds and releases are handled locally, ensuring zero overhead in CI/CD pipelines.
 
 ---
 
