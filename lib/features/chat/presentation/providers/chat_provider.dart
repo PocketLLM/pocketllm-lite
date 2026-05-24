@@ -95,6 +95,8 @@ class ChatState {
   final int? lastTtftMs;
   final String? activePersonaId;
   final bool useTools;
+  final bool useWebSearch;
+  final bool isSearchingWeb;
 
   ChatState({
     required this.messages,
@@ -112,6 +114,8 @@ class ChatState {
     this.lastTtftMs,
     this.activePersonaId = 'general_assistant',
     this.useTools = false,
+    this.useWebSearch = false,
+    this.isSearchingWeb = false,
   });
 
   ChatState copyWith({
@@ -130,6 +134,8 @@ class ChatState {
     int? lastTtftMs,
     String? activePersonaId,
     bool? useTools,
+    bool? useWebSearch,
+    bool? isSearchingWeb,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -148,6 +154,8 @@ class ChatState {
       lastTtftMs: lastTtftMs != null ? lastTtftMs : this.lastTtftMs,
       activePersonaId: activePersonaId ?? this.activePersonaId,
       useTools: useTools ?? this.useTools,
+      useWebSearch: useWebSearch ?? this.useWebSearch,
+      isSearchingWeb: isSearchingWeb ?? this.isSearchingWeb,
     );
   }
 }
@@ -165,6 +173,8 @@ class ChatNotifier extends Notifier<ChatState> {
       useRag: false,
       activePersonaId: 'general_assistant',
       useTools: false,
+      useWebSearch: false,
+      isSearchingWeb: false,
     );
   }
 
@@ -174,6 +184,10 @@ class ChatNotifier extends Notifier<ChatState> {
 
   void toggleTools() {
     state = state.copyWith(useTools: !state.useTools);
+  }
+
+  void toggleWebSearch() {
+    state = state.copyWith(useWebSearch: !state.useWebSearch);
   }
 
   void setPersona(ChatPersona persona) {
@@ -267,6 +281,8 @@ class ChatNotifier extends Notifier<ChatState> {
       streamingContent: '',
       streamingThinkingContent: '',
       useRag: false,
+      useWebSearch: false,
+      isSearchingWeb: false,
     );
   }
 
@@ -412,7 +428,7 @@ class ChatNotifier extends Notifier<ChatState> {
       }
 
       String? systemPrompt = state.systemPrompt;
-      if (state.useTools) {
+      if (state.useTools || state.useWebSearch) {
         final toolService = ref.read(toolCallingServiceProvider);
         systemPrompt =
             '${systemPrompt ?? ""}\n${toolService.getToolSystemInstructions()}';
@@ -546,7 +562,7 @@ class ChatNotifier extends Notifier<ChatState> {
       final toolService = ref.read(toolCallingServiceProvider);
       final toolCall = toolService.parseToolCall(finalMainContent);
 
-      if (state.useTools && toolCall != null) {
+      if ((state.useTools || state.useWebSearch) && toolCall != null) {
         int toolCallCount = 0;
         for (final m in baseMessages.reversed) {
           if (m.content.startsWith('🔧 [TOOL_RESPONSE]')) {
@@ -573,6 +589,10 @@ class ChatNotifier extends Notifier<ChatState> {
             streamingThinkingContent: '',
           );
 
+          if (toolName == 'web_search') {
+            state = state.copyWith(isSearchingWeb: true);
+          }
+
           String toolResult = 'Error: Tool handler not found.';
           final tool = toolService.getTool(toolName);
           if (tool != null) {
@@ -584,6 +604,10 @@ class ChatNotifier extends Notifier<ChatState> {
             } catch (e) {
               toolResult = 'Error invoking tool: $e';
             }
+          }
+
+          if (toolName == 'web_search') {
+            state = state.copyWith(isSearchingWeb: false);
           }
 
           final toolReturnMessage = ChatMessage(

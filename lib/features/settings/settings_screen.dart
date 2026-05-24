@@ -31,6 +31,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late TextEditingController _urlController;
+  late TextEditingController _tavilyKeyController;
   String _version = 'Loading...';
   bool _isConnecting = false;
   bool? _isConnected;
@@ -50,6 +51,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       defaultValue: AppConstants.defaultOllamaBaseUrl,
     );
     _urlController = TextEditingController(text: url);
+    final tavilyKey = storage.getSetting('tavily_api_key', defaultValue: '') as String? ?? '';
+    _tavilyKeyController = TextEditingController(text: tavilyKey);
     _loadVersion();
     _checkConnection();
 
@@ -140,6 +143,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void dispose() {
     _urlController.dispose();
+    _tavilyKeyController.dispose();
     super.dispose();
   }
 
@@ -221,6 +225,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildModelsSection(theme),
             const SizedBox(height: 24),
             _buildRagSection(theme),
+            const SizedBox(height: 24),
+            _buildWebSearchSection(theme),
             const SizedBox(height: 24),
             _buildPromptEnhancerSection(theme),
             const SizedBox(height: 24),
@@ -674,6 +680,66 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   HapticFeedback.lightImpact();
                   context.push('/document-manager');
                 },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWebSearchSection(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Web Search (Tavily)'),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tavily API Key',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _tavilyKeyController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  hintText: 'Enter your Tavily API Key (tvly-...)',
+                  filled: true,
+                  fillColor: theme.colorScheme.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                ),
+                onChanged: (val) async {
+                  final storage = ref.read(storageServiceProvider);
+                  await storage.saveSetting('tavily_api_key', val.trim());
+                },
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'A Tavily API key enables real-time search capabilities for local AI models. Get a free key at tavily.com.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                ),
               ),
             ],
           ),

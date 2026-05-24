@@ -512,6 +512,44 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
   }
 
+  void _toggleWebSearch() {
+    final storage = ref.read(storageServiceProvider);
+    final apiKey = storage.getSetting('tavily_api_key') as String? ?? '';
+    final useWebSearch = ref.read(chatProvider).useWebSearch;
+
+    if (apiKey.isEmpty && !useWebSearch) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          icon: Icon(
+            Icons.language_rounded,
+            color: Theme.of(dialogContext).colorScheme.primary,
+          ),
+          title: const Text('Tavily API Key Required'),
+          content: const Text(
+            'Web Search requires a Tavily API Key. '
+            'Please go to Settings to configure it.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                context.push('/settings');
+              },
+              child: const Text('Settings'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    ref.read(chatProvider.notifier).toggleWebSearch();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Listen for draft messages (e.g. from suggestion chips)
@@ -1034,6 +1072,27 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   colorScheme: colorScheme,
                                   iconColor:
                                       isListening ? colorScheme.error : null,
+                                ),
+                                const SizedBox(width: 4),
+                                // 5b. Web Search Toggle Button
+                                Consumer(
+                                  builder: (context, ref, child) {
+                                    final useWebSearch = ref.watch(
+                                      chatProvider.select((s) => s.useWebSearch),
+                                    );
+                                    return _InputActionButton(
+                                      icon: Icons.language_rounded,
+                                      tooltip: useWebSearch
+                                          ? 'Web Search Enabled'
+                                          : 'Web Search Disabled',
+                                      onTap: _toggleWebSearch,
+                                      isDisabled: isGenerating,
+                                      colorScheme: colorScheme,
+                                      iconColor: useWebSearch
+                                          ? colorScheme.primary
+                                          : null,
+                                    );
+                                  },
                                 ),
                                 if (isListening) ...[
                                   const SizedBox(width: 4),

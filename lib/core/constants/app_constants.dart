@@ -36,6 +36,9 @@ class AppConstants {
   // Model Settings
   static const String modelSettingsPrefixKey = 'model_settings_';
 
+  // Tavily API Key
+  static const String tavilyApiKeyKey = 'tavily_api_key';
+
   // New Appearance Keys
   static const String chatPaddingKey = 'chat_padding';
   static const String showAvatarsKey = 'show_avatars';

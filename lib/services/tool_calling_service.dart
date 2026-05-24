@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'storage_service.dart';
 
 class ToolDefinition {
   final String name;
@@ -16,8 +18,9 @@ class ToolDefinition {
 
 class ToolCallingService {
   final Map<String, ToolDefinition> _tools = {};
+  final StorageService _storage;
 
-  ToolCallingService() {
+  ToolCallingService(this._storage) {
     _registerDefaultTools();
   }
 
@@ -104,6 +107,79 @@ class ToolCallingService {
         },
       ),
     );
+
+    // 4. Tavily Web Search Tool
+    registerTool(
+      ToolDefinition(
+        name: 'web_search',
+        description:
+            'Search the live internet for recent facts, news, and real-time information. Input format: {"query": "search query string, e.g. OpenAI GPT-4o release date"}',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'query': {
+              'type': 'string',
+              'description': 'The search query to look up on the internet',
+            },
+          },
+          'required': ['query'],
+        },
+        handler: (args) async {
+          final query = args['query'] as String? ?? '';
+          if (query.trim().isEmpty) return 'Please specify a search query.';
+
+          final apiKey = _storage.getSetting('tavily_api_key') as String? ?? '';
+          if (apiKey.isEmpty) {
+            return 'Error: Tavily API Key is not configured in settings.';
+          }
+
+          try {
+            final url = Uri.parse('https://api.tavily.com/search');
+            final response = await http.post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'api_key': apiKey,
+                'query': query,
+                'search_depth': 'basic',
+                'max_results': 5,
+                'include_answer': true,
+              }),
+            );
+
+            if (response.statusCode == 200) {
+              final data = jsonDecode(response.body);
+              final resultsList = data['results'] as List? ?? [];
+              final answer = data['answer'] as String? ?? '';
+
+              if (resultsList.isEmpty) {
+                return 'No results found for "$query".';
+              }
+
+              final buffer = StringBuffer();
+              if (answer.isNotEmpty) {
+                buffer.writeln('Summary Answer: $answer\n');
+              }
+              buffer.writeln('Search Results for "$query":');
+              for (int i = 0; i < resultsList.length; i++) {
+                final res = resultsList[i];
+                final title = res['title'] ?? 'No Title';
+                final link = res['url'] ?? '';
+                final snippet = res['content'] ?? '';
+                buffer.writeln('[Source ${i + 1}] Title: $title');
+                buffer.writeln('URL: $link');
+                buffer.writeln('Snippet: $snippet\n');
+              }
+              return buffer.toString();
+            } else {
+              return 'Tavily Search API returned error code ${response.statusCode}: ${response.body}';
+            }
+          } catch (e) {
+            return 'Error performing web search: $e';
+          }
+        },
+      ),
+    );
   }
 
   void registerTool(ToolDefinition tool) {
@@ -166,6 +242,9 @@ class ToolCallingService {
       buffer.writeln('  Description: ${tool.description}');
       buffer.writeln('  Parameters: ${jsonEncode(tool.parameters)}');
     }
+    buffer.writeln(
+      'IMPORTANT CITATION RULE: When calling the "web_search" tool, you MUST cite the source URLs in your final response using clickable markdown links, e.g. [Source Name](URL) or [1](URL), so that the user can verify the information.',
+    );
     buffer.writeln('### END OF TOOLS');
     return buffer.toString();
   }

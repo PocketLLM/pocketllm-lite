@@ -36,7 +36,7 @@ final huggingFaceServiceProvider = Provider<HuggingFaceService>((ref) {
 });
 
 final toolCallingServiceProvider = Provider<ToolCallingService>((ref) {
-  return ToolCallingService();
+  return ToolCallingService(ref.watch(storageServiceProvider));
 });
 
 // Re-export RAG providers from rag_service.dart

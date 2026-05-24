@@ -21,6 +21,7 @@ import '../providers/editing_message_provider.dart';
 import '../../../../core/providers.dart';
 import 'three_dot_loading_indicator.dart';
 import '../providers/audio_provider.dart';
+import 'package:shimmer/shimmer.dart';
 
 // Helper class for formatting timestamps
 class TimestampFormatter {
@@ -386,6 +387,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
 
     // Show loading indicator for empty assistant messages (AI is generating)
     if (!isUser && message.content.isEmpty) {
+      final isSearchingWeb = ref.watch(chatProvider.select((s) => s.isSearchingWeb));
+
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: Row(
@@ -419,10 +422,34 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                       ]
                     : null,
               ),
-              child: ThreeDotLoadingIndicator(
-                color: textColor.withValues(alpha: 0.7),
-                size: 6.0,
-              ),
+              child: isSearchingWeb
+                  ? Shimmer.fromColors(
+                      baseColor: textColor.withValues(alpha: 0.45),
+                      highlightColor: textColor.withValues(alpha: 0.15),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.language_rounded,
+                            size: 16,
+                            color: textColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Searching the web...',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: textColor,
+                              fontSize: fontSize * 0.9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ThreeDotLoadingIndicator(
+                      color: textColor.withValues(alpha: 0.7),
+                      size: 6.0,
+                    ),
             ),
           ],
         ),
