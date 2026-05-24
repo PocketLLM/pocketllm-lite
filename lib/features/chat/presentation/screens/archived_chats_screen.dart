@@ -30,9 +30,8 @@ class _ArchivedChatsScreenState extends ConsumerState<ArchivedChatsScreen> {
         valueListenable: storage.chatBoxListenable,
         builder: (context, box, _) {
           final sessions = storage.getChatSessions();
-          final archivedSessions = sessions
-              .where((s) => storage.isArchived(s.id))
-              .toList();
+          final archivedSessions =
+              sessions.where((s) => storage.isArchived(s.id)).toList();
 
           if (archivedSessions.isEmpty) {
             return Center(

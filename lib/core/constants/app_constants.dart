@@ -9,6 +9,7 @@ class AppConstants {
   static const String activityLogBoxName = 'activity_logs';
   static const String errorLogBoxName = 'error_logs';
   static const String personasBoxName = 'chat_personas';
+  static const String skillsBoxName = 'skills';
 
   // Keys
   static const String isFirstLaunchKey = 'is_first_launch';

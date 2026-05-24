@@ -200,5 +200,5 @@ class AppearanceNotifier extends Notifier<AppearanceState> {
 
 final appearanceProvider =
     NotifierProvider<AppearanceNotifier, AppearanceState>(
-      AppearanceNotifier.new,
-    );
+  AppearanceNotifier.new,
+);

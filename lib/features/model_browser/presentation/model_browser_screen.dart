@@ -88,21 +88,21 @@ class _ModelBrowserScreenState extends ConsumerState<ModelBrowserScreen> {
             child: state.isLoading
                 ? _buildLoadingState()
                 : state.error != null
-                ? Center(
-                    child: Text(
-                      'Error: ${state.error}',
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
-                  )
-                : state.models.isEmpty
-                ? const Center(child: Text('No models found.'))
-                : ListView.builder(
-                    itemCount: state.models.length,
-                    itemBuilder: (context, index) {
-                      final model = state.models[index];
-                      return _buildModelCard(context, model, theme);
-                    },
-                  ),
+                    ? Center(
+                        child: Text(
+                          'Error: ${state.error}',
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
+                      )
+                    : state.models.isEmpty
+                        ? const Center(child: Text('No models found.'))
+                        : ListView.builder(
+                            itemCount: state.models.length,
+                            itemBuilder: (context, index) {
+                              final model = state.models[index];
+                              return _buildModelCard(context, model, theme);
+                            },
+                          ),
           ),
         ],
       ),

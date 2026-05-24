@@ -11,6 +11,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../services/inference_service.dart';
 import '../../../../services/rag_service.dart';
 import '../../domain/models/chat_persona.dart';
+import '../../domain/models/skill.dart';
 
 class ThinkingParseResult {
   final String thinking;
@@ -35,10 +36,9 @@ ThinkingParseResult parseThinking(String rawText) {
         final endIdx = rawText.indexOf(tag.value);
         final endLen = tag.value.length;
         final thinking = rawText.substring(startIdx + startLen, endIdx).trim();
-        final mainContent =
-            (rawText.substring(0, startIdx) +
-                    rawText.substring(endIdx + endLen))
-                .trim();
+        final mainContent = (rawText.substring(0, startIdx) +
+                rawText.substring(endIdx + endLen))
+            .trim();
         return ThinkingParseResult(
           thinking: thinking,
           mainContent: mainContent,
@@ -416,6 +416,42 @@ class ChatNotifier extends Notifier<ChatState> {
         final toolService = ref.read(toolCallingServiceProvider);
         systemPrompt =
             '${systemPrompt ?? ""}\n${toolService.getToolSystemInstructions()}';
+      }
+
+      // Check for skill triggers inside user message
+      final allSkills = ref.read(storageServiceProvider).getSkills();
+      final activeSkills = <Skill>[];
+      if (baseMessages.isNotEmpty) {
+        final lastUserMessage = baseMessages.lastWhere(
+          (m) => m.role == 'user',
+          orElse: () => ChatMessage(
+            role: 'user',
+            content: '',
+            timestamp: DateTime.now(),
+          ),
+        );
+        if (lastUserMessage.content.isNotEmpty) {
+          for (final skill in allSkills) {
+            if (skill.isEnabled &&
+                lastUserMessage.content.contains('/${skill.id}')) {
+              activeSkills.add(skill);
+            }
+          }
+        }
+      }
+
+      if (activeSkills.isNotEmpty) {
+        final skillsBuffer = StringBuffer();
+        skillsBuffer.writeln('\n### ACTIVE AGENT SKILLS');
+        skillsBuffer.writeln(
+          'The user has activated the following skills for this turn. Follow their instructions strictly:',
+        );
+        for (final skill in activeSkills) {
+          skillsBuffer.writeln('- Skill: ${skill.title} (/${skill.id})');
+          skillsBuffer.writeln('  Instructions:\n${skill.body}\n');
+        }
+        skillsBuffer.writeln('### END OF ACTIVE AGENT SKILLS');
+        systemPrompt = '${systemPrompt ?? ""}\n${skillsBuffer.toString()}';
       }
 
       final request = ChatRequest(

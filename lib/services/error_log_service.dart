@@ -176,9 +176,9 @@ class ErrorLogService {
   }
 
   List<ErrorEntry> _readEntries() {
-    final values =
-        _memoryEntries ??
-        _requireBox().values
+    final values = _memoryEntries ??
+        _requireBox()
+            .values
             .whereType<Map>()
             .map(
               (value) => ErrorEntry.fromJson(Map<String, dynamic>.from(value)),
@@ -197,9 +197,8 @@ class ErrorLogService {
 
     final entries = _readEntries();
     final toKeep = entries.take(maxEntries).map((entry) => entry.id).toSet();
-    final keysToDelete = box.keys
-        .where((key) => !toKeep.contains(key))
-        .toList();
+    final keysToDelete =
+        box.keys.where((key) => !toKeep.contains(key)).toList();
     await box.deleteAll(keysToDelete);
   }
 

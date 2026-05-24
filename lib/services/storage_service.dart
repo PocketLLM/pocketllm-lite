@@ -11,6 +11,7 @@ import '../features/chat/domain/models/starred_message.dart';
 import '../features/chat/domain/models/system_prompt.dart';
 import '../features/chat/domain/models/text_file_attachment.dart';
 import '../features/chat/domain/models/chat_persona.dart';
+import '../features/chat/domain/models/skill.dart';
 import '../core/constants/system_prompt_presets.dart';
 import 'pdf_export_service.dart';
 
@@ -18,6 +19,7 @@ class StorageService {
   late Box<ChatSession> _chatBox;
   late Box<SystemPrompt> _systemPromptBox;
   late Box<ChatPersona> _personaBox;
+  late Box<Skill> _skillsBox;
   late Box _settingsBox;
   late Box _activityLogBox;
 
@@ -37,13 +39,38 @@ class StorageService {
     Hive.registerAdapter(ChatSessionAdapter());
     Hive.registerAdapter(SystemPromptAdapter());
     Hive.registerAdapter(ChatPersonaAdapter());
+    Hive.registerAdapter(SkillAdapter());
 
     _chatBox = await Hive.openBox<ChatSession>(AppConstants.chatBoxName);
     _systemPromptBox = await Hive.openBox<SystemPrompt>(
       AppConstants.systemPromptsBoxName,
     );
     _personaBox = await Hive.openBox<ChatPersona>(AppConstants.personasBoxName);
+    _skillsBox = await Hive.openBox<Skill>(AppConstants.skillsBoxName);
     _settingsBox = await Hive.openBox(AppConstants.settingsBoxName);
+
+    // Seed initial skills if empty
+    if (_skillsBox.isEmpty) {
+      final initialSkills = [
+        Skill(
+          id: 'webdesign',
+          title: 'Web Design Expert',
+          description:
+              'Design premium, beautiful Material 3 responsive layouts.',
+          body:
+              'You are an elite UX/UI designer and frontend engineer. Follow the Material 3 guidelines and use premium design system values. Use beautiful color schemes, smooth micro-animations, clean typography, and appropriate spacing. Present structural layouts in clean, well-commented HTML, CSS, and Dart Flutter styles.',
+        ),
+        Skill(
+          id: 'pythonexpert',
+          title: 'Python Expert',
+          description:
+              'Write optimized, type-hinted, and compliant Python code.',
+          body:
+              'You are a Principal Python Architect. Always write well-documented, PEP 8 compliant, type-hinted code. Prioritize memory efficiency and execution performance. Provide unit tests using pytest where appropriate.',
+        ),
+      ];
+      await _skillsBox.putAll({for (final s in initialSkills) s.id: s});
+    }
     _activityLogBox = await Hive.openBox(AppConstants.activityLogBoxName);
 
     // Seed system prompts if empty
@@ -253,6 +280,36 @@ class StorageService {
     final name = _personaBox.get(id)?.name ?? id;
     await _personaBox.delete(id);
     await logActivity('Persona Deleted', 'Deleted persona "$name" (ID: $id)');
+  }
+
+  // Skills
+  ValueListenable<Box<Skill>> get skillsBoxListenable =>
+      _skillsBox.listenable();
+
+  List<Skill> getSkills() {
+    return _skillsBox.values.toList();
+  }
+
+  Future<void> saveSkill(Skill skill) async {
+    final isNew = !_skillsBox.containsKey(skill.id);
+    await _skillsBox.put(skill.id, skill);
+    if (isNew) {
+      await logActivity(
+        'Skill Installed',
+        'Installed skill "${skill.title}" (ID: ${skill.id})',
+      );
+    } else {
+      await logActivity(
+        'Skill Updated',
+        'Updated skill "${skill.title}" (ID: ${skill.id})',
+      );
+    }
+  }
+
+  Future<void> deleteSkill(String id) async {
+    final title = _skillsBox.get(id)?.title ?? id;
+    await _skillsBox.delete(id);
+    await logActivity('Skill Deleted', 'Deleted skill "$title" (ID: $id)');
   }
 
   // Search & Filter
@@ -816,9 +873,8 @@ class StorageService {
 
     if (includePrompts) {
       // Prompts are not filtered by chatIds
-      data['prompts'] = getSystemPrompts()
-          .map((p) => _systemPromptToJson(p))
-          .toList();
+      data['prompts'] =
+          getSystemPrompts().map((p) => _systemPromptToJson(p)).toList();
     }
 
     if (includeSettings) {
@@ -1204,16 +1260,15 @@ class StorageService {
       images: json['images'] != null ? List<String>.from(json['images']) : null,
       attachments: attachments is List
           ? attachments
-                .map(
-                  (item) => TextFileAttachment(
-                    name: item['name'],
-                    content: item['content'],
-                    sizeBytes:
-                        item['sizeBytes'] ?? item['content']?.length ?? 0,
-                    mimeType: item['mimeType'],
-                  ),
-                )
-                .toList()
+              .map(
+                (item) => TextFileAttachment(
+                  name: item['name'],
+                  content: item['content'],
+                  sizeBytes: item['sizeBytes'] ?? item['content']?.length ?? 0,
+                  mimeType: item['mimeType'],
+                ),
+              )
+              .toList()
           : null,
     );
   }

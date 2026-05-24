@@ -32,26 +32,26 @@ class BenchmarkRun {
   });
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'modelName': modelName,
-    'timestamp': timestamp.toIso8601String(),
-    'timeToFirstTokenMs': timeToFirstTokenMs,
-    'tokensPerSecond': tokensPerSecond,
-    'totalTokens': totalTokens,
-    'totalTimeMs': totalTimeMs,
-    'promptType': promptType,
-  };
+        'id': id,
+        'modelName': modelName,
+        'timestamp': timestamp.toIso8601String(),
+        'timeToFirstTokenMs': timeToFirstTokenMs,
+        'tokensPerSecond': tokensPerSecond,
+        'totalTokens': totalTokens,
+        'totalTimeMs': totalTimeMs,
+        'promptType': promptType,
+      };
 
   factory BenchmarkRun.fromJson(Map<String, dynamic> json) => BenchmarkRun(
-    id: json['id'] as String,
-    modelName: json['modelName'] as String,
-    timestamp: DateTime.parse(json['timestamp'] as String),
-    timeToFirstTokenMs: (json['timeToFirstTokenMs'] as num).toInt(),
-    tokensPerSecond: (json['tokensPerSecond'] as num).toDouble(),
-    totalTokens: (json['totalTokens'] as num).toInt(),
-    totalTimeMs: (json['totalTimeMs'] as num).toInt(),
-    promptType: json['promptType'] as String? ?? 'Quick Test',
-  );
+        id: json['id'] as String,
+        modelName: json['modelName'] as String,
+        timestamp: DateTime.parse(json['timestamp'] as String),
+        timeToFirstTokenMs: (json['timeToFirstTokenMs'] as num).toInt(),
+        tokensPerSecond: (json['tokensPerSecond'] as num).toDouble(),
+        totalTokens: (json['totalTokens'] as num).toInt(),
+        totalTimeMs: (json['totalTimeMs'] as num).toInt(),
+        promptType: json['promptType'] as String? ?? 'Quick Test',
+      );
 }
 
 class BenchmarkState {
@@ -168,9 +168,8 @@ class BenchmarkNotifier extends Notifier<BenchmarkState> {
 
         buffer.write(chunk.text);
 
-        final elapsedSinceFirst = now
-            .difference(firstTokenTime!)
-            .inMilliseconds;
+        final elapsedSinceFirst =
+            now.difference(firstTokenTime!).inMilliseconds;
         final words = RegExp(r'\S+').allMatches(buffer.toString()).length;
         final tokens = (words * 1.3).ceil();
 
@@ -192,9 +191,8 @@ class BenchmarkNotifier extends Notifier<BenchmarkState> {
       final totalTokens = (words * 1.3).ceil();
 
       final genTimeMs = totalTimeMs - (timeToFirstTokenMs ?? 0);
-      final finalTps = genTimeMs > 0
-          ? (totalTokens / (genTimeMs / 1000.0))
-          : 0.0;
+      final finalTps =
+          genTimeMs > 0 ? (totalTokens / (genTimeMs / 1000.0)) : 0.0;
 
       final result = BenchmarkRun(
         id: const Uuid().v4(),
@@ -487,9 +485,7 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
                     final p = _selectedPromptType == 'Custom Prompt'
                         ? _customPromptController.text
                         : _prompts[_selectedPromptType]!;
-                    ref
-                        .read(benchmarkProvider.notifier)
-                        .runBenchmark(
+                    ref.read(benchmarkProvider.notifier).runBenchmark(
                           prompt: p,
                           promptType: _selectedPromptType,
                           modelId: currentModel,
@@ -676,8 +672,8 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
                           averageTps > 0 && run.tokensPerSecond > averageTps;
                       final percentDiff = averageTps > 0
                           ? (((run.tokensPerSecond - averageTps) / averageTps) *
-                                    100)
-                                .abs()
+                                  100)
+                              .abs()
                           : 0.0;
 
                       return Card(

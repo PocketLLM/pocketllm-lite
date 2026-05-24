@@ -428,6 +428,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const Divider(height: 1, indent: 56),
               ListTile(
+                title: const Text('Manage Agent Skills'),
+                subtitle: const Text(
+                  'Install, import, and CRUD custom agent skills',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                leading: const Icon(Icons.extension_rounded),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/settings/skills');
+                },
+              ),
+              const Divider(height: 1, indent: 56),
+              ListTile(
                 title: const Text('Manage System Prompts'),
                 subtitle: const Text('Create and edit reusable AI personas'),
                 trailing: const Icon(Icons.chevron_right),
@@ -518,7 +531,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       final storage = ref.watch(storageServiceProvider);
                       final defaultModel =
                           storage.getSetting(AppConstants.defaultModelKey) ??
-                          '';
+                              '';
 
                       return Container(
                         decoration: BoxDecoration(

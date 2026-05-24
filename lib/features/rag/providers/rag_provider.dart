@@ -70,5 +70,5 @@ class RagDocumentsNotifier extends Notifier<RagDocumentsState> {
 
 final ragDocumentsProvider =
     NotifierProvider<RagDocumentsNotifier, RagDocumentsState>(
-      RagDocumentsNotifier.new,
-    );
+  RagDocumentsNotifier.new,
+);

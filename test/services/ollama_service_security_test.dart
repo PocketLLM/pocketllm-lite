@@ -4,7 +4,7 @@ import 'package:pocketllm_lite/services/ollama_service.dart';
 
 class MockClient extends http.BaseClient {
   final Future<http.StreamedResponse> Function(http.BaseRequest request)
-  _handler;
+      _handler;
 
   MockClient(this._handler);
 

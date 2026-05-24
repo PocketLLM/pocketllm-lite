@@ -141,13 +141,12 @@ class _PersonaManagementScreenState
                                     ),
                                     child: Text(
                                       'SYSTEM',
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                            color: colorScheme
-                                                .onSecondaryContainer,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                      style:
+                                          theme.textTheme.labelSmall?.copyWith(
+                                        color: colorScheme.onSecondaryContainer,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ],

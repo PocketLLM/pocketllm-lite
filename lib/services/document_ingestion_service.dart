@@ -68,9 +68,8 @@ class DocumentIngestionService {
   }
 
   Future<Map<String, dynamic>> ingestFile(File file) async {
-    final extension = file.path
-        .substring(file.path.lastIndexOf('.'))
-        .toLowerCase();
+    final extension =
+        file.path.substring(file.path.lastIndexOf('.')).toLowerCase();
     final filename = file.path.split('/').last;
 
     final text = await _extractText(file, extension);

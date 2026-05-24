@@ -561,8 +561,7 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
       child: Row(
         children: [
           ...presets.map((preset) {
-            final isSelected =
-                appearance.userMsgColor == preset.userColor &&
+            final isSelected = appearance.userMsgColor == preset.userColor &&
                 appearance.aiMsgColor == preset.aiColor;
 
             return Padding(
@@ -592,9 +591,9 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                         color: isSelected
                             ? Theme.of(context).colorScheme.primaryContainer
                             : Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest
-                                  .withValues(alpha: 0.3),
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected
@@ -649,9 +648,9 @@ class _CustomizationScreenState extends ConsumerState<CustomizationScreen> {
                               fontSize: 10,
                               color: isSelected
                                   ? Theme.of(context)
-                                        .colorScheme
-                                        .onPrimaryContainer
-                                        .withValues(alpha: 0.7)
+                                      .colorScheme
+                                      .onPrimaryContainer
+                                      .withValues(alpha: 0.7)
                                   : Theme.of(
                                       context,
                                     ).colorScheme.onSurfaceVariant,

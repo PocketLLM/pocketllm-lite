@@ -171,9 +171,8 @@ class ModelDownloadService {
           final speed = (bytesDiff / 1024 / 1024) / (elapsed / 1000); // MB/s
 
           final bytesRemaining = expectedSizeBytes - downloadedBytes;
-          final timeRemainingSecs = speed > 0
-              ? (bytesRemaining / 1024 / 1024) / speed
-              : 0.0;
+          final timeRemainingSecs =
+              speed > 0 ? (bytesRemaining / 1024 / 1024) / speed : 0.0;
 
           progressNotifier.value = ModelDownloadProgress(
             progress: progress,

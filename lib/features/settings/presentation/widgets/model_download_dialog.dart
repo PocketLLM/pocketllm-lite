@@ -203,7 +203,6 @@ class _ModelDownloadDialogState extends ConsumerState<ModelDownloadDialog> {
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Close'),
           ),
-
         if (!_isDownloading)
           FilledButton(
             onPressed: _startDownload,

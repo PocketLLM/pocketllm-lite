@@ -305,9 +305,7 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               ref.read(chatProvider.notifier).toggleTools();
             }
 
-            ref
-                .read(chatProvider.notifier)
-                .updateSettings(
+            ref.read(chatProvider.notifier).updateSettings(
                   temperature: _temp,
                   topP: _topP,
                   systemPrompt: promptContent,

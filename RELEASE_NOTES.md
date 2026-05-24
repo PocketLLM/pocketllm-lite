@@ -1,20 +1,29 @@
-# Release Notes - Version 1.0.19
+# Release Notes - Version 1.0.20
 
-## **Highlights: Local LLM Load Timeout Fix, Dart SDK Compatibility, and Sleek Offline UI Enhancements**
-This release fixes connection aborts (where Ollama terminates completion requests early with a `500` status because the client closed the socket) by increasing `apiConnectionTimeout` to **120 seconds** and `apiGenerationTimeout` to **180 seconds** inside `AppConstants`. This gives local models (like Gemma or Llama) plenty of time to spin up and offload weights without triggering early client-side cut-offs, while preserving our direct animations compatibility, immediate bouncing-dots typing indicator, minimalist model selector, and personalized empty chat screens!
+## **Highlights: Native Agent Skills (SKILL.md) Integration, Autocomplete, In-Input Highlights, and Automated LLM Conditioning**
+This release introduces a fully-fledged **Agent Skills (SKILL.md) System**! Users can now install, CRUD, and manage custom agent instructions using standard YAML frontmatter and Markdown bodies. Skills can be imported instantly from any GitHub URL or raw SKILL.md link. In the chat room, typing `/` will trigger a gorgeous horizontal Material 3 chip-HUD matching active skills. Mentioning skills like `/webdesign` inside the input will highlight them in bold blue, allow tapping to navigate to their details screen, and render them as interactive links in the message timeline. Best of all, local LLMs will automatically scan your messages for active skills and consume their markdown rules before completing replies!
 
 ---
 
 ## **Feature List**
 
+### **🧩 Agent Skills System (New!)**
+*   **SKILL.md Standard Format**: Follows the standard YAML frontmatter and Markdown body architecture for clean, organized, and powerful domain-specific skills.
+*   **GitHub Skill Installer**: Easily download, preview, and install custom skills from any standard or raw GitHub repository URL, with automatic blob link conversion.
+*   **Full CRUD & Status Toggles**: Create, read, update, and delete agent skills manually with sleek modal sheets. Easily toggle individual skills on or off using M3 switches.
+*   **Smart Autocomplete Suggester**: As you type `/` in the chat input, a horizontal M3 selection panel dynamically populates matching active skills.
+*   **In-Input Rich Highlights & Tap-Redirects**: Skill triggers inside the input field are highlighted in bold primary blue. Tapping on a highlighted skill word instantly redirects you to the detailed skill instructions page.
+*   **Inter-Bubble Clickable Badges**: preprocessed message content converts skill triggers into interactive markdown links in both user and assistant conversation bubbles. Tapping a badge takes you directly to the skill's instructions.
+*   **Dynamic LLM Skill Conditioning**: Complete automatic scanning of active skill triggers inside user queries. When a skill is detected, its markdown body is dynamically injected into the system instructions for that turn.
+
 ### **🤖 AI Chat & Interaction**
-*   **Dynamic AI Personas (New!)**: Design custom AI experts with specific emoji avatars, custom system prompts, temperature overrides, and associated default local models.
-*   **Horizontal Persona Picker HUD (New!)**: Choose your helper instantly when starting a chat using a gorgeous horizontally scrollable card deck with native haptic selections.
-*   **Native Agentic Tools (New!)**: Toggle "Native Agentic Tools" in Chat Settings to let local models execute native code tools:
+*   **Dynamic AI Personas**: Design custom AI experts with specific emoji avatars, custom system prompts, temperature overrides, and associated default local models.
+*   **Horizontal Persona Picker HUD**: Choose your helper instantly when starting a chat using a gorgeous horizontally scrollable card deck with native haptic selections.
+*   **Native Agentic Tools**: Toggle "Native Agentic Tools" in Chat Settings to let local models execute native code tools:
     *   **Calculator**: Solves complex and basic mathematical equations.
     *   **System Info**: Queries native platform parameter details, local dates, and local times.
     *   **Knowledge Search**: Simulates general knowledge Wikipedia-style summaries offline.
-*   **Adaptive Tool UI Cards (New!)**: Beautiful custom cards rendered in the chat timeline to highlight tool calls, parameter arguments, and returning response data dynamically.
+*   **Adaptive Tool UI Cards**: Beautiful custom cards rendered in the chat timeline to highlight tool calls, parameter arguments, and returning response data dynamically.
 *   **DeepSeek R1 Thinking**: Streaming support for `<think>` tags, rendered in a beautifully animated Material 3 collapsible accordion.
 *   **Knowledge Base RAG**: Toggle Retrieval-Augmented Generation (RAG) directly in the Chat Settings dialog to automatically query offline vector databases and augment prompts with local context.
 *   **Ollama Integration**: Seamlessly connect to local Ollama instances.

@@ -21,6 +21,8 @@ import '../features/model_browser/presentation/model_detail_screen.dart';
 import '../features/rag/presentation/document_manager_screen.dart';
 import '../features/settings/presentation/screens/benchmark_screen.dart';
 import '../features/chat/presentation/screens/persona_management_screen.dart';
+import '../features/chat/presentation/screens/skill_management_screen.dart';
+import '../features/chat/presentation/screens/skill_details_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -109,6 +111,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'personas',
             builder: (context, state) => const PersonaManagementScreen(),
+          ),
+          GoRoute(
+            path: 'skills',
+            builder: (context, state) => const SkillManagementScreen(),
+            routes: [
+              GoRoute(
+                path: 'details/:id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id'] ?? '';
+                  return SkillDetailsScreen(skillId: id);
+                },
+              ),
+            ],
           ),
         ],
       ),

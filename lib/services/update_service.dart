@@ -161,12 +161,10 @@ class UpdateService {
       }
 
       // Fetch latest release from GitHub
-      final response = await http
-          .get(
-            Uri.parse(_releasesApiUrl),
-            headers: {'Accept': 'application/vnd.github.v3+json'},
-          )
-          .timeout(const Duration(seconds: 10));
+      final response = await http.get(
+        Uri.parse(_releasesApiUrl),
+        headers: {'Accept': 'application/vnd.github.v3+json'},
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         return UpdateCheckResult(

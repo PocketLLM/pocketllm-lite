@@ -270,9 +270,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   IconButton(
                     icon: const Icon(Icons.archive_outlined),
                     tooltip: 'Archive selected chats',
-                    onPressed: _selectedIds.isEmpty
-                        ? null
-                        : _archiveSelectedChats,
+                    onPressed:
+                        _selectedIds.isEmpty ? null : _archiveSelectedChats,
                   ),
                   IconButton(
                     icon: const Icon(Icons.download),
@@ -301,8 +300,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   IconButton(
                     icon: Icon(
                       Icons.filter_list,
-                      color:
-                          (_selectedModelFilter != null ||
+                      color: (_selectedModelFilter != null ||
                               _selectedDateFilter != null ||
                               _selectedTagFilter != null)
                           ? theme.colorScheme.primary
@@ -361,7 +359,6 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 ],
               ),
             ),
-
           if (_selectedModelFilter != null ||
               _selectedDateFilter != null ||
               _selectedTagFilter != null)
@@ -401,7 +398,6 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 ),
               ),
             ),
-
           Expanded(
             child: ValueListenableBuilder<Box<ChatSession>>(
               valueListenable: storage.chatBoxListenable,
@@ -441,8 +437,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                 List<ChatSession> pinnedSessions = [];
                 List<ChatSession> recentSessions = [];
 
-                final isFiltering =
-                    _searchQuery.isNotEmpty ||
+                final isFiltering = _searchQuery.isNotEmpty ||
                     _selectedModelFilter != null ||
                     _selectedDateFilter != null ||
                     _selectedTagFilter != null;
@@ -469,9 +464,8 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                   // For now, let's exclude them to keep "Archive" meaning "Hidden".
                   // OR include them but mark as archived?
                   // Let's exclude for consistency.
-                  recentSessions = sessions
-                      .where((s) => !storage.isArchived(s.id))
-                      .toList();
+                  recentSessions =
+                      sessions.where((s) => !storage.isArchived(s.id)).toList();
                 }
 
                 if (!isFiltering &&
@@ -620,8 +614,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                       ),
                       ChoiceChip(
                         label: const Text('Last 7 Days'),
-                        selected:
-                            tempDate != null &&
+                        selected: tempDate != null &&
                             tempDate!.difference(DateTime.now()).inDays.abs() <
                                 8,
                         onSelected: (val) {
@@ -636,8 +629,7 @@ class _ChatHistoryScreenState extends ConsumerState<ChatHistoryScreen> {
                       ),
                       ChoiceChip(
                         label: const Text('Last 30 Days'),
-                        selected:
-                            tempDate != null &&
+                        selected: tempDate != null &&
                             tempDate!.difference(DateTime.now()).inDays.abs() >
                                 8,
                         onSelected: (val) {

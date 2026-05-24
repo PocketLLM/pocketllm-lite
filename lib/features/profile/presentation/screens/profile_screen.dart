@@ -108,9 +108,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return;
     }
 
-    final ImageSource source = action == 'camera'
-        ? ImageSource.camera
-        : ImageSource.gallery;
+    final ImageSource source =
+        action == 'camera' ? ImageSource.camera : ImageSource.gallery;
 
     try {
       final XFile? image = await _picker.pickImage(
@@ -137,9 +136,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _saveProfile() async {
     // Update simple fields and potential new image
-    await ref
-        .read(profileProvider.notifier)
-        .updateProfile(
+    await ref.read(profileProvider.notifier).updateProfile(
           name: _nameController.text.trim(),
           bio: _bioController.text.trim(),
           avatarColor: _avatarColor.toARGB32(),

@@ -16,5 +16,5 @@ class EditingMessageNotifier extends Notifier<ChatMessage?> {
 
 final editingMessageProvider =
     NotifierProvider<EditingMessageNotifier, ChatMessage?>(
-      EditingMessageNotifier.new,
-    );
+  EditingMessageNotifier.new,
+);

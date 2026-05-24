@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/utils/image_decoder.dart';
@@ -222,6 +223,18 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     }
   }
 
+  String _preprocessContent(String content, List<String> skillIds) {
+    if (skillIds.isEmpty) return content;
+    var result = content;
+    final sortedIds = List<String>.from(skillIds)
+      ..sort((a, b) => b.length.compareTo(a.length));
+    for (final id in sortedIds) {
+      final pattern = RegExp(r'\/' + RegExp.escape(id) + r'\b');
+      result = result.replaceAll(pattern, '[/$id](skill://$id)');
+    }
+    return result;
+  }
+
   Future<void> _decodeImages() async {
     if (widget.message.images != null && widget.message.images!.isNotEmpty) {
       final images = await IsolateImageDecoder.decodeImages(
@@ -424,9 +437,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
+            mainAxisAlignment:
+                isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (!isUser && showAvatars) ...[
@@ -512,37 +524,86 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                               ),
                             ],
                             if (isUser)
-                              Text(
-                                message.content,
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: textColor,
-                                  fontSize: fontSize,
-                                  height: 1.5,
-                                ),
+                              Builder(
+                                builder: (context) {
+                                  final skillIds = storage
+                                      .getSkills()
+                                      .map((s) => s.id)
+                                      .toList();
+                                  final processed = _preprocessContent(
+                                      message.content, skillIds);
+                                  final hasSkillLink =
+                                      processed != message.content;
+                                  if (hasSkillLink) {
+                                    return MarkdownBody(
+                                      data: processed,
+                                      onTapLink: (text, href, title) {
+                                        if (href != null &&
+                                            href.startsWith('skill://')) {
+                                          final skillId =
+                                              href.replaceFirst('skill://', '');
+                                          context.push(
+                                              '/settings/skills/details/$skillId');
+                                        }
+                                      },
+                                      styleSheet: _getStyleSheet(
+                                        theme,
+                                        fontSize,
+                                        textColor,
+                                      ),
+                                    );
+                                  }
+                                  return Text(
+                                    message.content,
+                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                      color: textColor,
+                                      fontSize: fontSize,
+                                      height: 1.5,
+                                    ),
+                                  );
+                                },
                               )
                             else
-                              MarkdownBody(
-                                data: message.content,
-                                // ignore: deprecated_member_use
-                                imageBuilder: MarkdownHandlers.imageBuilder,
-                                onTapLink: (text, href, title) async {
-                                  if (href != null) {
-                                    final uri = Uri.tryParse(href);
-                                    if (uri != null &&
-                                        UrlValidator.isSecureUrl(uri) &&
-                                        await canLaunchUrl(uri)) {
-                                      await launchUrl(
-                                        uri,
-                                        mode: LaunchMode.externalApplication,
-                                      );
-                                    }
-                                  }
+                              Builder(
+                                builder: (context) {
+                                  final skillIds = storage
+                                      .getSkills()
+                                      .map((s) => s.id)
+                                      .toList();
+                                  final processed = _preprocessContent(
+                                      message.content, skillIds);
+                                  return MarkdownBody(
+                                    data: processed,
+                                    // ignore: deprecated_member_use
+                                    imageBuilder: MarkdownHandlers.imageBuilder,
+                                    onTapLink: (text, href, title) async {
+                                      if (href != null) {
+                                        if (href.startsWith('skill://')) {
+                                          final skillId =
+                                              href.replaceFirst('skill://', '');
+                                          context.push(
+                                              '/settings/skills/details/$skillId');
+                                          return;
+                                        }
+                                        final uri = Uri.tryParse(href);
+                                        if (uri != null &&
+                                            UrlValidator.isSecureUrl(uri) &&
+                                            await canLaunchUrl(uri)) {
+                                          await launchUrl(
+                                            uri,
+                                            mode:
+                                                LaunchMode.externalApplication,
+                                          );
+                                        }
+                                      }
+                                    },
+                                    styleSheet: _getStyleSheet(
+                                      theme,
+                                      fontSize,
+                                      textColor,
+                                    ),
+                                  );
                                 },
-                                styleSheet: _getStyleSheet(
-                                  theme,
-                                  fontSize,
-                                  textColor,
-                                ),
                               ),
                             if (message.attachments != null &&
                                 message.attachments!.isNotEmpty)
@@ -823,9 +884,8 @@ class _FocusedMenuOverlay extends ConsumerWidget {
     final radius = appearance.bubbleRadius;
     final fontSize = appearance.fontSize;
     final padding = appearance.chatPadding;
-    final textColor = bubbleColor.computeLuminance() > 0.5
-        ? Colors.black87
-        : Colors.white;
+    final textColor =
+        bubbleColor.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
 
     final screenHeight = MediaQuery.of(context).size.height;
     final showAbove = bubbleOffset.dy > screenHeight * 0.6;
@@ -975,19 +1035,19 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                             }
                           }
                         },
-                        styleSheet: MarkdownStyleSheet.fromTheme(theme)
-                            .copyWith(
-                              p: theme.textTheme.bodyMedium?.copyWith(
-                                color: textColor,
-                                fontSize: fontSize,
-                              ),
-                              code: theme.textTheme.bodyMedium?.copyWith(
-                                backgroundColor: textColor.withValues(
-                                  alpha: 0.08,
-                                ),
-                                fontSize: fontSize * 0.9,
-                              ),
+                        styleSheet:
+                            MarkdownStyleSheet.fromTheme(theme).copyWith(
+                          p: theme.textTheme.bodyMedium?.copyWith(
+                            color: textColor,
+                            fontSize: fontSize,
+                          ),
+                          code: theme.textTheme.bodyMedium?.copyWith(
+                            backgroundColor: textColor.withValues(
+                              alpha: 0.08,
                             ),
+                            fontSize: fontSize * 0.9,
+                          ),
+                        ),
                       ),
                     // Timestamp display in overlay
                     Padding(
@@ -1015,7 +1075,7 @@ class _FocusedMenuOverlay extends ConsumerWidget {
             left: isUser ? null : bubbleOffset.dx,
             right: isUser
                 ? MediaQuery.of(context).size.width -
-                      (bubbleOffset.dx + bubbleSize.width)
+                    (bubbleOffset.dx + bubbleSize.width)
                 : null,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -1052,17 +1112,14 @@ class _FocusedMenuOverlay extends ConsumerWidget {
                         : Icons.volume_up_rounded,
                     isSpeaking ? 'Stop' : 'Speak',
                     () {
-                      ref
-                          .read(ttsProvider.notifier)
-                          .speak(
+                      ref.read(ttsProvider.notifier).speak(
                             message.content,
                             message.timestamp.toIso8601String(),
                           );
                       Navigator.pop(context);
                     },
-                    iconColor: isSpeaking
-                        ? colorScheme.error
-                        : colorScheme.onSurface,
+                    iconColor:
+                        isSpeaking ? colorScheme.error : colorScheme.onSurface,
                   ),
                   _buildActionChip(context, Icons.copy_rounded, 'Copy', () {
                     Clipboard.setData(ClipboardData(text: message.content));

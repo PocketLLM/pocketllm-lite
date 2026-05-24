@@ -384,16 +384,15 @@ class _AnimatedItem extends StatelessWidget {
           curve: Interval(start, end, curve: AppMotion.curveEnter),
         );
 
-        final slide =
-            Tween<Offset>(
-              begin: const Offset(0, 0.2),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: controller,
-                curve: Interval(start, end, curve: AppMotion.curveOvershoot),
-              ),
-            );
+        final slide = Tween<Offset>(
+          begin: const Offset(0, 0.2),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: controller,
+            curve: Interval(start, end, curve: AppMotion.curveOvershoot),
+          ),
+        );
 
         return FadeTransition(
           opacity: fade,

@@ -14,8 +14,8 @@ class LocalInferenceService implements InferenceService {
     cactus.CactusLM? lm,
     ErrorLogService? errorLogService,
     this.contextSize = 2048,
-  }) : _lm = lm ?? cactus.CactusLM(),
-       _errorLogService = errorLogService;
+  })  : _lm = lm ?? cactus.CactusLM(),
+        _errorLogService = errorLogService;
 
   @override
   Future<bool> isAvailable() async {
@@ -139,9 +139,8 @@ class LocalInferenceService implements InferenceService {
       final result = await streamed.result;
       _lastMetrics = InferenceMetrics(
         tokensPerSecond: result.tokensPerSecond,
-        millisecondsPerToken: result.tokensPerSecond > 0
-            ? 1000 / result.tokensPerSecond
-            : 0,
+        millisecondsPerToken:
+            result.tokensPerSecond > 0 ? 1000 / result.tokensPerSecond : 0,
         totalTime: Duration(milliseconds: result.totalTimeMs.round()),
         promptTokens: result.prefillTokens,
         completionTokens: result.decodeTokens,

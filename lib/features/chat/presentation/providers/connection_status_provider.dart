@@ -57,5 +57,5 @@ class ConnectionCheckerNotifier extends AsyncNotifier<bool> {
 /// Provider that automatically checks connection status periodically
 final autoConnectionStatusProvider =
     AsyncNotifierProvider<ConnectionCheckerNotifier, bool>(
-      ConnectionCheckerNotifier.new,
-    );
+  ConnectionCheckerNotifier.new,
+);

@@ -17,6 +17,7 @@ import '../providers/editing_message_provider.dart';
 import '../../domain/models/text_file_attachment.dart';
 import '../../domain/models/chat_message.dart';
 import '../../domain/models/chat_persona.dart';
+import '../../domain/models/skill.dart';
 import 'templates_sheet.dart';
 import '../providers/audio_provider.dart';
 
@@ -28,17 +29,28 @@ class ChatInput extends ConsumerStatefulWidget {
 }
 
 class _ChatInputState extends ConsumerState<ChatInput> {
-  final _controller = TextEditingController();
+  late final SkillHighlightController _controller;
   final _focusNode = FocusNode();
   final _picker = ImagePicker();
   final List<Uint8List> _selectedImages = [];
   final List<TextFileAttachment> _selectedFiles = [];
   Timer? _debounceTimer;
   bool _limitHapticTriggered = false;
+  List<Skill> _suggestions = [];
 
   @override
   void initState() {
     super.initState();
+    _controller = SkillHighlightController(
+      getSkillIds: () {
+        if (!mounted) return [];
+        return ref
+            .read(storageServiceProvider)
+            .getSkills()
+            .map((s) => s.id)
+            .toList();
+      },
+    );
     _loadDraft();
     _controller.addListener(_onTextChanged);
   }
@@ -78,6 +90,71 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       _limitHapticTriggered = true;
     } else if (!hasReachedLimit) {
       _limitHapticTriggered = false;
+    }
+
+    // Check for autocomplete suggestions
+    final text = _controller.text;
+    final selection = _controller.selection;
+    if (selection.baseOffset >= 0) {
+      final cursorOffset = selection.baseOffset;
+      int wordStart = cursorOffset;
+      while (wordStart > 0 &&
+          text[wordStart - 1] != ' ' &&
+          text[wordStart - 1] != '\n') {
+        wordStart--;
+      }
+      final currentWord = text.substring(wordStart, cursorOffset);
+      if (currentWord.startsWith('/')) {
+        final query = currentWord.substring(1).toLowerCase();
+        final allSkills = ref
+            .read(storageServiceProvider)
+            .getSkills()
+            .where((s) => s.isEnabled)
+            .toList();
+        final matches = allSkills
+            .where((s) =>
+                s.id.startsWith(query) || s.title.toLowerCase().contains(query))
+            .toList();
+        setState(() {
+          _suggestions = matches;
+        });
+      } else {
+        if (_suggestions.isNotEmpty) {
+          setState(() {
+            _suggestions = [];
+          });
+        }
+      }
+    } else {
+      if (_suggestions.isNotEmpty) {
+        setState(() {
+          _suggestions = [];
+        });
+      }
+    }
+  }
+
+  void _applySuggestion(Skill skill) {
+    final text = _controller.text;
+    final selection = _controller.selection;
+    if (selection.baseOffset >= 0) {
+      final cursorOffset = selection.baseOffset;
+      int wordStart = cursorOffset;
+      while (wordStart > 0 &&
+          text[wordStart - 1] != ' ' &&
+          text[wordStart - 1] != '\n') {
+        wordStart--;
+      }
+      final newText =
+          text.replaceRange(wordStart, cursorOffset, '/${skill.id} ');
+      setState(() {
+        _controller.text = newText;
+        _controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: wordStart + skill.id.length + 2),
+        );
+        _suggestions = [];
+      });
+      _focusNode.requestFocus();
     }
   }
 
@@ -184,9 +261,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           name: file.name,
           content: content,
           sizeBytes: file.bytes!.lengthInBytes,
-          mimeType: file.extension != null
-              ? 'text/${file.extension}'
-              : 'text/plain',
+          mimeType:
+              file.extension != null ? 'text/${file.extension}' : 'text/plain',
         ),
       );
     });
@@ -267,9 +343,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       HapticFeedback.lightImpact();
     }
 
-    final imagesToSend = _selectedImages
-        .map((bytes) => base64Encode(bytes))
-        .toList();
+    final imagesToSend =
+        _selectedImages.map((bytes) => base64Encode(bytes)).toList();
 
     final sessionId = ref.read(chatProvider).currentSessionId;
     final draftKey = sessionId ?? 'new_chat';
@@ -278,18 +353,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final editingMessage = ref.read(editingMessageProvider);
 
     if (editingMessage != null) {
-      await ref
-          .read(chatProvider.notifier)
-          .editMessage(
+      await ref.read(chatProvider.notifier).editMessage(
             editingMessage,
             _controller.text,
             attachments: _selectedFiles.isNotEmpty ? _selectedFiles : null,
           );
       ref.read(editingMessageProvider.notifier).clearEditingMessage();
     } else {
-      ref
-          .read(chatProvider.notifier)
-          .sendMessage(
+      ref.read(chatProvider.notifier).sendMessage(
             _controller.text,
             images: imagesToSend.isNotEmpty ? imagesToSend : null,
             attachments: _selectedFiles.isNotEmpty ? _selectedFiles : null,
@@ -517,6 +588,83 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Skills suggestions panel
+              if (_suggestions.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      height: 52,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _suggestions.length,
+                        itemBuilder: (context, idx) {
+                          final skill = _suggestions[idx];
+                          return Card(
+                            margin: const EdgeInsets.only(right: 8.0),
+                            elevation: 0,
+                            color: colorScheme.surfaceContainerHigh,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                color: colorScheme.outlineVariant
+                                    .withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: InkWell(
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                _applySuggestion(skill);
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0, vertical: 8.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.extension_rounded,
+                                      size: 18,
+                                      color: colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          skill.title,
+                                          style: theme.textTheme.labelMedium
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          '/${skill.id}',
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                            color: colorScheme.primary,
+                                            fontFamily: 'monospace',
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
               Container(
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHigh,
@@ -712,6 +860,31 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               controller: _controller,
                               focusNode: _focusNode,
                               enabled: !isGenerating && !_isEnhancing,
+                              onTap: () {
+                                final text = _controller.text;
+                                final offset = _controller.selection.baseOffset;
+                                if (offset >= 0) {
+                                  final skills = ref
+                                      .read(storageServiceProvider)
+                                      .getSkills();
+                                  for (final skill in skills) {
+                                    final token = '/${skill.id}';
+                                    int start = 0;
+                                    while ((start =
+                                            text.indexOf(token, start)) !=
+                                        -1) {
+                                      final end = start + token.length;
+                                      if (offset >= start && offset <= end) {
+                                        HapticFeedback.lightImpact();
+                                        context.push(
+                                            '/settings/skills/details/${skill.id}');
+                                        return;
+                                      }
+                                      start = end;
+                                    }
+                                  }
+                                }
+                              },
                               textCapitalization: TextCapitalization.sentences,
                               keyboardType: TextInputType.multiline,
                               maxLines: 6,
@@ -721,13 +894,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                 fontSize: 16,
                               ),
                               maxLength: AppConstants.maxInputLength,
-                              buildCounter:
-                                  (
-                                    context, {
-                                    required currentLength,
-                                    required isFocused,
-                                    required maxLength,
-                                  }) => null,
+                              buildCounter: (
+                                context, {
+                                required currentLength,
+                                required isFocused,
+                                required maxLength,
+                              }) =>
+                                  null,
                               decoration: InputDecoration(
                                 hintText: _isEnhancing
                                     ? 'Enhancing your prompt...'
@@ -738,9 +911,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                       : colorScheme.onSurfaceVariant.withValues(
                                           alpha: 0.5,
                                         ),
-                                  fontStyle: _isEnhancing
-                                      ? FontStyle.italic
-                                      : null,
+                                  fontStyle:
+                                      _isEnhancing ? FontStyle.italic : null,
                                 ),
                                 border: InputBorder.none,
                                 enabledBorder: InputBorder.none,
@@ -778,9 +950,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                         onTap: isGenerating
                                             ? null
                                             : () => _showPersonaPicker(
-                                                context,
-                                                ref,
-                                              ),
+                                                  context,
+                                                  ref,
+                                                ),
                                         child: Container(
                                           width: 32,
                                           height: 32,
@@ -850,19 +1022,18 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                           _controller.text = words;
                                           _controller.selection =
                                               TextSelection.fromPosition(
-                                                TextPosition(
-                                                  offset: words.length,
-                                                ),
-                                              );
+                                            TextPosition(
+                                              offset: words.length,
+                                            ),
+                                          );
                                         }
                                       });
                                     }
                                   },
                                   isDisabled: isGenerating,
                                   colorScheme: colorScheme,
-                                  iconColor: isListening
-                                      ? colorScheme.error
-                                      : null,
+                                  iconColor:
+                                      isListening ? colorScheme.error : null,
                                 ),
                                 if (isListening) ...[
                                   const SizedBox(width: 4),
@@ -874,10 +1045,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                             stream: sttState.amplitudeStream!,
                                             barBuilder: (anim, amp) =>
                                                 WaveFormBar(
-                                                  animation: anim,
-                                                  amplitude: amp,
-                                                  color: colorScheme.error,
-                                                ),
+                                              animation: anim,
+                                              amplitude: amp,
+                                              color: colorScheme.error,
+                                            ),
                                           )
                                         : const Center(
                                             child: SizedBox(
@@ -937,18 +1108,17 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                           '$charCount/$maxLength',
                                           style: theme.textTheme.labelSmall
                                               ?.copyWith(
-                                                color: remaining <= 200
-                                                    ? colorScheme.error
-                                                    : colorScheme
-                                                          .onSurfaceVariant
-                                                          .withValues(
-                                                            alpha: 0.5,
-                                                          ),
-                                                fontFeatures: const [
-                                                  FontFeature.tabularFigures(),
-                                                ],
-                                                fontSize: 10,
-                                              ),
+                                            color: remaining <= 200
+                                                ? colorScheme.error
+                                                : colorScheme.onSurfaceVariant
+                                                    .withValues(
+                                                    alpha: 0.5,
+                                                  ),
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                            fontSize: 10,
+                                          ),
                                         ),
                                       ),
                                     );
@@ -960,9 +1130,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   builder: (context, value, child) {
                                     final canSend =
                                         (value.text.trim().isNotEmpty ||
-                                            _selectedImages.isNotEmpty ||
-                                            _selectedFiles.isNotEmpty) &&
-                                        !isGenerating;
+                                                _selectedImages.isNotEmpty ||
+                                                _selectedFiles.isNotEmpty) &&
+                                            !isGenerating;
 
                                     return AnimatedContainer(
                                       duration: const Duration(
@@ -988,9 +1158,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                           transitionBuilder:
                                               (child, animation) =>
                                                   ScaleTransition(
-                                                    scale: animation,
-                                                    child: child,
-                                                  ),
+                                            scale: animation,
+                                            child: child,
+                                          ),
                                           child: isGenerating
                                               ? SizedBox(
                                                   key: const ValueKey(
@@ -998,13 +1168,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                                   ),
                                                   width: 16,
                                                   height: 16,
-                                                  child: CircularProgressIndicator(
+                                                  child:
+                                                      CircularProgressIndicator(
                                                     strokeWidth: 2,
                                                     valueColor:
                                                         AlwaysStoppedAnimation(
-                                                          colorScheme
-                                                              .surfaceContainer,
-                                                        ),
+                                                      colorScheme
+                                                          .surfaceContainer,
+                                                    ),
                                                   ),
                                                 )
                                               : Icon(
@@ -1015,9 +1186,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                                   color: canSend
                                                       ? colorScheme.surface
                                                       : colorScheme.onSurface
-                                                            .withValues(
-                                                              alpha: 0.25,
-                                                            ),
+                                                          .withValues(
+                                                          alpha: 0.25,
+                                                        ),
                                                   size: 18,
                                                 ),
                                         ),
@@ -1175,9 +1346,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       title: Text(
                         persona.name,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                           color: isSelected
                               ? colorScheme.primary
                               : colorScheme.onSurface,
@@ -1263,8 +1433,7 @@ class _InputActionButton extends StatelessWidget {
                     : Icon(
                         icon,
                         size: 20,
-                        color:
-                            iconColor ??
+                        color: iconColor ??
                             colorScheme.onSurfaceVariant.withValues(
                               alpha: isDisabled ? 0.35 : 0.8,
                             ),
@@ -1275,5 +1444,52 @@ class _InputActionButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class SkillHighlightController extends TextEditingController {
+  final List<String> Function() getSkillIds;
+
+  SkillHighlightController({
+    required this.getSkillIds,
+    super.text,
+  });
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final textVal = text;
+    final skillIds = getSkillIds();
+    if (skillIds.isEmpty || textVal.isEmpty) {
+      return TextSpan(text: textVal, style: style);
+    }
+
+    final children = <TextSpan>[];
+    final colorScheme = Theme.of(context).colorScheme;
+    final highlightStyle = (style ?? const TextStyle()).copyWith(
+      color: colorScheme.primary,
+      fontWeight: FontWeight.bold,
+    );
+
+    final escapedIds = skillIds.map(RegExp.escape).join('|');
+    final pattern = RegExp(r'\/(' + escapedIds + r')\b');
+
+    textVal.splitMapJoin(
+      pattern,
+      onMatch: (Match match) {
+        final matchedText = match[0]!;
+        children.add(TextSpan(text: matchedText, style: highlightStyle));
+        return '';
+      },
+      onNonMatch: (String nonMatch) {
+        children.add(TextSpan(text: nonMatch, style: style));
+        return '';
+      },
+    );
+
+    return TextSpan(children: children, style: style);
   }
 }

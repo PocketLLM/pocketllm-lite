@@ -176,7 +176,6 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
               },
             ),
             const SizedBox(height: 16),
-
             if (isJson) ...[
               const Text(
                 'Content',
@@ -265,8 +264,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed:
-              (_isLoading ||
+          onPressed: (_isLoading ||
                   (isJson &&
                       !_includeChats &&
                       !_includePrompts &&

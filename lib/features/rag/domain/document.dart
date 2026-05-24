@@ -14,20 +14,20 @@ class DocumentChunk {
   });
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'documentId': documentId,
-    'content': content,
-    'index': index,
-    'metadata': metadata,
-  };
+        'id': id,
+        'documentId': documentId,
+        'content': content,
+        'index': index,
+        'metadata': metadata,
+      };
 
   factory DocumentChunk.fromJson(Map<String, dynamic> json) => DocumentChunk(
-    id: json['id'],
-    documentId: json['documentId'],
-    content: json['content'],
-    index: json['index'],
-    metadata: json['metadata'] ?? {},
-  );
+        id: json['id'],
+        documentId: json['documentId'],
+        content: json['content'],
+        index: json['index'],
+        metadata: json['metadata'] ?? {},
+      );
 }
 
 class IngestedDocument {
@@ -50,14 +50,14 @@ class IngestedDocument {
   });
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'title': title,
-    'filename': filename,
-    'totalChunks': totalChunks,
-    'sizeBytes': sizeBytes,
-    'ingestedAt': ingestedAt.toIso8601String(),
-    'metadata': metadata,
-  };
+        'id': id,
+        'title': title,
+        'filename': filename,
+        'totalChunks': totalChunks,
+        'sizeBytes': sizeBytes,
+        'ingestedAt': ingestedAt.toIso8601String(),
+        'metadata': metadata,
+      };
 
   factory IngestedDocument.fromJson(Map<String, dynamic> json) =>
       IngestedDocument(

@@ -87,8 +87,7 @@ class BarChartPainter extends CustomPainter {
     for (int i = 0; i < activity.length; i++) {
       final item = activity[i];
       final double barHeight = (item.chatCount / effectiveMax) * chartHeight;
-      final double x =
-          (i * size.width / activity.length) +
+      final double x = (i * size.width / activity.length) +
           (size.width / activity.length - barWidth) / 2;
 
       // Draw background pill (full height)
@@ -101,9 +100,8 @@ class BarChartPainter extends CustomPainter {
       // Draw active pill (value height)
       if (item.chatCount > 0) {
         // Minimum height to be visible as a pill
-        final double effectiveBarHeight = barHeight < barWidth
-            ? barWidth
-            : barHeight;
+        final double effectiveBarHeight =
+            barHeight < barWidth ? barWidth : barHeight;
 
         final y = chartHeight - effectiveBarHeight;
 

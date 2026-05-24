@@ -36,10 +36,9 @@ class ChatMessage {
     List<String>? images,
     List<TextFileAttachment>? attachments,
     this.thinkingContent,
-  }) : images = images != null ? List.unmodifiable(images) : null,
-       attachments = attachments != null
-           ? List.unmodifiable(attachments)
-           : null;
+  })  : images = images != null ? List.unmodifiable(images) : null,
+        attachments =
+            attachments != null ? List.unmodifiable(attachments) : null;
 
   ChatMessage copyWith({
     String? role,

@@ -12,6 +12,17 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.20] - 2026-05-24
+
+### Added
+- **Agent Skills (SKILL.md) System**: Comprehensive support to manage and execute custom AI skills following standard frontmatter & markdown formats.
+- **GitHub URL Skill Installer**: Native capability to download, parse, preview, and install skills directly from any GitHub or raw SKILL.md URL.
+- **Manual Skill CRUD**: Beautiful modal form interfaces to create, read, edit, enable/disable, and delete custom skills locally.
+- **Smart Chat Input Autocomplete**: Real-time popups with horizontal Material 3 recommendation cards of matched skills as the user types `/`.
+- **In-Input Highlight & Navigation**: Automatically highlights `/skill_id` in bold blue inside the text input field, and redirects the user to the skill details screen if tapped.
+- **Inter-Bubble Clickable Badges**: Preprocesses message content for skill commands, rendering them as interactive clickable badges in both user and assistant conversation bubbles.
+- **Dynamic Turn-Based LLM Conditioning**: Scans user query messages, fetches matching active skill instructions, and appends them to the system instructions dynamically before executing inference.
+
 ## [1.0.19] - 2026-05-18
 
 ### Fixed

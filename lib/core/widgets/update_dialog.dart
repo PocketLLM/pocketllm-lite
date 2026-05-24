@@ -80,66 +80,65 @@ class _UpdateDialogState extends State<UpdateDialog>
       _updateService
           .downloadAndInstallUpdate(widget.release.apkDownloadUrl!)
           .listen(
-            (event) {
-              setState(() {
-                switch (event.status) {
-                  case OtaStatus.DOWNLOADING:
-                    _status = 'Downloading update...';
-                    _downloadProgress =
-                        double.tryParse(event.value ?? '0') ?? 0;
-                    _downloadProgress = _downloadProgress / 100;
-                    break;
-                  case OtaStatus.INSTALLING:
-                    _status = 'Installing update...';
-                    _downloadProgress = 1.0;
-                    break;
-                  case OtaStatus.INSTALLATION_DONE:
-                    _status = 'Installation complete!';
-                    _isDownloading = false;
-                    // Close the dialog after successful installation
-                    if (mounted) {
-                      Navigator.of(context).pop();
-                    }
-                    break;
-                  case OtaStatus.ALREADY_RUNNING_ERROR:
-                    _error = 'Download already in progress';
-                    _isDownloading = false;
-                    break;
-                  case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
-                    _error =
-                        'Permission denied. Please enable "Install from unknown sources" in settings.';
-                    _isDownloading = false;
-                    break;
-                  case OtaStatus.INTERNAL_ERROR:
-                    _error = 'An error occurred: ${event.value}';
-                    _isDownloading = false;
-                    break;
-                  case OtaStatus.DOWNLOAD_ERROR:
-                    _error = 'Download failed. Please check your connection.';
-                    _isDownloading = false;
-                    break;
-                  case OtaStatus.CHECKSUM_ERROR:
-                    _error = 'File verification failed. Please try again.';
-                    _isDownloading = false;
-                    break;
-                  case OtaStatus.INSTALLATION_ERROR:
-                    _error = 'Installation failed. Please try again.';
-                    _isDownloading = false;
-                    break;
-                  case OtaStatus.CANCELED:
-                    _error = 'Download was canceled.';
-                    _isDownloading = false;
-                    break;
-                }
-              });
-            },
-            onError: (e) {
-              setState(() {
-                _error = 'Error: $e';
+        (event) {
+          setState(() {
+            switch (event.status) {
+              case OtaStatus.DOWNLOADING:
+                _status = 'Downloading update...';
+                _downloadProgress = double.tryParse(event.value ?? '0') ?? 0;
+                _downloadProgress = _downloadProgress / 100;
+                break;
+              case OtaStatus.INSTALLING:
+                _status = 'Installing update...';
+                _downloadProgress = 1.0;
+                break;
+              case OtaStatus.INSTALLATION_DONE:
+                _status = 'Installation complete!';
                 _isDownloading = false;
-              });
-            },
-          );
+                // Close the dialog after successful installation
+                if (mounted) {
+                  Navigator.of(context).pop();
+                }
+                break;
+              case OtaStatus.ALREADY_RUNNING_ERROR:
+                _error = 'Download already in progress';
+                _isDownloading = false;
+                break;
+              case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
+                _error =
+                    'Permission denied. Please enable "Install from unknown sources" in settings.';
+                _isDownloading = false;
+                break;
+              case OtaStatus.INTERNAL_ERROR:
+                _error = 'An error occurred: ${event.value}';
+                _isDownloading = false;
+                break;
+              case OtaStatus.DOWNLOAD_ERROR:
+                _error = 'Download failed. Please check your connection.';
+                _isDownloading = false;
+                break;
+              case OtaStatus.CHECKSUM_ERROR:
+                _error = 'File verification failed. Please try again.';
+                _isDownloading = false;
+                break;
+              case OtaStatus.INSTALLATION_ERROR:
+                _error = 'Installation failed. Please try again.';
+                _isDownloading = false;
+                break;
+              case OtaStatus.CANCELED:
+                _error = 'Download was canceled.';
+                _isDownloading = false;
+                break;
+            }
+          });
+        },
+        onError: (e) {
+          setState(() {
+            _error = 'Error: $e';
+            _isDownloading = false;
+          });
+        },
+      );
     } catch (e) {
       setState(() {
         _error = 'Failed to start download: $e';
@@ -295,11 +294,11 @@ class _UpdateDialogState extends State<UpdateDialog>
                         ),
                         child: MarkdownBody(
                           data: widget.release.body,
-                          styleSheet: MarkdownStyleSheet.fromTheme(theme)
-                              .copyWith(
-                                p: theme.textTheme.bodyMedium,
-                                listBullet: theme.textTheme.bodyMedium,
-                              ),
+                          styleSheet:
+                              MarkdownStyleSheet.fromTheme(theme).copyWith(
+                            p: theme.textTheme.bodyMedium,
+                            listBullet: theme.textTheme.bodyMedium,
+                          ),
                         ),
                       ),
                     ],

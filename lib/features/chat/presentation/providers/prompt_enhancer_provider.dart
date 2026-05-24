@@ -60,5 +60,5 @@ class PromptEnhancerNotifier extends Notifier<PromptEnhancerState> {
 
 final promptEnhancerProvider =
     NotifierProvider<PromptEnhancerNotifier, PromptEnhancerState>(
-      PromptEnhancerNotifier.new,
-    );
+  PromptEnhancerNotifier.new,
+);

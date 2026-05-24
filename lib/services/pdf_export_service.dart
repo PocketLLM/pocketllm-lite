@@ -83,9 +83,8 @@ class PdfExportService {
 
   pw.Widget _buildMessage(dynamic message) {
     final isUser = message.role == 'user';
-    final align = isUser
-        ? pw.CrossAxisAlignment.end
-        : pw.CrossAxisAlignment.start;
+    final align =
+        isUser ? pw.CrossAxisAlignment.end : pw.CrossAxisAlignment.start;
     final bg = isUser ? PdfColors.blue100 : PdfColors.grey100;
     final textColor = PdfColors.black;
 

@@ -48,9 +48,8 @@ class M3AppBar extends StatelessWidget implements PreferredSizeWidget {
       titleContent = titleWidget!;
     } else if (subtitle != null) {
       titleContent = Column(
-        crossAxisAlignment: centerTitle
-            ? CrossAxisAlignment.center
-            : CrossAxisAlignment.start,
+        crossAxisAlignment:
+            centerTitle ? CrossAxisAlignment.center : CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
@@ -83,8 +82,7 @@ class M3AppBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 1,
       backgroundColor: backgroundColor ?? colorScheme.surface,
       surfaceTintColor: colorScheme.surfaceTint,
-      leading:
-          leading ??
+      leading: leading ??
           (automaticallyImplyLeading
               ? IconButton(
                   icon: const Icon(Icons.arrow_back_rounded),

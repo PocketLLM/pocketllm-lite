@@ -37,8 +37,8 @@ class ErrorEntry {
     this.details,
     this.suggestedFix,
     this.stackTrace,
-  }) : id = id ?? const Uuid().v4(),
-       timestamp = timestamp ?? DateTime.now();
+  })  : id = id ?? const Uuid().v4(),
+        timestamp = timestamp ?? DateTime.now();
 
   Map<String, dynamic> toJson() {
     return {
@@ -56,8 +56,7 @@ class ErrorEntry {
   factory ErrorEntry.fromJson(Map<String, dynamic> json) {
     return ErrorEntry(
       id: json['id']?.toString(),
-      timestamp:
-          DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
+      timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
       severity: ErrorSeverity.values.firstWhere(
         (value) => value.name == json['severity'],

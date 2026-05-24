@@ -65,8 +65,8 @@ class ModelBrowserNotifier extends Notifier<ModelBrowserState> {
 
 final modelBrowserProvider =
     NotifierProvider<ModelBrowserNotifier, ModelBrowserState>(
-      ModelBrowserNotifier.new,
-    );
+  ModelBrowserNotifier.new,
+);
 
 final modelDetailsProvider = FutureProvider.family<HFModel, String>((
   ref,

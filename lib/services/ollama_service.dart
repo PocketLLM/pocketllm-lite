@@ -11,8 +11,8 @@ class OllamaService {
   final http.Client _client;
 
   OllamaService({String? baseUrl, http.Client? client})
-    : _baseUrl = baseUrl ?? AppConstants.defaultOllamaBaseUrl,
-      _client = client ?? http.Client() {
+      : _baseUrl = baseUrl ?? AppConstants.defaultOllamaBaseUrl,
+        _client = client ?? http.Client() {
     // Security: Validate URL scheme to prevent non-HTTP protocols
     if (!UrlValidator.isHttpUrlString(_baseUrl)) {
       throw ArgumentError(
@@ -109,11 +109,10 @@ class OllamaService {
       if (streamedResponse.statusCode == 200) {
         // Use LineSplitter to correctly handle chunks that might be split
         // across JSON object boundaries, ensuring no data is lost and reducing string allocations.
-        await for (final line
-            in streamedResponse.stream
-                .timeout(AppConstants.apiGenerationTimeout)
-                .transform(utf8.decoder)
-                .transform(const LineSplitter())) {
+        await for (final line in streamedResponse.stream
+            .timeout(AppConstants.apiGenerationTimeout)
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())) {
           if (line.trim().isEmpty) continue;
           try {
             final json = jsonDecode(line);
@@ -157,11 +156,10 @@ class OllamaService {
 
       if (streamedResponse.statusCode == 200) {
         // Use LineSplitter to properly handle split chunks in NDJSON stream
-        await for (final line
-            in streamedResponse.stream
-                .timeout(AppConstants.apiGenerationTimeout)
-                .transform(utf8.decoder)
-                .transform(const LineSplitter())) {
+        await for (final line in streamedResponse.stream
+            .timeout(AppConstants.apiGenerationTimeout)
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())) {
           if (line.trim().isEmpty) continue;
           try {
             final json = jsonDecode(line);
@@ -195,9 +193,8 @@ class OllamaService {
     final url = Uri.parse('$_baseUrl/api/chat');
 
     // Truncate input to 2000 chars max
-    final truncatedInput = userInput.length > 2000
-        ? userInput.substring(0, 2000)
-        : userInput;
+    final truncatedInput =
+        userInput.length > 2000 ? userInput.substring(0, 2000) : userInput;
 
     final body = {
       "model": model,
