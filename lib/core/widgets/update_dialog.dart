@@ -224,7 +224,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                 gradient: LinearGradient(
                   colors: [
                     theme.colorScheme.primary,
-                    theme.colorScheme.primary.withOpacity(0.8),
+                    theme.colorScheme.primary.withValues(alpha: 0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -247,7 +247,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -276,7 +276,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -364,7 +364,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                                         borderRadius: BorderRadius.circular(5),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: theme.colorScheme.primary.withOpacity(0.3),
+                                            color: theme.colorScheme.primary.withValues(alpha: 0.3),
                                             blurRadius: 4,
                                             offset: const Offset(0, 1),
                                           ),
@@ -382,7 +382,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                       Text(
                         'Installing the update will automatically replace the old application. Please keep the app open.',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -394,7 +394,7 @@ class _UpdateDialogState extends State<UpdateDialog>
               Container(
                 height: 24,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.1),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(20),
                     bottomRight: Radius.circular(20),
@@ -421,10 +421,10 @@ class _UpdateDialogState extends State<UpdateDialog>
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surfaceContainerHighest
-                                .withOpacity(0.5),
+                                .withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: theme.colorScheme.outline.withOpacity(0.3),
+                              color: theme.colorScheme.outline.withValues(alpha: 0.3),
                             ),
                           ),
                           child: MarkdownBody(
@@ -442,7 +442,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
+                            color: Colors.orange.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -471,7 +471,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.error.withOpacity(0.1),
+                            color: theme.colorScheme.error.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -504,7 +504,7 @@ class _UpdateDialogState extends State<UpdateDialog>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(20),
                     bottomRight: Radius.circular(20),
@@ -646,11 +646,11 @@ class _WaveformLoaderState extends State<WaveformLoader>
               width: widget.barWidth,
               height: height,
               decoration: BoxDecoration(
-                color: activeColor.withOpacity(0.3 + (value * 0.7)),
+                color: activeColor.withValues(alpha: 0.3 + (value * 0.7)),
                 borderRadius: BorderRadius.circular(widget.barWidth / 2),
                 boxShadow: [
                   BoxShadow(
-                    color: activeColor.withOpacity(value * 0.3),
+                    color: activeColor.withValues(alpha: value * 0.3),
                     blurRadius: 6,
                     spreadRadius: 0,
                   ),
@@ -663,4 +663,5 @@ class _WaveformLoaderState extends State<WaveformLoader>
     );
   }
 }
+
 

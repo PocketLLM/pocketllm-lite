@@ -972,38 +972,40 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             padding: const EdgeInsets.only(top: 8, bottom: 2),
                             child: Row(
                               children: [
-                                // Left action buttons
-                                // 1. Beautiful Persona Picker Button (from screenshot)
-                                Semantics(
-                                  label: 'Select Persona',
-                                  button: true,
-                                  child: Tooltip(
-                                    message:
-                                        'Active Persona: ${activePersona.name}',
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      shape: const CircleBorder(),
-                                      clipBehavior: Clip.antiAlias,
-                                      child: InkWell(
-                                        onTap: isGenerating
-                                            ? null
-                                            : () => _showPersonaPicker(
-                                                  context,
-                                                  ref,
+                                // Left action buttons - Hidden during voice dictation to save space and focus user
+                                if (!isListening) ...[
+                                  // 1. Beautiful Persona Picker Button (from screenshot)
+                                  Semantics(
+                                    label: 'Select Persona',
+                                    button: true,
+                                    child: Tooltip(
+                                      message:
+                                          'Active Persona: ${activePersona.name}',
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        shape: const CircleBorder(),
+                                        clipBehavior: Clip.antiAlias,
+                                        child: InkWell(
+                                          onTap: isGenerating
+                                              ? null
+                                              : () => _showPersonaPicker(
+                                                    context,
+                                                    ref,
+                                                  ),
+                                          child: Container(
+                                            width: 32,
+                                            height: 32,
+                                            decoration: BoxDecoration(
+                                              color: colorScheme.onSurface
+                                                  .withValues(alpha: 0.1),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                activePersona.avatarIcon,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
                                                 ),
-                                        child: Container(
-                                          width: 32,
-                                          height: 32,
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.onSurface
-                                                .withValues(alpha: 0.1),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              activePersona.avatarIcon,
-                                              style: const TextStyle(
-                                                fontSize: 16,
                                               ),
                                             ),
                                           ),
@@ -1011,36 +1013,36 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                       ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                // 2. Image Picker Button (with Outline style from screenshot)
-                                _InputActionButton(
-                                  icon: Icons.image_outlined,
-                                  tooltip: 'Add Image',
-                                  onTap: _pickImage,
-                                  isDisabled: isGenerating,
-                                  colorScheme: colorScheme,
-                                ),
-                                const SizedBox(width: 4),
-                                // 3. Attach File Button
-                                _InputActionButton(
-                                  icon: Icons.attach_file_rounded,
-                                  tooltip: 'Attach File',
-                                  onTap: _pickFile,
-                                  isDisabled: isGenerating,
-                                  colorScheme: colorScheme,
-                                ),
-                                const SizedBox(width: 4),
-                                // 4. Templates Button
-                                _InputActionButton(
-                                  icon: Icons.bolt_rounded,
-                                  tooltip: 'Templates',
-                                  onTap: _showTemplates,
-                                  isDisabled: isGenerating,
-                                  colorScheme: colorScheme,
-                                ),
-                                const SizedBox(width: 4),
-                                // 5. Voice Input Button
+                                  const SizedBox(width: 6),
+                                  // 2. Image Picker Button (with Outline style from screenshot)
+                                  _InputActionButton(
+                                    icon: Icons.image_outlined,
+                                    tooltip: 'Add Image',
+                                    onTap: _pickImage,
+                                    isDisabled: isGenerating,
+                                    colorScheme: colorScheme,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  // 3. Attach File Button
+                                  _InputActionButton(
+                                    icon: Icons.attach_file_rounded,
+                                    tooltip: 'Attach File',
+                                    onTap: _pickFile,
+                                    isDisabled: isGenerating,
+                                    colorScheme: colorScheme,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  // 4. Templates Button
+                                  _InputActionButton(
+                                    icon: Icons.bolt_rounded,
+                                    tooltip: 'Templates',
+                                    onTap: _showTemplates,
+                                    isDisabled: isGenerating,
+                                    colorScheme: colorScheme,
+                                  ),
+                                  const SizedBox(width: 4),
+                                ],
+                                // 5. Voice Input Button (Always visible)
                                 _InputActionButton(
                                   icon: isListening
                                       ? Icons.mic_rounded
@@ -1055,13 +1057,33 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                     if (isListening) {
                                       notifier.stopListening();
                                     } else {
+                                      final originalText = _controller.text;
+                                      final selection = _controller.selection;
+                                      
+                                      // Split original text into prefix and suffix at the cursor position
+                                      final prefix = selection.baseOffset >= 0
+                                          ? originalText.substring(0, selection.baseOffset)
+                                          : originalText;
+                                      final suffix = selection.baseOffset >= 0
+                                          ? originalText.substring(selection.baseOffset)
+                                          : '';
+                                          
+                                      // Automatically add a space if the prefix does not already end with one
+                                      final spacing = (prefix.isNotEmpty && !prefix.endsWith(' '))
+                                          ? ' '
+                                          : '';
+
                                       notifier.startListening((words) {
                                         if (words.isNotEmpty) {
-                                          _controller.text = words;
+                                          _controller.text = '$prefix$spacing$words$suffix';
+                                          
+                                          // Set the selection cursor directly at the end of the newly spoken segment
+                                          final newCursorPosition = 
+                                              prefix.length + spacing.length + words.length;
                                           _controller.selection =
                                               TextSelection.fromPosition(
                                             TextPosition(
-                                              offset: words.length,
+                                              offset: newCursorPosition,
                                             ),
                                           );
                                         }
@@ -1073,29 +1095,31 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   iconColor:
                                       isListening ? colorScheme.error : null,
                                 ),
-                                const SizedBox(width: 4),
-                                // 5b. Web Search Toggle Button
-                                Consumer(
-                                  builder: (context, ref, child) {
-                                    final useWebSearch = ref.watch(
-                                      chatProvider.select((s) => s.useWebSearch),
-                                    );
-                                    return _InputActionButton(
-                                      icon: Icons.language_rounded,
-                                      tooltip: useWebSearch
-                                          ? 'Web Search Enabled'
-                                          : 'Web Search Disabled',
-                                      onTap: _toggleWebSearch,
-                                      isDisabled: isGenerating,
-                                      colorScheme: colorScheme,
-                                      iconColor: useWebSearch
-                                          ? colorScheme.primary
-                                          : null,
-                                    );
-                                  },
-                                ),
-                                if (isListening) ...[
+                                if (!isListening) ...[
                                   const SizedBox(width: 4),
+                                  // 5b. Web Search Toggle Button
+                                  Consumer(
+                                    builder: (context, ref, child) {
+                                      final useWebSearch = ref.watch(
+                                        chatProvider.select((s) => s.useWebSearch),
+                                      );
+                                      return _InputActionButton(
+                                        icon: Icons.language_rounded,
+                                        tooltip: useWebSearch
+                                            ? 'Web Search Enabled'
+                                            : 'Web Search Disabled',
+                                        onTap: _toggleWebSearch,
+                                        isDisabled: isGenerating,
+                                        colorScheme: colorScheme,
+                                        iconColor: useWebSearch
+                                            ? colorScheme.primary
+                                            : null,
+                                      );
+                                    },
+                                  ),
+                                ],
+                                if (isListening) ...[
+                                  const SizedBox(width: 8),
                                   SizedBox(
                                     width: 70,
                                     height: 24,
@@ -1120,34 +1144,36 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                           ),
                                   ),
                                 ],
-                                // 6. Enhance Prompt Button
-                                Consumer(
-                                  builder: (context, ref, child) {
-                                    final enhancerState = ref.watch(
-                                      promptEnhancerProvider,
-                                    );
-                                    final hasEnhancer =
-                                        enhancerState.selectedModelId != null;
+                                if (!isListening) ...[
+                                  // 6. Enhance Prompt Button
+                                  Consumer(
+                                    builder: (context, ref, child) {
+                                      final enhancerState = ref.watch(
+                                        promptEnhancerProvider,
+                                      );
+                                      final hasEnhancer =
+                                          enhancerState.selectedModelId != null;
 
-                                    if (!hasEnhancer) {
-                                      return const SizedBox.shrink();
-                                    }
+                                      if (!hasEnhancer) {
+                                        return const SizedBox.shrink();
+                                      }
 
-                                    final isDisabled =
-                                        isGenerating || _isEnhancing;
-                                    return Padding(
-                                      padding: const EdgeInsets.only(left: 4),
-                                      child: _InputActionButton(
-                                        icon: Icons.auto_awesome_rounded,
-                                        tooltip: 'Enhance Prompt',
-                                        onTap: _enhancePrompt,
-                                        isDisabled: isDisabled,
-                                        colorScheme: colorScheme,
-                                        isLoading: _isEnhancing,
-                                      ),
-                                    );
-                                  },
-                                ),
+                                      final isDisabled =
+                                          isGenerating || _isEnhancing;
+                                      return Padding(
+                                        padding: const EdgeInsets.only(left: 4),
+                                        child: _InputActionButton(
+                                          icon: Icons.auto_awesome_rounded,
+                                          tooltip: 'Enhance Prompt',
+                                          onTap: _enhancePrompt,
+                                          isDisabled: isDisabled,
+                                          colorScheme: colorScheme,
+                                          isLoading: _isEnhancing,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
                                 const Spacer(),
                                 // Character counter
                                 ValueListenableBuilder<TextEditingValue>(
