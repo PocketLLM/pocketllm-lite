@@ -14,6 +14,7 @@ import 'dialogs/chat_settings_dialog.dart';
 import 'screens/chat_history_screen.dart';
 import '../../media/presentation/screens/media_gallery_screen.dart';
 import '../../../core/widgets/m3_app_bar.dart';
+import '../../../providers/model_manager_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -22,10 +23,43 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends ConsumerState<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didHaveMemoryPressure() {
+    super.didHaveMemoryPressure();
+    final state = ref.read(modelManagerProvider);
+    if (state.activeLoadedId != null) {
+      ref.read(modelManagerProvider.notifier).unloadActiveModel();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Memory Pressure Alert: Local model unloaded from RAM to prevent application crash.',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -35,6 +69,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
     final modelsAsync = ref.watch(modelsProvider);
     final connectionStatusAsync = ref.watch(autoConnectionStatusProvider);
+    final localState = ref.watch(modelManagerProvider);
+    final activeLoadedId = localState.activeLoadedId;
+    final loadedModelName = activeLoadedId != null 
+        ? localState.models[activeLoadedId]?.name 
+        : null;
+
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -45,9 +85,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         titleWidget: Row(
           children: [
             Expanded(
-              child: connectionStatusAsync.when(
-                data: (isConnected) {
-                  if (!isConnected) {
+              child: activeLoadedId != null
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.tertiaryContainer,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.bolt_rounded,
+                            size: 16,
+                            color: colorScheme.onTertiaryContainer,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Local: ${loadedModelName ?? "GGUF Model"}',
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: colorScheme.onTertiaryContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : connectionStatusAsync.when(
+                      data: (isConnected) {
+                        if (!isConnected) {
                     return InkWell(
                       onTap: () => _showConnectionHelpDialog(context),
                       borderRadius: BorderRadius.circular(20),
@@ -233,6 +305,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               return const SizedBox.shrink();
             },
           ),
+          if (activeLoadedId != null)
+            IconButton(
+              icon: Icon(Icons.power_settings_new_rounded, color: colorScheme.error),
+              tooltip: 'Unload Local Model',
+              onPressed: () {
+                if (ref.read(storageServiceProvider).getSetting(
+                      AppConstants.hapticFeedbackKey,
+                      defaultValue: true,
+                    )) {
+                  HapticFeedback.selectionClick();
+                }
+                ref.read(modelManagerProvider.notifier).unloadActiveModel();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Local GGUF model unloaded from memory.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+            ),
+
           IconButton(
             icon: const Icon(Icons.photo_library_outlined),
             tooltip: 'Media Gallery',

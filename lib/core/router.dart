@@ -18,6 +18,8 @@ import '../features/settings/presentation/screens/system_prompt_details_screen.d
 import '../features/error_log/presentation/error_log_screen.dart';
 import '../features/model_browser/presentation/model_browser_screen.dart';
 import '../features/model_browser/presentation/model_detail_screen.dart';
+import '../features/model_browser/presentation/model_catalog_screen.dart';
+import '../features/model_browser/presentation/local_model_help_screen.dart';
 import '../features/rag/presentation/document_manager_screen.dart';
 import '../features/settings/presentation/screens/benchmark_screen.dart';
 import '../features/chat/presentation/screens/persona_management_screen.dart';
@@ -54,6 +56,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
         routes: [
+          GoRoute(
+            path: 'model-catalog',
+            builder: (context, state) => const ModelCatalogScreen(),
+          ),
+          GoRoute(
+            path: 'model-help',
+            builder: (context, state) => const LocalModelHelpScreen(),
+          ),
           GoRoute(
             path: 'error-log',
             builder: (context, state) => const ErrorLogScreen(),

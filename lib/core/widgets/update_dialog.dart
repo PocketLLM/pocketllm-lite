@@ -1,7 +1,10 @@
+import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:ota_update/ota_update.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/update_service.dart';
 
@@ -70,11 +73,43 @@ class _UpdateDialogState extends State<UpdateDialog>
 
     setState(() {
       _isDownloading = true;
-      _status = 'Preparing download...';
+      _status = 'Checking permissions...';
       _error = null;
     });
 
     HapticFeedback.mediumImpact();
+
+    // Check unknown sources installation permission on Android
+    if (Platform.isAndroid) {
+      try {
+        final status = await Permission.requestInstallPackages.status;
+        if (!status.isGranted) {
+          setState(() {
+            _status = 'Requesting installation permission...';
+          });
+          final result = await Permission.requestInstallPackages.request();
+          if (!result.isGranted) {
+            setState(() {
+              _error = 'Permission to install unknown apps is required. Please enable it in Settings.';
+              _isDownloading = false;
+            });
+            // Try to open settings for the user
+            await openAppSettings();
+            return;
+          }
+        }
+      } catch (e) {
+        setState(() {
+          _error = 'Permission check failed: $e';
+          _isDownloading = false;
+        });
+        return;
+      }
+    }
+
+    setState(() {
+      _status = 'Preparing download...';
+    });
 
     try {
       _updateService
@@ -189,7 +224,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                 gradient: LinearGradient(
                   colors: [
                     theme.colorScheme.primary,
-                    theme.colorScheme.primary.withValues(alpha: 0.8),
+                    theme.colorScheme.primary.withOpacity(0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -212,7 +247,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -241,7 +276,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
+                            color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -265,163 +300,218 @@ class _UpdateDialogState extends State<UpdateDialog>
               ),
             ),
 
-            // Content
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (widget.release.body.isNotEmpty) ...[
+            if (_isDownloading) ...[
+              // Modern, Expressive Download HUD
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const WaveformLoader(
+                        maxHeight: 48,
+                        minHeight: 12,
+                        barWidth: 5,
+                        barCount: 9,
+                      ),
+                      const SizedBox(height: 32),
+                      TweenAnimationBuilder<double>(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                        tween: Tween<double>(begin: 0, end: _downloadProgress),
+                        builder: (context, animatedValue, child) {
+                          return Column(
+                            children: [
+                              Text(
+                                '${(animatedValue * 100).toStringAsFixed(0)}%',
+                                style: theme.textTheme.displayMedium?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w900,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _status,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 24),
+                              Container(
+                                height: 16,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(3),
+                                  child: FractionallySizedBox(
+                                    alignment: Alignment.centerLeft,
+                                    widthFactor: animatedValue.clamp(0.0, 1.0),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            theme.colorScheme.primary,
+                                            theme.colorScheme.tertiary,
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(5),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: theme.colorScheme.primary.withOpacity(0.3),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
                       Text(
-                        "What's New",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        'Installing the update will automatically replace the old application. Please keep the app open.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: theme.colorScheme.outline.withValues(
-                              alpha: 0.3,
-                            ),
-                          ),
-                        ),
-                        child: MarkdownBody(
-                          data: widget.release.body,
-                          styleSheet:
-                              MarkdownStyleSheet.fromTheme(theme).copyWith(
-                            p: theme.textTheme.bodyMedium,
-                            listBullet: theme.textTheme.bodyMedium,
-                          ),
-                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
-                    if (widget.release.apkDownloadUrl == null) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.info_outline,
-                              color: Colors.orange,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'No APK available for direct download. You can download from GitHub releases.',
-                                style: TextStyle(
-                                  color: Colors.orange[800],
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    if (_error != null) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.error.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              color: theme.colorScheme.error,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _error!,
-                                style: TextStyle(
-                                  color: theme.colorScheme.error,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-
-            // Download Progress
-            if (_isDownloading) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _status,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
+              // Bottom spacer for aesthetics
+              Container(
+                height: 24,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                ),
+              ),
+            ] else ...[
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (widget.release.body.isNotEmpty) ...[
                         Text(
-                          '${(_downloadProgress * 100).toStringAsFixed(0)}%',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.primary,
+                          "What's New",
+                          style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest
+                                .withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withOpacity(0.3),
+                            ),
+                          ),
+                          child: MarkdownBody(
+                            data: widget.release.body,
+                            styleSheet:
+                                MarkdownStyleSheet.fromTheme(theme).copyWith(
+                              p: theme.textTheme.bodyMedium,
+                              listBullet: theme.textTheme.bodyMedium,
+                            ),
+                          ),
+                        ),
                       ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                        value: _downloadProgress,
-                        minHeight: 8,
-                        backgroundColor:
-                            theme.colorScheme.surfaceContainerHighest,
-                      ),
-                    ),
-                  ],
+                      if (widget.release.apkDownloadUrl == null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline,
+                                color: Colors.orange,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'No APK available for direct download. You can download from GitHub releases.',
+                                  style: TextStyle(
+                                    color: Colors.orange[800],
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (_error != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.error.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: theme.colorScheme.error,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _error!,
+                                  style: TextStyle(
+                                    color: theme.colorScheme.error,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-            ],
 
-            // Actions
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(
-                  alpha: 0.3,
+              // Actions
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
                 ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
-              ),
-              child: Column(
-                children: [
-                  if (!_isDownloading) ...[
+                child: Column(
+                  children: [
                     Row(
                       children: [
                         if (widget.release.apkDownloadUrl != null)
@@ -480,21 +570,97 @@ class _UpdateDialogState extends State<UpdateDialog>
                         ),
                       ],
                     ),
-                  ] else ...[
-                    Text(
-                      'Please wait while the update is being downloaded...',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
                   ],
-                ],
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
     );
   }
 }
+
+/// A premium, mathematically flowing audio-like waveform loader
+class WaveformLoader extends StatefulWidget {
+  final Color? color;
+  final double maxHeight;
+  final double minHeight;
+  final double barWidth;
+  final int barCount;
+
+  const WaveformLoader({
+    super.key,
+    this.color,
+    this.maxHeight = 48.0,
+    this.minHeight = 12.0,
+    this.barWidth = 5.0,
+    this.barCount = 9,
+  });
+
+  @override
+  State<WaveformLoader> createState() => _WaveformLoaderState();
+}
+
+class _WaveformLoaderState extends State<WaveformLoader>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final activeColor = widget.color ?? theme.colorScheme.primary;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(widget.barCount, (index) {
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            // Shift phase dynamically per bar using sine functions
+            final double phase = (index * 2 * math.pi / widget.barCount);
+            final double angle = (_controller.value * 2 * math.pi) - phase;
+            final double value = (math.sin(angle) + 1.0) / 2.0;
+
+            final double height = widget.minHeight +
+                (widget.maxHeight - widget.minHeight) * value;
+
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: widget.barWidth,
+              height: height,
+              decoration: BoxDecoration(
+                color: activeColor.withOpacity(0.3 + (value * 0.7)),
+                borderRadius: BorderRadius.circular(widget.barWidth / 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: activeColor.withOpacity(value * 0.3),
+                    blurRadius: 6,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      }),
+    );
+  }
+}
+

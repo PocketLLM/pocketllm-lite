@@ -11,14 +11,8 @@ import '../../core/utils/url_validator.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
-import '../../core/theme/theme_provider.dart';
-import '../../core/widgets/update_dialog.dart';
-import '../../services/update_service.dart';
 import '../chat/presentation/providers/models_provider.dart';
-import '../chat/presentation/providers/prompt_enhancer_provider.dart';
-import 'presentation/widgets/export_dialog.dart';
-import 'presentation/widgets/import_dialog.dart';
-import 'presentation/widgets/model_settings_dialog.dart';
+import 'presentation/screens/settings_category_screens.dart';
 
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -30,16 +24,9 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late TextEditingController _urlController;
-  late TextEditingController _tavilyKeyController;
   String _version = 'Loading...';
   bool _isConnecting = false;
   bool? _isConnected;
-  bool _isRefreshingModels = false;
-
-  // Update Service
-  final UpdateService _updateService = UpdateService();
-  bool _autoUpdateEnabled = true;
-  bool _isCheckingForUpdates = false;
 
   @override
   void initState() {
@@ -50,12 +37,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       defaultValue: AppConstants.defaultOllamaBaseUrl,
     );
     _urlController = TextEditingController(text: url);
-    final tavilyKey = storage.getSetting('tavily_api_key', defaultValue: '') as String? ?? '';
-    _tavilyKeyController = TextEditingController(text: tavilyKey);
     _loadVersion();
     _checkConnection();
-
-    _loadUpdateSettings();
 
     Future.delayed(Duration.zero, () {
       _refreshModels();
@@ -63,86 +46,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _refreshModels() async {
-    setState(() {
-      _isRefreshingModels = true;
-    });
-
     ref.invalidate(modelsProvider);
-
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    if (mounted) {
-      setState(() {
-        _isRefreshingModels = false;
-      });
-    }
-  }
-
-  Future<void> _loadUpdateSettings() async {
-    final enabled = await _updateService.isAutoUpdateEnabled();
-    if (mounted) {
-      setState(() {
-        _autoUpdateEnabled = enabled;
-      });
-    }
-  }
-
-  Future<void> _toggleAutoUpdate(bool value) async {
-    HapticFeedback.selectionClick();
-    await _updateService.setAutoUpdateEnabled(value);
-    if (mounted) {
-      setState(() {
-        _autoUpdateEnabled = value;
-      });
-    }
-  }
-
-  Future<void> _checkForUpdatesManually() async {
-    HapticFeedback.mediumImpact();
-
-    setState(() {
-      _isCheckingForUpdates = true;
-    });
-
-    try {
-      await _updateService.clearDismissedVersion();
-
-      final result = await _updateService.checkForUpdates(force: true);
-
-      if (!mounted) return;
-
-      if (result.updateAvailable && result.release != null) {
-        await UpdateDialog.show(context, result.release!);
-      } else if (result.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error checking for updates: ${result.error}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('You are using the latest version! 🎉'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isCheckingForUpdates = false;
-        });
-      }
-    }
   }
 
   @override
   void dispose() {
     _urlController.dispose();
-    _tavilyKeyController.dispose();
     super.dispose();
   }
 
@@ -193,7 +102,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final storage = ref.watch(storageServiceProvider);
 
     return PopScope(
       onPopInvokedWithResult: (didPop, result) async {
@@ -219,27 +127,105 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           children: [
             _buildConnectionSection(theme),
             const SizedBox(height: 24),
-            _buildPromptSection(theme),
-            const SizedBox(height: 24),
-            _buildModelsSection(theme),
-            const SizedBox(height: 24),
-            _buildRagSection(theme),
-            const SizedBox(height: 24),
-            _buildWebSearchSection(theme),
-            const SizedBox(height: 24),
-            _buildPromptEnhancerSection(theme),
-            const SizedBox(height: 24),
-            _buildStorageSection(theme, storage),
-            const SizedBox(height: 24),
-            _buildAppearanceSection(theme, storage),
-            const SizedBox(height: 24),
-            _buildUpdatesSection(theme),
+            _buildCategoryNavList(theme),
             const SizedBox(height: 24),
             _buildAboutSection(theme),
             const SizedBox(height: 60),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCategoryNavList(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Configuration Categories'),
+        ListTile(
+          title: const Text('Prompts & Templates'),
+          subtitle: const Text('AI personas, custom skills, system prompts, quick templates, and enhancer'),
+          leading: Icon(Icons.face_retouching_natural, color: theme.colorScheme.primary),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PromptsTemplatesSettingsScreen()),
+            );
+          },
+        ),
+        const Divider(height: 1, indent: 56),
+        ListTile(
+          title: const Text('Models & Inference'),
+          subtitle: const Text('Manage local GGUF catalog models and configure active Ollama models'),
+          leading: Icon(Icons.memory_rounded, color: theme.colorScheme.primary),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ModelsInferenceSettingsScreen()),
+            );
+          },
+        ),
+        const Divider(height: 1, indent: 56),
+        ListTile(
+          title: const Text('Knowledge Base & Web Search'),
+          subtitle: const Text('Configure RAG documents and real-time search engine settings'),
+          leading: Icon(Icons.library_books, color: theme.colorScheme.primary),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const KnowledgeSearchSettingsScreen()),
+            );
+          },
+        ),
+        const Divider(height: 1, indent: 56),
+        ListTile(
+          title: const Text('Chats & Local Data'),
+          subtitle: const Text('Configure auto-save, JSON backup exports, starred messages, and tags'),
+          leading: Icon(Icons.forum_outlined, color: theme.colorScheme.primary),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ChatsDataSettingsScreen()),
+            );
+          },
+        ),
+        const Divider(height: 1, indent: 56),
+        ListTile(
+          title: const Text('Appearance & Themes'),
+          subtitle: const Text('Light/dark modes, custom color palettes, and haptic feedback toggles'),
+          leading: Icon(Icons.palette_outlined, color: theme.colorScheme.primary),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AppearanceThemesSettingsScreen()),
+            );
+          },
+        ),
+        const Divider(height: 1, indent: 56),
+        ListTile(
+          title: const Text('System, Benchmark & Updates'),
+          subtitle: const Text('Run speed benchmarks, activity/error logs, and check OTA updates'),
+          leading: Icon(Icons.tune_rounded, color: theme.colorScheme.primary),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SystemToolsSettingsScreen()),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -397,976 +383,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPromptSection(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('Prompts & Templates'),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.3,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              ListTile(
-                title: const Text('Manage AI Personas'),
-                subtitle: const Text(
-                  'Custom instructions, icons, and temperature overrides',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                leading: const Icon(Icons.face_retouching_natural),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/personas');
-                },
-              ),
-              const Divider(height: 1, indent: 56),
-              ListTile(
-                title: const Text('Manage Agent Skills'),
-                subtitle: const Text(
-                  'Install, import, and CRUD custom agent skills',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                leading: const Icon(Icons.extension_rounded),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/skills');
-                },
-              ),
-              const Divider(height: 1, indent: 56),
-              ListTile(
-                title: const Text('Manage System Prompts'),
-                subtitle: const Text('Create and edit reusable AI personas'),
-                trailing: const Icon(Icons.chevron_right),
-                leading: const Icon(Icons.edit_note),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/prompts');
-                },
-              ),
-              const Divider(height: 1, indent: 56),
-              ListTile(
-                title: const Text('Message Templates'),
-                subtitle: const Text('Manage quick reply snippets'),
-                trailing: const Icon(Icons.chevron_right),
-                leading: const Icon(Icons.bolt),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/templates');
-                },
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildModelsSection(ThemeData theme) {
-    final modelsAsync = ref.watch(modelsProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader(
-          'Models',
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.add, size: 20),
-                tooltip: 'Download Model',
-                onPressed: () async {
-                  HapticFeedback.lightImpact();
-                  context.push('/model-browser');
-                },
-                style: IconButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  padding: const EdgeInsets.all(8),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: _isRefreshingModels
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.refresh, size: 20),
-                onPressed: _isRefreshingModels
-                    ? null
-                    : () async {
-                        HapticFeedback.lightImpact();
-                        await _refreshModels();
-                      },
-                style: IconButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  padding: const EdgeInsets.all(8),
-                ),
-              ),
-            ],
-          ),
-        ),
-        modelsAsync.when(
-          data: (models) {
-            if (models.isEmpty) {
-              return const Text(
-                'No models found. Download one using the + button.',
-              );
-            }
-            return Column(
-              children: [
-                for (int i = 0; i < models.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 8),
-                  Builder(
-                    builder: (context) {
-                      final model = models[i];
-                      final storage = ref.watch(storageServiceProvider);
-                      final defaultModel =
-                          storage.getSetting(AppConstants.defaultModelKey) ??
-                              '';
-
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ListTile(
-                          title: Text(
-                            model.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Row(
-                            children: [
-                              Text(
-                                '${(model.size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              const SizedBox(width: 8),
-                              if (model.name.toLowerCase().contains('vision') ||
-                                  model.name.toLowerCase().contains('llava'))
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.tertiary
-                                        .withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.visibility,
-                                        size: 12,
-                                        color: theme.colorScheme.tertiary,
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        "Vision",
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: theme.colorScheme.tertiary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Radio<String>(
-                                value: model.name,
-                                groupValue: defaultModel,
-                                onChanged: (val) {
-                                  storage.saveSetting(
-                                    AppConstants.defaultModelKey,
-                                    val,
-                                  );
-                                  setState(() {});
-                                },
-                                activeColor: theme.colorScheme.primary,
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.edit,
-                                  size: 20,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                                onPressed: () {
-                                  HapticFeedback.lightImpact();
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => ModelSettingsDialog(
-                                      modelName: model.name,
-                                    ),
-                                  );
-                                },
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.delete_outline,
-                                  color: theme.colorScheme.error,
-                                ),
-                                onPressed: () async {
-                                  HapticFeedback.mediumImpact();
-                                  await ref
-                                      .read(ollamaServiceProvider)
-                                      .deleteModel(model.name);
-                                  await _refreshModels();
-                                },
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text(
-            'Error loading models: $e',
-            style: TextStyle(color: theme.colorScheme.error),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRagSection(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('Retrieval-Augmented Generation (RAG)'),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.3,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              ListTile(
-                title: const Text('Knowledge Base (Documents)'),
-                subtitle: const Text('Manage your PDF, TXT, and CSV files'),
-                trailing: const Icon(Icons.chevron_right),
-                leading: const Icon(Icons.library_books),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.push('/document-manager');
-                },
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWebSearchSection(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('Web Search (Tavily)'),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.3,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: theme.colorScheme.outlineVariant),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Tavily API Key',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _tavilyKeyController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  hintText: 'Enter your Tavily API Key (tvly-...)',
-                  filled: true,
-                  fillColor: theme.colorScheme.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                ),
-                onChanged: (val) async {
-                  final storage = ref.read(storageServiceProvider);
-                  await storage.saveSetting('tavily_api_key', val.trim());
-                },
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'A Tavily API key enables real-time search capabilities for local AI models. Get a free key at tavily.com.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPromptEnhancerSection(ThemeData theme) {
-    final modelsAsync = ref.watch(modelsProvider);
-    final enhancerState = ref.watch(promptEnhancerProvider);
-    final selectedModel = enhancerState.selectedModelId;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('Prompt Enhancer'),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.3,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Theme(
-            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-            child: ExpansionTile(
-              initiallyExpanded: false,
-              title: const Text(
-                'Select Enhancer Model',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                selectedModel ?? 'No model selected',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: selectedModel != null
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              leading: Icon(
-                Icons.auto_awesome,
-                color: theme.colorScheme.primary,
-              ),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showEditEnhancerPromptDialog(context),
-                    icon: const Icon(Icons.edit, size: 18),
-                    label: const Text('View/Edit Enhancer Prompt'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 40),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer.withValues(
-                        alpha: 0.3,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 16,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'This model will enhance prompts with best practices like specificity and structure.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.colorScheme.onPrimaryContainer,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                modelsAsync.when(
-                  data: (models) {
-                    if (models.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text(
-                          'No models available. Pull one via Termux.',
-                        ),
-                      );
-                    }
-                    return AnimatedOpacity(
-                      opacity: 1.0,
-                      duration: const Duration(milliseconds: 300),
-                      child: Column(
-                        children: [
-                          RadioListTile<String?>(
-                            title: const Text('None (Disabled)'),
-                            value: null,
-                            groupValue: selectedModel,
-                            onChanged: (val) {
-                              HapticFeedback.selectionClick();
-                              ref
-                                  .read(promptEnhancerProvider.notifier)
-                                  .setSelectedModel(null);
-                            },
-                          ),
-                          ...models.map(
-                            (m) => RadioListTile<String>(
-                              title: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      m.name,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${(m.size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  if (m.name.toLowerCase().contains('vision') ||
-                                      m.name.toLowerCase().contains('llava'))
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 8),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.tertiary
-                                              .withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'Vision',
-                                          style: TextStyle(fontSize: 10),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              value: m.name,
-                              groupValue: selectedModel,
-                              onChanged: (val) {
-                                HapticFeedback.selectionClick();
-                                ref
-                                    .read(promptEnhancerProvider.notifier)
-                                    .setSelectedModel(val);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (e, _) => Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Error: $e',
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showEditEnhancerPromptDialog(BuildContext context) {
-    final controller = TextEditingController(
-      text: AppConstants.promptEnhancerSystemPrompt,
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enhancer System Prompt'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'This prompt instructs the AI how to enhance your prompts:',
-                style: TextStyle(fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                maxLines: 10,
-                readOnly: true,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                ),
-                style: const TextStyle(fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.tertiary,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'This prompt is optimized for best results. Editing is disabled to ensure consistent enhancement quality.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onTertiaryContainer,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStorageSection(ThemeData theme, dynamic storage) {
-    bool autoSave = storage.getSetting(
-      AppConstants.autoSaveChatsKey,
-      defaultValue: true,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('Chats & Storage'),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.3,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              SwitchListTile(
-                title: const Text('Auto-save chats'),
-                value: autoSave,
-                onChanged: (val) async {
-                  HapticFeedback.lightImpact();
-                  await storage.saveSetting(AppConstants.autoSaveChatsKey, val);
-                  setState(() {}); // Rebuild
-                },
-              ),
-              ListTile(
-                title: const Text('Export Data'),
-                subtitle: const Text('Export chats and prompts to JSON'),
-                leading: const Icon(Icons.download),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  showDialog(
-                    context: context,
-                    builder: (context) => const ExportDialog(),
-                  );
-                },
-              ),
-              ListTile(
-                title: const Text('Import Data'),
-                subtitle: const Text('Restore chats and prompts from JSON'),
-                leading: const Icon(Icons.upload),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  showDialog(
-                    context: context,
-                    builder: (context) => const ImportDialog(),
-                  );
-                },
-              ),
-              ListTile(
-                title: const Text('Starred Messages'),
-                subtitle: const Text('View bookmarked messages'),
-                leading: const Icon(Icons.star_outline),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/starred-messages');
-                },
-              ),
-              ListTile(
-                title: const Text('Media Gallery'),
-                subtitle: const Text('Browse all shared images'),
-                leading: const Icon(Icons.photo_library_outlined),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/media-gallery');
-                },
-              ),
-              ListTile(
-                title: const Text('Tag Management'),
-                subtitle: const Text('Organize and rename chat tags'),
-                leading: const Icon(Icons.label_outline),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/tags');
-                },
-              ),
-              ListTile(
-                title: const Text('Performance Benchmark'),
-                subtitle: const Text(
-                  'Measure local inference speed (t/s) and latency',
-                ),
-                leading: const Icon(Icons.rocket_launch_outlined),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/benchmark');
-                },
-              ),
-              ListTile(
-                title: const Text('Activity Log'),
-                subtitle: const Text('View app usage history'),
-                leading: const Icon(Icons.history),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/activity-log');
-                },
-              ),
-              ListTile(
-                title: const Text('Error Log'),
-                subtitle: const Text('View and export app errors'),
-                leading: const Icon(Icons.bug_report_outlined),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/error-log');
-                },
-              ),
-              ListTile(
-                title: const Text('Usage Statistics'),
-                subtitle: const Text('View chat and token usage stats'),
-                leading: const Icon(Icons.bar_chart),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/statistics');
-                },
-              ),
-              ListTile(
-                title: const Text('Profile'),
-                subtitle: const Text('Customize your display name'),
-                leading: const Icon(Icons.person_outline),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/profile');
-                },
-              ),
-              ListTile(
-                title: Text(
-                  'Clear All History',
-                  style: TextStyle(color: theme.colorScheme.error),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                onTap: () async {
-                  HapticFeedback.lightImpact();
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (c) => AlertDialog(
-                      title: const Text('Clear All History?'),
-                      content: const Text(
-                        'This will delete all chats permanently.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(c, false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(c, true),
-                          child: const Text(
-                            'Clear',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (confirm == true) {
-                    await storage.clearAllChats();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('History cleared')),
-                      );
-                    }
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAppearanceSection(ThemeData theme, dynamic storage) {
-    final themeMode = ref.watch(themeProvider);
-    bool haptic = storage.getSetting(
-      AppConstants.hapticFeedbackKey,
-      defaultValue: false,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('Appearance'),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.3,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text('Theme', style: TextStyle(fontSize: 16)),
-                    const SizedBox(height: 12),
-                    SegmentedButton<ThemeMode>(
-                      segments: const [
-                        ButtonSegment(
-                          value: ThemeMode.light,
-                          label: Text('Light'),
-                        ),
-                        ButtonSegment(
-                          value: ThemeMode.dark,
-                          label: Text('Dark'),
-                        ),
-                        ButtonSegment(
-                          value: ThemeMode.system,
-                          label: Text('System'),
-                        ),
-                      ],
-                      selected: {themeMode},
-                      onSelectionChanged: (Set<ThemeMode> newSelection) {
-                        HapticFeedback.selectionClick();
-                        ref
-                            .read(themeProvider.notifier)
-                            .setThemeMode(newSelection.first);
-                      },
-                      style: ButtonStyle(
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SwitchListTile(
-                title: const Text('Haptic Feedback'),
-                value: haptic,
-                onChanged: (val) async {
-                  if (val) HapticFeedback.lightImpact();
-                  await storage.saveSetting(
-                    AppConstants.hapticFeedbackKey,
-                    val,
-                  );
-                  setState(() {});
-                },
-              ),
-              ListTile(
-                title: const Text('Chat Customization'),
-                subtitle: const Text('Colors, Fonts, Radius'),
-                trailing: const Icon(Icons.chevron_right),
-                leading: const Icon(Icons.palette_outlined),
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/settings/customization');
-                },
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUpdatesSection(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('Updates'),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.3,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              SwitchListTile(
-                title: const Text('Auto-check for Updates'),
-                subtitle: const Text('Check for updates when app opens'),
-                value: _autoUpdateEnabled,
-                onChanged: _toggleAutoUpdate,
-                secondary: Icon(
-                  Icons.update,
-                  color: _autoUpdateEnabled
-                      ? theme.colorScheme.primary
-                      : Colors.grey,
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                title: const Text('Check for Updates Now'),
-                subtitle: const Text('Manually check for new version'),
-                leading: _isCheckingForUpdates
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.refresh),
-                trailing: _isCheckingForUpdates
-                    ? null
-                    : const Icon(Icons.chevron_right),
-                onTap: _isCheckingForUpdates ? null : _checkForUpdatesManually,
-              ),
-              const Divider(height: 1),
-              ListTile(
-                title: const Text('View All Releases'),
-                subtitle: const Text('Open GitHub releases page'),
-                leading: const Icon(Icons.open_in_new),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () async {
-                  HapticFeedback.lightImpact();
-                  final url = Uri.parse(_updateService.getReleasesPageUrl());
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, size: 18, color: Colors.blue),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Updates are downloaded directly from GitHub releases. '
-                          'You may need to enable "Install from unknown sources" in your device settings.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue[800],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),

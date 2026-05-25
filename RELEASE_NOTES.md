@@ -1,7 +1,11 @@
-# Release Notes - Version 1.0.21
+# Release Notes - Version 1.0.24
 
-## **Highlights: Tavily Web Search Integration & Premium Rebranding**
-This patch release introduces the highly anticipated **Tavily Web Search** integration, allowing local AI models to query the live internet in real time. We have also added a premium **Shimmering Loading Animation** (`🔍 Searching the web...`) while queries execute, and automated **Inline Markdown Citations** for returned search results. In addition, all application branding assets (splash screens, launcher icons, and documentation headers) have been updated to a sleek, modern design. Furthermore, the redundant `.github/` folder and automated release workflows have been completely removed since builds and releases are handled locally, ensuring zero overhead in CI/CD pipelines.
+## **Highlights: In-App Update Permissions & Waveform HUD**
+This release introduces high-fidelity runtime permissions and a premium Material 3 expressive visual HUD for our in-app update mechanism:
+1. **Android unknown-source APK Installer Guard**: Integrates pre-download checks for `REQUEST_INSTALL_PACKAGES` permission on Android. If not enabled, the system cleanly prompts the user and auto-redirects to settings via `openAppSettings()` for seamless OTA updates.
+2. **Mathematically Flowing Waveform Loader**: Introduces a stunning, soundwave-like visualizer inside the update dialog driven by mathematical sine phase shift algorithms.
+3. **M3 Expressive Download HUD**: Upgrades the standard progress indicators into a gorgeous, focused, and locked dashboard featuring a smooth, physics-based, glowing gradient progress bar with custom shadows and clean monospace percentage readouts.
+4. **App Installation Command**: Updated build instructions for releasing `flutter build apk --split-per-abi --release`.
 
 ---
 

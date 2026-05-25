@@ -12,6 +12,29 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.24] - 2026-05-25
+
+### Added
+- **Android APK Installer Permission Guard**: Explicitly checks and requests `REQUEST_INSTALL_PACKAGES` permission at runtime before starting in-app updates, with direct settings redirection (`openAppSettings()`) on refusal to avoid unknown-source blockages.
+- **Premium Waveform Loader**: Built a state-of-the-art vertical pill-based loader utilizing staggered mathematical sine wave phase shift functions to create a fluid, beautiful glowing soundwave effect.
+- **M3 Expressive Progress HUD**: Transformed the OTA download dashboard to lock and focus, featuring high-fidelity typography, monospace percentage indicators, and a physics-based, glowing gradient progress bar with custom shadows.
+
+## [1.0.23] - 2026-05-25
+
+### Added
+- **Native Storage Platform Channels**: Integrated Kotlin `StatFs` and Swift capacity resource value APIs to query actual free storage space on device files directory, completely resolving `MissingPluginException`.
+- **Settings Screen Re-Architecting**: Grouped 20+ fine-grained configuration widgets into 6 beautifully styled logical sub-page dashboards (Prompts/Templates, Models/Inference, Knowledge/Search, Chats/Data, Appearance/Themes, System/Diagnostics), making the main dashboard clean and clutter-free.
+- **M3 Expressive Navigation List**: Placed categories inside a clean, modern vertical list layout without unnecessary cards, maximizing responsive whitespace and touch targets.
+
+## [1.0.22] - 2026-05-24
+
+### Added
+- **Native llama.cpp Build Chains**: Configured `CMakeLists.txt` for Android NDK and a robust Metal-enabled CocoaPods `pocketllm_lite.podspec` for accelerated iOS execution.
+- **Atomic Dio Storage System**: Built a modular, chunked downloader inside `ModelStorageService` that writes to a temporary file before atomically renaming to prevent file corruption.
+- **Custom GGUF File Importers**: Native-scoped document selector picker and a custom magic byte-level verification check validating selected models before sandboxed import.
+- **Local RAM Loader HUD**: Modern Material 3 model catalog screen to browse default models (Llama 3.2 1B/3B, Gemma 2, Qwen 2.5, Phi 3.5), view storage, and load/unload models on-demand.
+- **WidgetsBindingObserver Protection**: Active system-wide memory warning listeners that automatically purge loaded models to protect mobile OS processes from low-memory crashes.
+
 ## [1.0.21] - 2026-05-24
 
 ### Added

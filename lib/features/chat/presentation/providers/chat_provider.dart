@@ -10,6 +10,8 @@ import '../../domain/models/text_file_attachment.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../services/inference_service.dart';
 import '../../../../services/rag_service.dart';
+import '../../../../providers/model_manager_provider.dart';
+import '../../../../services/llama_inference_service.dart';
 import '../../domain/models/chat_persona.dart';
 import '../../domain/models/skill.dart';
 
@@ -402,10 +404,6 @@ class ChatNotifier extends Notifier<ChatState> {
     final inferenceFactory = ref.read(inferenceServiceFactoryProvider);
 
     try {
-      final service = await inferenceFactory.chooseForModel(
-        state.selectedModel,
-      );
-
       // Augment the last user query with RAG if enabled
       final messages = <ChatRequestMessage>[];
       for (int i = 0; i < baseMessages.length; i++) {
@@ -479,7 +477,29 @@ class ChatNotifier extends Notifier<ChatState> {
         topK: state.topK,
       );
 
-      final stream = service.chatStream(request);
+      final localManagerState = ref.read(modelManagerProvider);
+      final activeLoadedId = localManagerState.activeLoadedId;
+      
+      final Stream<ChatToken> stream;
+      if (activeLoadedId != null) {
+        final lastUserMessage = baseMessages.lastWhere(
+          (m) => m.role == 'user',
+          orElse: () => ChatMessage(
+            role: 'user',
+            content: '',
+            timestamp: DateTime.now(),
+          ),
+        );
+        final promptText = userInput ?? lastUserMessage.content;
+        stream = LlamaInferenceService.instance
+            .streamCompletion(promptText, temp: state.temperature)
+            .map((text) => ChatToken(text: text));
+      } else {
+        final service = await inferenceFactory.chooseForModel(
+          state.selectedModel,
+        );
+        stream = service.chatStream(request);
+      }
 
       final hapticEnabled = ref
           .read(storageServiceProvider)
