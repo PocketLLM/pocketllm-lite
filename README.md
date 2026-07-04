@@ -31,7 +31,7 @@
 </p>
 
 <p align="center">
-  PocketLLM Lite is an ultra-premium, privacy-first <strong>offline AI chat application</strong> for Android, iOS, and Desktop. By seamlessly bridging local on-device inference with <strong>Ollama via Termux</strong> (Android) or native macOS/Linux pipelines, it enables running state-of-the-art <strong>Local Large Language Models (LLMs)</strong> like DeepSeek-R1, Llama 3.2, and Phi-3 completely offline—safeguarding your digital sovereignty with zero external data telemetry.
+  PocketLLM Lite is an ultra-premium, privacy-first <strong>offline AI chat application</strong> for Android, iOS, and Desktop. By seamlessly bridging local on-device inference with <strong>Ollama via Termux</strong> (Android) or native macOS/Linux pipelines, it enables running state-of-the-art <strong>Local Large Language Models (LLMs)</strong> like DeepSeek-R1, Llama 3.2, and Phi-3 completely offline safeguarding your digital sovereignty with zero external data telemetry.
 </p>
 
 <p align="center">
