@@ -90,7 +90,8 @@ class _UpdateDialogState extends State<UpdateDialog>
           final result = await Permission.requestInstallPackages.request();
           if (!result.isGranted) {
             setState(() {
-              _error = 'Permission to install unknown apps is required. Please enable it in Settings.';
+              _error =
+                  'Permission to install unknown apps is required. Please enable it in Settings.';
               _isDownloading = false;
             });
             // Try to open settings for the user
@@ -304,7 +305,8 @@ class _UpdateDialogState extends State<UpdateDialog>
               // Modern, Expressive Download HUD
               Flexible(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24.0, vertical: 32.0),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
@@ -345,7 +347,8 @@ class _UpdateDialogState extends State<UpdateDialog>
                                 height: 16,
                                 width: double.infinity,
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.surfaceContainerHighest,
+                                  color:
+                                      theme.colorScheme.surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Padding(
@@ -364,7 +367,8 @@ class _UpdateDialogState extends State<UpdateDialog>
                                         borderRadius: BorderRadius.circular(5),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                            color: theme.colorScheme.primary
+                                                .withValues(alpha: 0.3),
                                             blurRadius: 4,
                                             offset: const Offset(0, 1),
                                           ),
@@ -382,7 +386,8 @@ class _UpdateDialogState extends State<UpdateDialog>
                       Text(
                         'Installing the update will automatically replace the old application. Please keep the app open.',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          color: theme.colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.7),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -394,7 +399,8 @@ class _UpdateDialogState extends State<UpdateDialog>
               Container(
                 height: 24,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(20),
                     bottomRight: Radius.circular(20),
@@ -424,7 +430,8 @@ class _UpdateDialogState extends State<UpdateDialog>
                                 .withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                              color: theme.colorScheme.outline
+                                  .withValues(alpha: 0.3),
                             ),
                           ),
                           child: MarkdownBody(
@@ -471,7 +478,8 @@ class _UpdateDialogState extends State<UpdateDialog>
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.error.withValues(alpha: 0.1),
+                            color:
+                                theme.colorScheme.error.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -504,7 +512,8 @@ class _UpdateDialogState extends State<UpdateDialog>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.3),
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(20),
                     bottomRight: Radius.circular(20),
@@ -663,5 +672,3 @@ class _WaveformLoaderState extends State<WaveformLoader>
     );
   }
 }
-
-

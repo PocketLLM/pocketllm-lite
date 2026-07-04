@@ -259,7 +259,7 @@ class _PersonaManagementScreenState
     final isEdit = persona != null;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final modelsAsync = ref.read(modelsProvider);
+    final modelsAsync = ref.read(unifiedModelsProvider);
 
     final nameController = TextEditingController(text: persona?.name ?? '');
     final promptController = TextEditingController(
@@ -437,8 +437,9 @@ class _PersonaManagementScreenState
                         ),
                         ...models.map(
                           (m) => DropdownMenuItem<String>(
-                            value: m.name,
-                            child: Text(m.name),
+                            value: m.id,
+                            child:
+                                Text('${m.isLocal ? "📁 " : "☁️ "}${m.name}'),
                           ),
                         ),
                       ];

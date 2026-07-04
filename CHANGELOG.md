@@ -12,6 +12,60 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.30] - 2026-07-04
+
+### Added
+- **Model Loading Status Indicator**: Introduced a dynamic loading message (*Loading model, please wait...*) in the chat bubble during offline local model initialization, providing clear visual feedback when a model is being loaded into memory.
+
+## [1.0.29] - 2026-07-04
+
+### Added
+- **Dynamic Model Selection for Benchmark**: Replaced the static, non-interactive "Active Model" header card on the Inference Benchmark screen with a fully interactive model selector dropdown. Users can now choose any local GGUF model or connected Ollama instance to test against.
+
+### Changed
+- **Fixed Empty State Overflow**: Removed the height-constrained `SizedBox` wrapping the benchmark history's `M3EmptyState` widget, preventing a RenderFlex vertical layout crash when the device height is restricted.
+
+## [1.0.28] - 2026-07-04
+
+### Changed
+- **Bypassed Connection Prompts for Local Models**: Completely bypassed the "Ollama Not Connected" check popup and SnackBar alert when a local downloaded model is selected, allowing full offline messaging and offline prompt enhancement.
+- **Fixed App Bar Dropdown Overflows**: Wrapped the dropdown title selector in a `ConstrainedBox` capped at 180px and set `isExpanded: true` on `DropdownButton` to automatically truncate long model names with an ellipsis, preventing RenderFlex horizontal layout crashes.
+
+## [1.0.27] - 2026-07-04
+
+### Added
+- **Unified Chat Model Selector**: Created a single unified dropdown menu in the chat app bar that displays both local downloaded GGUF models and active Ollama servers. Features clear visual icons (`📁` for local, `☁️` for cloud/remote) and highlights if a model is currently loaded in RAM.
+- **On-demand RAM Auto-loading**: Selecting a local downloaded model from the chat dropdown automatically triggers background memory mapping and RAM preparation context during generation, removing the need to manually load models via the catalog before chatting.
+
+### Changed
+- **Dio Custom GGUF Downloader**: Replaced `background_downloader` package dependencies with a standard `Dio`-based stream downloader inside `ModelDownloadService`, delivering accurate download speeds, progress percentages, and time-remaining calculations.
+- **Disabled Cancel Button for Catalog Downloads**: Greyed-out/disabled the download "Cancel" button for Cactus catalog models, as the SDK doesn't natively support download cancellation, leaving it active only for custom GGUFs.
+
+### Removed
+- **Removed background_downloader dependency**: Cleaned up and removed the `background_downloader` package and all its associated vestigial listener, tracking, and startup cleanup code from the notifier systems.
+
+## [1.0.26] - 2026-07-04
+
+### Added
+- **Dynamic Cactus AI Engine**: Replaced the fake FFI service and mock completion loop with a genuine Cactus SDK integration (`CactusLM`), enabling true on-device LLM inference.
+- **Dynamic Model Discovery**: Integrated dynamic model catalog queries directly from the Cactus edge API (`Supabase.fetchModels`), automatically aligning names, capabilities, and file sizes with supported device slugs.
+
+### Changed
+- **Unified Local Storage**: Re-routed local model directories to target the documents `models/` sandbox folder, aligning custom imports and downloaded zip packages under a single unified path.
+- **Robust Download Pipeline**: Migrated the download manager to Cactus native downloads, adding an automated watchdog timer to recover from stuck states and clear stalled download flags after 45 seconds of silence.
+- **Accurate Model Performance Metrics**: Switched the catalog inference test dialog to execute live on-device Cactus generation, returning genuine prompt latency (time-to-first-token) and tokens-per-second values.
+
+### Removed
+- **Fake FFI simulator and Native Build Chains**: Removed the canned-response simulation FFI code, the unused `android/app/CMakeLists.txt` build configuration, and the native iOS `pocketllm_lite.podspec` helper.
+
+## [1.0.25] - 2026-05-25
+
+### Added
+- **Interactive Model Catalog Dashboard**: Wrapped model catalog list items in inkwell tap handlers to launch an expressive Material 3 details sheet displaying family, provider, file size, key capabilities, and standardized benchmarks.
+- **Reactive Background Downloader Pipeline**: Refactored download tasks to execute as non-blocking `FileDownloader().enqueue(...)` background threads, and monitored status/progress dynamically using a reactive global stream.
+- **System Notification Tray Progress**: Enabled dynamic native system notifications with active progress indicators during model downloads and completion alerts when the task finishes.
+- **Method Channel Resiliency**: Added generic catch blocks to eliminate `MissingPluginException` errors, providing smooth, robust, fail-open fallback storage limits across all systems.
+
 ## [1.0.24] - 2026-05-25
 
 ### Added

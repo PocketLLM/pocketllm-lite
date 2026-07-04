@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:background_downloader/background_downloader.dart';
+import 'package:dio/dio.dart';
 
 class ModelDownloadProgress {
   final double progress;
@@ -21,11 +21,12 @@ class ModelDownloadProgress {
 }
 
 class ModelDownloadService {
-  ModelDownloadService() {
-    FileDownloader().configure(
-      globalConfig: [(Config.requestTimeout, const Duration(seconds: 100))],
-    );
-  }
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 100),
+      receiveTimeout: const Duration(minutes: 120),
+    ),
+  );
 
   Future<String> getModelsDirectory() async {
     final appDir = await getApplicationDocumentsDirectory();
@@ -49,6 +50,7 @@ class ModelDownloadService {
     final targetFilePath = '$modelsDir/$expectedFilename';
 
     // Show consent dialog
+    if (!context.mounted) return null;
     final consent = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -88,7 +90,7 @@ class ModelDownloadService {
       return null;
     }
 
-    // Now start the download with a progress dialog
+    final cancelToken = CancelToken();
     final progressNotifier = ValueNotifier<ModelDownloadProgress>(
       const ModelDownloadProgress(
         progress: 0,
@@ -99,7 +101,10 @@ class ModelDownloadService {
       ),
     );
 
-    // ignore: use_build_context_synchronously
+    int lastUpdateTime = DateTime.now().millisecondsSinceEpoch;
+    int lastUpdateBytes = 0;
+
+    if (!context.mounted) return null;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -136,9 +141,7 @@ class ModelDownloadService {
         actions: [
           TextButton(
             onPressed: () {
-              FileDownloader().cancelTasksWithIds([
-                'model_download_$expectedFilename',
-              ]);
+              cancelToken.cancel('User canceled download');
               Navigator.of(ctx).pop();
             },
             child: const Text('Cancel'),
@@ -147,57 +150,57 @@ class ModelDownloadService {
       ),
     );
 
-    final task = DownloadTask(
-      taskId: 'model_download_$expectedFilename',
-      url: url,
-      filename: expectedFilename,
-      directory: 'models',
-      baseDirectory: BaseDirectory.applicationDocuments,
-      updates: Updates.statusAndProgress,
-      allowPause: true,
-    );
+    try {
+      final response = await _dio.download(
+        url,
+        targetFilePath,
+        cancelToken: cancelToken,
+        onReceiveProgress: (received, total) {
+          final now = DateTime.now().millisecondsSinceEpoch;
+          final elapsed = now - lastUpdateTime;
+          if (elapsed > 500) {
+            final progress = total > 0 ? (received / total) : 0.0;
+            final bytesDiff = received - lastUpdateBytes;
+            final speed = (bytesDiff / 1024 / 1024) / (elapsed / 1000); // MB/s
 
-    int lastUpdateTime = DateTime.now().millisecondsSinceEpoch;
-    int lastUpdateBytes = 0;
+            final bytesRemaining =
+                (total > 0 ? total : expectedSizeBytes) - received;
+            final timeRemainingSecs =
+                speed > 0 ? (bytesRemaining / 1024 / 1024) / speed : 0.0;
 
-    final result = await FileDownloader().download(
-      task,
-      onProgress: (progress) {
-        final now = DateTime.now().millisecondsSinceEpoch;
-        final elapsed = now - lastUpdateTime;
-        if (elapsed > 500) {
-          final downloadedBytes = (progress * expectedSizeBytes).round();
-          final bytesDiff = downloadedBytes - lastUpdateBytes;
-          final speed = (bytesDiff / 1024 / 1024) / (elapsed / 1000); // MB/s
+            progressNotifier.value = ModelDownloadProgress(
+              progress: progress,
+              networkSpeed: speed,
+              timeRemaining: Duration(seconds: timeRemainingSecs.round()),
+              totalBytes: total > 0 ? total : expectedSizeBytes,
+              downloadedBytes: received,
+            );
 
-          final bytesRemaining = expectedSizeBytes - downloadedBytes;
-          final timeRemainingSecs =
-              speed > 0 ? (bytesRemaining / 1024 / 1024) / speed : 0.0;
+            lastUpdateTime = now;
+            lastUpdateBytes = received;
+          }
+        },
+      );
 
-          progressNotifier.value = ModelDownloadProgress(
-            progress: progress,
-            networkSpeed: speed,
-            timeRemaining: Duration(seconds: timeRemainingSecs.round()),
-            totalBytes: expectedSizeBytes,
-            downloadedBytes: downloadedBytes,
-          );
+      // Close progress dialog
+      if (context.mounted &&
+          Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
 
-          lastUpdateTime = now;
-          lastUpdateBytes = downloadedBytes;
-        }
-      },
-    );
+      if (response.statusCode == 200) {
+        return targetFilePath;
+      } else {
+        throw Exception('Download failed status: ${response.statusCode}');
+      }
+    } catch (e) {
+      // Close progress dialog on error
+      if (context.mounted &&
+          Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
 
-    // ignore: use_build_context_synchronously
-    if (Navigator.of(context, rootNavigator: true).canPop()) {
-      // ignore: use_build_context_synchronously
-      Navigator.of(context, rootNavigator: true).pop(); // Close progress dialog
-    }
-
-    if (result.status == TaskStatus.complete) {
-      return targetFilePath;
-    } else {
-      // Cleanup partial file if needed
+      // Cleanup partial file
       final file = File(targetFilePath);
       if (await file.exists()) {
         await file.delete();

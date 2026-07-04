@@ -6,7 +6,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/providers.dart';
 import 'providers/chat_provider.dart';
 import 'providers/models_provider.dart';
-import 'providers/connection_status_provider.dart';
 
 import 'widgets/chat_body.dart';
 import 'widgets/chat_input.dart';
@@ -23,7 +22,8 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObserver {
+class _ChatScreenState extends ConsumerState<ChatScreen>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -67,13 +67,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     final selectedModel = ref.watch(
       chatProvider.select((s) => s.selectedModel),
     );
-    final modelsAsync = ref.watch(modelsProvider);
-    final connectionStatusAsync = ref.watch(autoConnectionStatusProvider);
+    final modelsAsync = ref.watch(unifiedModelsProvider);
     final localState = ref.watch(modelManagerProvider);
     final activeLoadedId = localState.activeLoadedId;
-    final loadedModelName = activeLoadedId != null 
-        ? localState.models[activeLoadedId]?.name 
-        : null;
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -85,98 +81,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         titleWidget: Row(
           children: [
             Expanded(
-              child: activeLoadedId != null
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colorScheme.tertiaryContainer,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.bolt_rounded,
-                            size: 16,
-                            color: colorScheme.onTertiaryContainer,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              'Local: ${loadedModelName ?? "GGUF Model"}',
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: colorScheme.onTertiaryContainer,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : connectionStatusAsync.when(
-                      data: (isConnected) {
-                        if (!isConnected) {
-                    return InkWell(
-                      onTap: () => _showConnectionHelpDialog(context),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.errorContainer,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.cloud_off_rounded,
-                              size: 14,
-                              color: colorScheme.onErrorContainer,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Not Connected',
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: colorScheme.onErrorContainer,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+              child: modelsAsync.when(
+                data: (models) {
+                  String? currentValue = selectedModel;
+                  if (models.isNotEmpty &&
+                      !models.any((m) => m.id == currentValue)) {
+                    currentValue = models.first.id;
+                    Future.microtask(
+                      () => ref
+                          .read(chatProvider.notifier)
+                          .setModel(currentValue!),
+                    );
+                  }
+
+                  if (models.isEmpty) {
+                    return Text(
+                      'No Models Available',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     );
                   }
 
-                  return modelsAsync.when(
-                    data: (models) {
-                      String? currentValue = selectedModel;
-                      if (models.isNotEmpty &&
-                          !models.any((m) => m.name == currentValue)) {
-                        currentValue = models.first.name;
-                        Future.microtask(
-                          () => ref
-                              .read(chatProvider.notifier)
-                              .setModel(currentValue!),
-                        );
-                      }
-
-                      if (models.isEmpty) {
-                        return Text(
-                          'No Models',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        );
-                      }
-
-                      return Container(
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 180),
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 4,
@@ -187,7 +118,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
-                            isExpanded: false,
+                            isExpanded: true,
                             value: currentValue,
                             icon: Icon(
                               Icons.expand_more_rounded,
@@ -202,34 +133,85 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                             elevation: 4,
                             selectedItemBuilder: (BuildContext context) {
                               return models.map<Widget>((m) {
+                                final isActive = m.id == activeLoadedId;
                                 return Align(
                                   alignment: Alignment.centerLeft,
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 150,
-                                    ),
-                                    child: Text(
-                                      m.name,
-                                      overflow: TextOverflow.ellipsis,
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: colorScheme.onPrimaryContainer,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isActive) ...[
+                                        Icon(
+                                          Icons.bolt_rounded,
+                                          size: 14,
+                                          color: colorScheme.onPrimaryContainer,
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ],
+                                      Flexible(
+                                        child: Text(
+                                          m.name,
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                colorScheme.onPrimaryContainer,
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 );
                               }).toList();
                             },
                             items: models.map<DropdownMenuItem<String>>((m) {
+                              final isActive = m.id == activeLoadedId;
                               return DropdownMenuItem<String>(
-                                value: m.name,
-                                child: Text(
-                                  m.name,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onSurface,
-                                  ),
+                                value: m.id,
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      m.isLocal ? '📁 ' : '☁️ ',
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      m.name,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        color: colorScheme.onSurface,
+                                        fontWeight: isActive
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                    if (isActive) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.tertiaryContainer,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          'RAM',
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                            color:
+                                                colorScheme.onTertiaryContainer,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               );
                             }).toList(),
@@ -240,18 +222,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                                 ref
                                     .read(chatProvider.notifier)
                                     .setModel(newModel);
+                                final activeId = ref
+                                    .read(modelManagerProvider)
+                                    .activeLoadedId;
+                                if (activeId != null && activeId != newModel) {
+                                  ref
+                                      .read(modelManagerProvider.notifier)
+                                      .unloadActiveModel();
+                                }
                               }
                             },
                           ),
                         ),
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (e, s) => const SizedBox.shrink(),
+                      ),
+                    ),
                   );
                 },
-                loading: () => const SizedBox.shrink(),
-                error: (e, s) => const SizedBox.shrink(),
+                loading: () => const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                error: (e, s) => Text(
+                  'Error loading models',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.error,
+                  ),
+                ),
               ),
             ),
           ],
@@ -276,8 +275,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                         color: Colors.green,
                       ),
                       label: Text(
-                        '${lastTps.toStringAsFixed(1)} t/s' +
-                            (lastTtftMs != null ? ' • ${lastTtftMs}ms' : ''),
+                        '${lastTps.toStringAsFixed(1)} t/s${lastTtftMs != null ? ' • ${lastTtftMs}ms' : ''}',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.bold,
@@ -307,7 +305,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
           ),
           if (activeLoadedId != null)
             IconButton(
-              icon: Icon(Icons.power_settings_new_rounded, color: colorScheme.error),
+              icon: Icon(Icons.power_settings_new_rounded,
+                  color: colorScheme.error),
               tooltip: 'Unload Local Model',
               onPressed: () {
                 if (ref.read(storageServiceProvider).getSetting(
@@ -325,7 +324,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                 );
               },
             ),
-
           IconButton(
             icon: const Icon(Icons.photo_library_outlined),
             tooltip: 'Media Gallery',
@@ -417,80 +415,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         children: [
           const Expanded(child: ChatBody()),
           const ChatInput(),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showConnectionHelpDialog(BuildContext context) async {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        icon: Icon(Icons.cloud_off_rounded, color: colorScheme.error),
-        title: const Text('Ollama Not Connected'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Pocket LLM cannot reach the Ollama server.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Possible causes:',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 4),
-            ...[
-              'Ollama is not running (run "ollama serve")',
-              'Termux session was closed',
-              'Incorrect endpoint URL in Settings',
-            ].map(
-              (cause) => Padding(
-                padding: const EdgeInsets.only(left: 4, top: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '• ',
-                      style: TextStyle(color: colorScheme.onSurfaceVariant),
-                    ),
-                    Expanded(
-                      child: Text(
-                        cause,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              context.push('/settings');
-            },
-            icon: const Icon(Icons.settings_rounded),
-            label: const Text('Check Settings'),
-          ),
         ],
       ),
     );

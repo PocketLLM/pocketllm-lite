@@ -49,3 +49,6 @@ app.*.map.json
 *.keystore
 *.p12
 key.properties
+
+# APKs
+*.apk

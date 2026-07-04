@@ -22,9 +22,9 @@ class LocalModelHelpScreen extends StatelessWidget {
           _buildInfoCard(
             context: context,
             icon: Icons.memory_rounded,
-            title: 'What is GGUF & llama.cpp?',
+            title: 'What is GGUF & Cactus?',
             description:
-                'GGUF (GPT-Generated Unified Format) is a file format designed for quick loading and high performance of large language models on consumer hardware. llama.cpp is a highly optimized execution engine written in C/C++ that runs these models locally on your device with accelerated GPU shaders (Metal/Vulkan) or high-performance CPU (Neon/AVX).',
+                'GGUF (GPT-Generated Unified Format) is a file format designed for quick loading and high performance of large language models on consumer hardware. We leverage the Cactus AI engine (powered by llama.cpp) to run these models directly on your device, providing a self-contained offline execution environment.',
           ),
           const SizedBox(height: 20),
 
@@ -55,7 +55,7 @@ class LocalModelHelpScreen extends StatelessWidget {
             description:
                 '• Context Window (n_ctx): Defines the maximum token history. For mobile, 2048 tokens is ideal. Higher values consume significantly more RAM.\n'
                 '• Thread Counts: The engine automatically balances between physical high-efficiency cores and performance cores to optimize thermal throttling and battery drainage.\n'
-                '• GPU Acceleration (Metal/Vulkan): Enabled natively during compilation. Metal performance shaders allow GGUF matrices to compute in parallel on the GPU.',
+                '• On-device Execution: The Cactus SDK handles memory management and inference execution automatically, selecting the best available hardware acceleration on your device.',
           ),
           const SizedBox(height: 32),
         ],
@@ -87,7 +87,8 @@ class LocalModelHelpScreen extends StatelessWidget {
       color: colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -130,14 +131,17 @@ class LocalModelHelpScreen extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Table(
           border: TableBorder(
-            horizontalInside: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-            verticalInside: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+            horizontalInside: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+            verticalInside: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
           ),
           columnWidths: const {
             0: FlexColumnWidth(1.2),
@@ -149,38 +153,55 @@ class LocalModelHelpScreen extends StatelessWidget {
             TableRow(
               decoration: BoxDecoration(color: colorScheme.primaryContainer),
               children: [
-                _buildTableCell('Feature', theme, isHeader: true, color: colorScheme.onPrimaryContainer),
-                _buildTableCell('Standalone (llama.cpp)', theme, isHeader: true, color: colorScheme.onPrimaryContainer),
-                _buildTableCell('Ollama Connection', theme, isHeader: true, color: colorScheme.onPrimaryContainer),
+                _buildTableCell('Feature', theme,
+                    isHeader: true, color: colorScheme.onPrimaryContainer),
+                _buildTableCell('Standalone (Cactus AI)', theme,
+                    isHeader: true, color: colorScheme.onPrimaryContainer),
+                _buildTableCell('Ollama Connection', theme,
+                    isHeader: true, color: colorScheme.onPrimaryContainer),
               ],
             ),
             // Rows
             TableRow(
               children: [
                 _buildTableCell('Setup', theme),
-                _buildTableCell('None. Standalone and fully self-contained.', theme),
-                _buildTableCell('Requires Ollama running in Termux or on a PC.', theme),
+                _buildTableCell(
+                    'None. Standalone and fully self-contained.', theme),
+                _buildTableCell(
+                    'Requires Ollama running in Termux or on a PC.', theme),
               ],
             ),
             TableRow(
               children: [
                 _buildTableCell('Offline', theme),
-                _buildTableCell('100% offline. Fits completely in sandboxed memory.', theme),
-                _buildTableCell('Requires local socket connections to background daemon.', theme),
+                _buildTableCell(
+                    '100% offline. Fits completely in sandboxed memory.',
+                    theme),
+                _buildTableCell(
+                    'Requires local socket connections to background daemon.',
+                    theme),
               ],
             ),
             TableRow(
               children: [
                 _buildTableCell('Imports', theme),
-                _buildTableCell('Easy. Import any GGUF file directly with the file picker.', theme),
-                _buildTableCell('Requires building a Modelfile and calling ollama compile.', theme),
+                _buildTableCell(
+                    'Easy. Import any GGUF file directly with the file picker.',
+                    theme),
+                _buildTableCell(
+                    'Requires building a Modelfile and calling ollama compile.',
+                    theme),
               ],
             ),
             TableRow(
               children: [
                 _buildTableCell('Speed', theme),
-                _buildTableCell('Extremely fast direct C++ bindings with Metal GPU.', theme),
-                _buildTableCell('Subject to local socket latency or HTTP overheads.', theme),
+                _buildTableCell(
+                    'Extremely fast on-device inference using the Cactus SDK.',
+                    theme),
+                _buildTableCell(
+                    'Subject to local socket latency or HTTP overheads.',
+                    theme),
               ],
             ),
           ],
@@ -189,7 +210,8 @@ class LocalModelHelpScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTableCell(String text, ThemeData theme, {bool isHeader = false, Color? color}) {
+  Widget _buildTableCell(String text, ThemeData theme,
+      {bool isHeader = false, Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
       child: Text(

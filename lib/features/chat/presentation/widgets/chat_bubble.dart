@@ -387,7 +387,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
 
     // Show loading indicator for empty assistant messages (AI is generating)
     if (!isUser && message.content.isEmpty) {
-      final isSearchingWeb = ref.watch(chatProvider.select((s) => s.isSearchingWeb));
+      final isSearchingWeb =
+          ref.watch(chatProvider.select((s) => s.isSearchingWeb));
 
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

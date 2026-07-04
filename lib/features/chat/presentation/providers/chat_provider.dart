@@ -10,10 +10,10 @@ import '../../domain/models/text_file_attachment.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../services/inference_service.dart';
 import '../../../../services/rag_service.dart';
-import '../../../../providers/model_manager_provider.dart';
-import '../../../../services/llama_inference_service.dart';
 import '../../domain/models/chat_persona.dart';
 import '../../domain/models/skill.dart';
+import '../../../../providers/model_manager_provider.dart';
+import '../../../../models/local_model.dart';
 
 class ThinkingParseResult {
   final String thinking;
@@ -84,6 +84,7 @@ ThinkingParseResult parseThinking(String rawText) {
 class ChatState {
   final List<ChatMessage> messages;
   final bool isGenerating;
+  final bool isModelLoading;
   final String? currentSessionId;
   final String selectedModel;
   final String? systemPrompt;
@@ -103,6 +104,7 @@ class ChatState {
   ChatState({
     required this.messages,
     required this.isGenerating,
+    this.isModelLoading = false,
     this.currentSessionId,
     this.selectedModel = 'llama3',
     this.systemPrompt,
@@ -123,6 +125,7 @@ class ChatState {
   ChatState copyWith({
     List<ChatMessage>? messages,
     bool? isGenerating,
+    bool? isModelLoading,
     String? currentSessionId,
     String? selectedModel,
     String? systemPrompt,
@@ -142,6 +145,7 @@ class ChatState {
     return ChatState(
       messages: messages ?? this.messages,
       isGenerating: isGenerating ?? this.isGenerating,
+      isModelLoading: isModelLoading ?? this.isModelLoading,
       currentSessionId: currentSessionId ?? this.currentSessionId,
       selectedModel: selectedModel ?? this.selectedModel,
       systemPrompt: systemPrompt ?? this.systemPrompt,
@@ -152,8 +156,8 @@ class ChatState {
       streamingThinkingContent:
           streamingThinkingContent ?? this.streamingThinkingContent,
       useRag: useRag ?? this.useRag,
-      lastTps: lastTps != null ? lastTps : this.lastTps,
-      lastTtftMs: lastTtftMs != null ? lastTtftMs : this.lastTtftMs,
+      lastTps: lastTps ?? this.lastTps,
+      lastTtftMs: lastTtftMs ?? this.lastTtftMs,
       activePersonaId: activePersonaId ?? this.activePersonaId,
       useTools: useTools ?? this.useTools,
       useWebSearch: useWebSearch ?? this.useWebSearch,
@@ -170,6 +174,7 @@ class ChatNotifier extends Notifier<ChatState> {
     return ChatState(
       messages: [],
       isGenerating: false,
+      isModelLoading: false,
       streamingContent: '',
       streamingThinkingContent: '',
       useRag: false,
@@ -288,12 +293,6 @@ class ChatNotifier extends Notifier<ChatState> {
     );
   }
 
-  /// Estimate tokens from text (rough approximation: words * 1.3)
-  static int _estimateTokens(String text) {
-    final words = _wordRegExp.allMatches(text).length;
-    return (words * 1.3).ceil();
-  }
-
   String _buildAttachmentContext(
     String content,
     List<TextFileAttachment> attachments,
@@ -392,9 +391,15 @@ class ChatNotifier extends Notifier<ChatState> {
     List<ChatMessage> baseMessages, {
     String? userInput,
   }) async {
+    final localState = ref.read(modelManagerProvider);
+    final isLocalModel = localState.models.containsKey(state.selectedModel) &&
+        localState.models[state.selectedModel]?.status ==
+            DownloadStatus.downloaded;
+
     state = state.copyWith(
       messages: baseMessages,
       isGenerating: true,
+      isModelLoading: isLocalModel,
       streamingContent: '',
       streamingThinkingContent: '',
       lastTps: 0.0,
@@ -477,29 +482,10 @@ class ChatNotifier extends Notifier<ChatState> {
         topK: state.topK,
       );
 
-      final localManagerState = ref.read(modelManagerProvider);
-      final activeLoadedId = localManagerState.activeLoadedId;
-      
-      final Stream<ChatToken> stream;
-      if (activeLoadedId != null) {
-        final lastUserMessage = baseMessages.lastWhere(
-          (m) => m.role == 'user',
-          orElse: () => ChatMessage(
-            role: 'user',
-            content: '',
-            timestamp: DateTime.now(),
-          ),
-        );
-        final promptText = userInput ?? lastUserMessage.content;
-        stream = LlamaInferenceService.instance
-            .streamCompletion(promptText, temp: state.temperature)
-            .map((text) => ChatToken(text: text));
-      } else {
-        final service = await inferenceFactory.chooseForModel(
-          state.selectedModel,
-        );
-        stream = service.chatStream(request);
-      }
+      final service = await inferenceFactory.chooseForModel(
+        state.selectedModel,
+      );
+      final stream = service.chatStream(request);
 
       final hapticEnabled = ref
           .read(storageServiceProvider)
@@ -515,6 +501,7 @@ class ChatNotifier extends Notifier<ChatState> {
         final now = DateTime.now();
         if (timeToFirstTokenMs == null) {
           timeToFirstTokenMs = now.difference(startTime).inMilliseconds;
+          state = state.copyWith(isModelLoading: false);
         }
 
         if (hapticEnabled) {
@@ -664,6 +651,7 @@ class ChatNotifier extends Notifier<ChatState> {
     } finally {
       state = state.copyWith(
         isGenerating: false,
+        isModelLoading: false,
         streamingContent: '',
         streamingThinkingContent: '',
       );

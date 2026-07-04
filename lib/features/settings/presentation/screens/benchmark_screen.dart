@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../../core/widgets/m3_empty_state.dart';
 import '../../../../services/inference_service.dart';
+import '../../../chat/presentation/providers/models_provider.dart';
 
 class BenchmarkRun {
   final String id;
@@ -247,6 +250,7 @@ class BenchmarkScreen extends ConsumerStatefulWidget {
 
 class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
   String _selectedPromptType = 'Quick Test';
+  String? _selectedModelId;
   final TextEditingController _customPromptController = TextEditingController(
     text: 'Briefly write a three-word motto for an AI program.',
   );
@@ -271,6 +275,13 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
     final storage = ref.watch(storageServiceProvider);
     final currentModel =
         storage.getSetting(AppConstants.defaultModelKey) ?? 'llama3';
+
+    final modelsAsync = ref.watch(unifiedModelsProvider);
+    final availableModels = modelsAsync.value ?? [];
+    if (_selectedModelId == null && availableModels.isNotEmpty) {
+      final hasDefault = availableModels.any((m) => m.id == currentModel);
+      _selectedModelId = hasDefault ? currentModel : availableModels.first.id;
+    }
 
     // Calculate comparative metrics compared to average
     double averageTps = 0.0;
@@ -327,51 +338,149 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Model Info header card
-            Card(
-              elevation: 0,
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: colorScheme.outlineVariant),
+            // Model Selection card
+            Text(
+              'Benchmark Target Model',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    M3Container(
-                      Shapes.flower,
-                      width: 48,
-                      height: 48,
-                      color: colorScheme.primary.withValues(alpha: 0.1),
-                      child: Center(
-                        child: Icon(Icons.speed, color: colorScheme.primary),
-                      ),
+            ),
+            const SizedBox(height: 8),
+            modelsAsync.when(
+              data: (models) {
+                if (models.isEmpty) {
+                  return Card(
+                    elevation: 0,
+                    color: colorScheme.errorContainer.withValues(alpha: 0.1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                          color: colorScheme.error.withValues(alpha: 0.3)),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
                         children: [
-                          Text(
-                            'Active Model: $currentModel',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Performance tests will run against this model.',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
+                          Icon(Icons.error_outline_rounded,
+                              color: colorScheme.error),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'No models downloaded or connected. Go to the Catalog to download a model or start Ollama to perform a benchmark.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onErrorContainer,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
+                  );
+                }
+
+                // Re-sync _selectedModelId if it's not valid
+                if (_selectedModelId == null ||
+                    !models.any((m) => m.id == _selectedModelId)) {
+                  _selectedModelId = models.first.id;
+                }
+
+                final selectedModel =
+                    models.firstWhere((m) => m.id == _selectedModelId);
+
+                return Card(
+                  elevation: 0,
+                  color: colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.3),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: colorScheme.outlineVariant),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            M3Container(
+                              Shapes.flower,
+                              width: 40,
+                              height: 40,
+                              color: colorScheme.primary.withValues(alpha: 0.1),
+                              child: Center(
+                                child: Icon(Icons.model_training,
+                                    color: colorScheme.primary, size: 20),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedModelId,
+                                  isExpanded: true,
+                                  icon: Icon(
+                                    Icons.expand_more_rounded,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  dropdownColor:
+                                      colorScheme.surfaceContainerHigh,
+                                  borderRadius: BorderRadius.circular(16),
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: colorScheme.onSurface,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  onChanged: state.isRunning
+                                      ? null
+                                      : (val) {
+                                          if (val != null) {
+                                            setState(
+                                                () => _selectedModelId = val);
+                                          }
+                                        },
+                                  items:
+                                      models.map<DropdownMenuItem<String>>((m) {
+                                    return DropdownMenuItem<String>(
+                                      value: m.id,
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            m.isLocal ? '📁 ' : '☁️ ',
+                                            style:
+                                                const TextStyle(fontSize: 14),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(m.name),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          selectedModel.isLocal
+                              ? 'Running local offline inference test using Cactus.'
+                              : 'Running remote network inference test using Ollama.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
                 ),
               ),
+              error: (e, s) => Text('Error loading models: $e'),
             ),
             const SizedBox(height: 16),
 
@@ -485,10 +594,18 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
                     final p = _selectedPromptType == 'Custom Prompt'
                         ? _customPromptController.text
                         : _prompts[_selectedPromptType]!;
+                    if (_selectedModelId == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text(
+                                'Please select or download a model first.')),
+                      );
+                      return;
+                    }
                     ref.read(benchmarkProvider.notifier).runBenchmark(
                           prompt: p,
                           promptType: _selectedPromptType,
-                          modelId: currentModel,
+                          modelId: _selectedModelId!,
                         );
                   },
                   style: FilledButton.styleFrom(
@@ -653,14 +770,11 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
             ),
             const SizedBox(height: 8),
             state.history.isEmpty
-                ? const SizedBox(
-                    height: 250,
-                    child: M3EmptyState(
-                      icon: Icons.history_toggle_off,
-                      title: 'No past runs',
-                      description:
-                          'Test results will be listed here after you run a benchmark.',
-                    ),
+                ? const M3EmptyState(
+                    icon: Icons.history_toggle_off,
+                    title: 'No past runs',
+                    description:
+                        'Test results will be listed here after you run a benchmark.',
                   )
                 : ListView.builder(
                     shrinkWrap: true,

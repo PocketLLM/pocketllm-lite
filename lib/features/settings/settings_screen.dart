@@ -14,7 +14,6 @@ import '../../core/providers.dart';
 import '../chat/presentation/providers/models_provider.dart';
 import 'presentation/screens/settings_category_screens.dart';
 
-
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -144,84 +143,98 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _buildSectionHeader('Configuration Categories'),
         ListTile(
           title: const Text('Prompts & Templates'),
-          subtitle: const Text('AI personas, custom skills, system prompts, quick templates, and enhancer'),
-          leading: Icon(Icons.face_retouching_natural, color: theme.colorScheme.primary),
+          subtitle: const Text(
+              'AI personas, custom skills, system prompts, quick templates, and enhancer'),
+          leading: Icon(Icons.face_retouching_natural,
+              color: theme.colorScheme.primary),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             HapticFeedback.lightImpact();
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const PromptsTemplatesSettingsScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const PromptsTemplatesSettingsScreen()),
             );
           },
         ),
         const Divider(height: 1, indent: 56),
         ListTile(
           title: const Text('Models & Inference'),
-          subtitle: const Text('Manage local GGUF catalog models and configure active Ollama models'),
+          subtitle: const Text(
+              'Manage local GGUF catalog models and configure active Ollama models'),
           leading: Icon(Icons.memory_rounded, color: theme.colorScheme.primary),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             HapticFeedback.lightImpact();
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const ModelsInferenceSettingsScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const ModelsInferenceSettingsScreen()),
             );
           },
         ),
         const Divider(height: 1, indent: 56),
         ListTile(
           title: const Text('Knowledge Base & Web Search'),
-          subtitle: const Text('Configure RAG documents and real-time search engine settings'),
+          subtitle: const Text(
+              'Configure RAG documents and real-time search engine settings'),
           leading: Icon(Icons.library_books, color: theme.colorScheme.primary),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             HapticFeedback.lightImpact();
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const KnowledgeSearchSettingsScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const KnowledgeSearchSettingsScreen()),
             );
           },
         ),
         const Divider(height: 1, indent: 56),
         ListTile(
           title: const Text('Chats & Local Data'),
-          subtitle: const Text('Configure auto-save, JSON backup exports, starred messages, and tags'),
+          subtitle: const Text(
+              'Configure auto-save, JSON backup exports, starred messages, and tags'),
           leading: Icon(Icons.forum_outlined, color: theme.colorScheme.primary),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             HapticFeedback.lightImpact();
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const ChatsDataSettingsScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const ChatsDataSettingsScreen()),
             );
           },
         ),
         const Divider(height: 1, indent: 56),
         ListTile(
           title: const Text('Appearance & Themes'),
-          subtitle: const Text('Light/dark modes, custom color palettes, and haptic feedback toggles'),
-          leading: Icon(Icons.palette_outlined, color: theme.colorScheme.primary),
+          subtitle: const Text(
+              'Light/dark modes, custom color palettes, and haptic feedback toggles'),
+          leading:
+              Icon(Icons.palette_outlined, color: theme.colorScheme.primary),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             HapticFeedback.lightImpact();
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const AppearanceThemesSettingsScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const AppearanceThemesSettingsScreen()),
             );
           },
         ),
         const Divider(height: 1, indent: 56),
         ListTile(
           title: const Text('System, Benchmark & Updates'),
-          subtitle: const Text('Run speed benchmarks, activity/error logs, and check OTA updates'),
+          subtitle: const Text(
+              'Run speed benchmarks, activity/error logs, and check OTA updates'),
           leading: Icon(Icons.tune_rounded, color: theme.colorScheme.primary),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             HapticFeedback.lightImpact();
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const SystemToolsSettingsScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const SystemToolsSettingsScreen()),
             );
           },
         ),

@@ -357,6 +357,7 @@ ollama pull <model-name>
       data: content,
       selectable: true,
       padding: const EdgeInsets.all(16),
+      // ignore: deprecated_member_use
       imageBuilder: MarkdownHandlers.imageBuilder,
       styleSheet: MarkdownStyleSheet(
         h1: TextStyle(

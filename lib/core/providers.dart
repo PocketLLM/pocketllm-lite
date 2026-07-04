@@ -6,7 +6,6 @@ import '../services/storage_service.dart';
 import '../services/huggingface_service.dart';
 import '../services/tool_calling_service.dart';
 
-
 final storageServiceProvider = Provider<StorageService>((ref) {
   throw UnimplementedError('StorageService must be initialized in main.dart');
 });

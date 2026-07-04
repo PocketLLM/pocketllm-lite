@@ -20,6 +20,8 @@ import '../../domain/models/chat_persona.dart';
 import '../../domain/models/skill.dart';
 import 'templates_sheet.dart';
 import '../providers/audio_provider.dart';
+import '../../../../providers/model_manager_provider.dart';
+import '../../../../models/local_model.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -290,49 +292,55 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       return;
     }
 
-    final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
-    await connectionChecker.refresh();
-    final connectionState = await ref.read(autoConnectionStatusProvider.future);
-    final isConnected = connectionState;
+    final selectedModel = ref.read(chatProvider).selectedModel;
+    final localState = ref.read(modelManagerProvider);
+    final isLocalModel = localState.models.containsKey(selectedModel) &&
+        localState.models[selectedModel]?.status == DownloadStatus.downloaded;
 
-    if (!isConnected) {
-      if (mounted) {
-        await showDialog(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            icon: Icon(
-              Icons.cloud_off_rounded,
-              color: Theme.of(dialogContext).colorScheme.error,
+    if (!isLocalModel) {
+      final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
+      await connectionChecker.refresh();
+      final connectionState =
+          await ref.read(autoConnectionStatusProvider.future);
+      if (!connectionState) {
+        if (mounted) {
+          await showDialog(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              icon: Icon(
+                Icons.cloud_off_rounded,
+                color: Theme.of(dialogContext).colorScheme.error,
+              ),
+              title: const Text('Ollama Not Connected'),
+              content: const Text(
+                'Please ensure Ollama is running and connected. '
+                'Check your setup and try again.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton.tonal(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    if (mounted) context.push('/settings');
+                  },
+                  child: const Text('Settings'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    if (mounted) context.push('/settings/docs');
+                  },
+                  child: const Text('Setup Guide'),
+                ),
+              ],
             ),
-            title: const Text('Ollama Not Connected'),
-            content: const Text(
-              'Please ensure Ollama is running and connected. '
-              'Check your setup and try again.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
-              ),
-              FilledButton.tonal(
-                onPressed: () {
-                  Navigator.pop(dialogContext);
-                  if (mounted) context.push('/settings');
-                },
-                child: const Text('Settings'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  Navigator.pop(dialogContext);
-                  if (mounted) context.push('/settings/docs');
-                },
-                child: const Text('Setup Guide'),
-              ),
-            ],
-          ),
-        );
+          );
+        }
+        return;
       }
-      return;
     }
 
     final storage = ref.read(storageServiceProvider);
@@ -417,29 +425,37 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Future<void> _enhancePrompt() async {
     if (_controller.text.trim().isEmpty) return;
 
-    final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
-    await connectionChecker.refresh();
-    final connectionState = await ref.read(autoConnectionStatusProvider.future);
-    final isConnected = connectionState;
+    final enhancerState = ref.read(promptEnhancerProvider);
+    final selectedModel = enhancerState.selectedModelId;
+    final localState = ref.read(modelManagerProvider);
+    final isLocalModel = selectedModel != null &&
+        localState.models.containsKey(selectedModel) &&
+        localState.models[selectedModel]?.status == DownloadStatus.downloaded;
 
-    if (!isConnected) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Cannot enhance prompt: Ollama not connected'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            action: SnackBarAction(
-              label: 'Settings',
-              textColor: Theme.of(context).colorScheme.onError,
-              onPressed: () => context.push('/settings'),
+    if (!isLocalModel) {
+      final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
+      await connectionChecker.refresh();
+      final connectionState =
+          await ref.read(autoConnectionStatusProvider.future);
+      if (!connectionState) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  const Text('Cannot enhance prompt: Ollama not connected'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              action: SnackBarAction(
+                label: 'Settings',
+                textColor: Theme.of(context).colorScheme.onError,
+                onPressed: () => context.push('/settings'),
+              ),
             ),
-          ),
-        );
+          );
+        }
+        return;
       }
-      return;
     }
 
-    final enhancerState = ref.read(promptEnhancerProvider);
     if (enhancerState.selectedModelId == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1059,27 +1075,33 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                     } else {
                                       final originalText = _controller.text;
                                       final selection = _controller.selection;
-                                      
+
                                       // Split original text into prefix and suffix at the cursor position
                                       final prefix = selection.baseOffset >= 0
-                                          ? originalText.substring(0, selection.baseOffset)
+                                          ? originalText.substring(
+                                              0, selection.baseOffset)
                                           : originalText;
                                       final suffix = selection.baseOffset >= 0
-                                          ? originalText.substring(selection.baseOffset)
+                                          ? originalText
+                                              .substring(selection.baseOffset)
                                           : '';
-                                          
+
                                       // Automatically add a space if the prefix does not already end with one
-                                      final spacing = (prefix.isNotEmpty && !prefix.endsWith(' '))
+                                      final spacing = (prefix.isNotEmpty &&
+                                              !prefix.endsWith(' '))
                                           ? ' '
                                           : '';
 
                                       notifier.startListening((words) {
                                         if (words.isNotEmpty) {
-                                          _controller.text = '$prefix$spacing$words$suffix';
-                                          
+                                          _controller.text =
+                                              '$prefix$spacing$words$suffix';
+
                                           // Set the selection cursor directly at the end of the newly spoken segment
-                                          final newCursorPosition = 
-                                              prefix.length + spacing.length + words.length;
+                                          final newCursorPosition =
+                                              prefix.length +
+                                                  spacing.length +
+                                                  words.length;
                                           _controller.selection =
                                               TextSelection.fromPosition(
                                             TextPosition(
@@ -1101,7 +1123,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   Consumer(
                                     builder: (context, ref, child) {
                                       final useWebSearch = ref.watch(
-                                        chatProvider.select((s) => s.useWebSearch),
+                                        chatProvider
+                                            .select((s) => s.useWebSearch),
                                       );
                                       return _InputActionButton(
                                         icon: Icons.language_rounded,

@@ -5,7 +5,6 @@ import 'package:shimmer/shimmer.dart';
 import '../../../core/widgets/m3_app_bar.dart';
 import '../providers/model_browser_provider.dart';
 import '../domain/hf_model.dart';
-import 'model_detail_screen.dart'; // We'll navigate to this
 
 class ModelBrowserScreen extends ConsumerStatefulWidget {
   const ModelBrowserScreen({super.key});

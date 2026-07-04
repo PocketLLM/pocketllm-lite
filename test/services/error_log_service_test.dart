@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocketllm_lite/features/error_log/domain/error_entry.dart';
 import 'package:pocketllm_lite/services/error_log_service.dart';
 
 void main() {

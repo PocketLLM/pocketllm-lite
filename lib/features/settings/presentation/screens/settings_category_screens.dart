@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,8 +43,10 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
         children: [
           ListTile(
             title: const Text('Manage AI Personas'),
-            subtitle: const Text('Custom instructions, icons, and temperature overrides'),
-            leading: Icon(Icons.face_retouching_natural, color: theme.colorScheme.primary),
+            subtitle: const Text(
+                'Custom instructions, icons, and temperature overrides'),
+            leading: Icon(Icons.face_retouching_natural,
+                color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -52,8 +56,10 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
           const Divider(height: 1, indent: 56),
           ListTile(
             title: const Text('Manage Agent Skills'),
-            subtitle: const Text('Install, import, and CRUD custom agent skills'),
-            leading: Icon(Icons.extension_rounded, color: theme.colorScheme.primary),
+            subtitle:
+                const Text('Install, import, and CRUD custom agent skills'),
+            leading:
+                Icon(Icons.extension_rounded, color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -116,7 +122,8 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
               ),
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: OutlinedButton.icon(
                     onPressed: () => _showEditEnhancerPromptDialog(context),
                     icon: const Icon(Icons.edit, size: 18),
@@ -127,11 +134,13 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      color: theme.colorScheme.primaryContainer
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -160,7 +169,8 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
                     if (models.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.all(16),
-                        child: Text('No models available. Pull one via Termux.'),
+                        child:
+                            Text('No models available. Pull one via Termux.'),
                       );
                     }
                     return Column(
@@ -171,7 +181,9 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
                           groupValue: selectedModel,
                           onChanged: (val) {
                             HapticFeedback.selectionClick();
-                            ref.read(promptEnhancerProvider.notifier).setSelectedModel(null);
+                            ref
+                                .read(promptEnhancerProvider.notifier)
+                                .setSelectedModel(null);
                           },
                         ),
                         ...models.map(
@@ -197,12 +209,15 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: theme.colorScheme.tertiary.withValues(alpha: 0.15),
+                                        color: theme.colorScheme.tertiary
+                                            .withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: const Text('Vision', style: TextStyle(fontSize: 10)),
+                                      child: const Text('Vision',
+                                          style: TextStyle(fontSize: 10)),
                                     ),
                                   ),
                               ],
@@ -211,7 +226,9 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
                             groupValue: selectedModel,
                             onChanged: (val) {
                               HapticFeedback.selectionClick();
-                              ref.read(promptEnhancerProvider.notifier).setSelectedModel(val);
+                              ref
+                                  .read(promptEnhancerProvider.notifier)
+                                  .setSelectedModel(val);
                             },
                           ),
                         ),
@@ -224,7 +241,8 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
                   ),
                   error: (e, _) => Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text('Error: $e', style: TextStyle(color: theme.colorScheme.error)),
+                    child: Text('Error: $e',
+                        style: TextStyle(color: theme.colorScheme.error)),
                   ),
                 ),
               ],
@@ -236,7 +254,8 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
   }
 
   void _showEditEnhancerPromptDialog(BuildContext context) {
-    final controller = TextEditingController(text: AppConstants.promptEnhancerSystemPrompt);
+    final controller =
+        TextEditingController(text: AppConstants.promptEnhancerSystemPrompt);
 
     showDialog(
       context: context,
@@ -257,9 +276,13 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
                 maxLines: 10,
                 readOnly: true,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  fillColor: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest
+                      .withValues(alpha: 0.3),
                 ),
                 style: const TextStyle(fontSize: 13),
               ),
@@ -267,19 +290,25 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .tertiaryContainer
+                      .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.tertiary),
+                    Icon(Icons.info_outline,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.tertiary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'This prompt is optimized for best results. Editing is disabled to ensure consistent enhancement quality.',
                         style: TextStyle(
                           fontSize: 11,
-                          color: Theme.of(context).colorScheme.onTertiaryContainer,
+                          color:
+                              Theme.of(context).colorScheme.onTertiaryContainer,
                         ),
                       ),
                     ),
@@ -307,10 +336,12 @@ class ModelsInferenceSettingsScreen extends ConsumerStatefulWidget {
   const ModelsInferenceSettingsScreen({super.key});
 
   @override
-  ConsumerState<ModelsInferenceSettingsScreen> createState() => _ModelsInferenceSettingsScreenState();
+  ConsumerState<ModelsInferenceSettingsScreen> createState() =>
+      _ModelsInferenceSettingsScreenState();
 }
 
-class _ModelsInferenceSettingsScreenState extends ConsumerState<ModelsInferenceSettingsScreen> {
+class _ModelsInferenceSettingsScreenState
+    extends ConsumerState<ModelsInferenceSettingsScreen> {
   bool _isRefreshing = false;
 
   Future<void> _refreshModels() async {
@@ -338,8 +369,10 @@ class _ModelsInferenceSettingsScreenState extends ConsumerState<ModelsInferenceS
         children: [
           ListTile(
             title: const Text('Local GGUF Models & Catalog'),
-            subtitle: const Text('Browse GGUF catalog profiles, import files, and load to RAM'),
-            leading: Icon(Icons.memory_rounded, color: theme.colorScheme.primary),
+            subtitle: const Text(
+                'Browse GGUF catalog profiles, import files, and load to RAM'),
+            leading:
+                Icon(Icons.memory_rounded, color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -375,7 +408,10 @@ class _ModelsInferenceSettingsScreenState extends ConsumerState<ModelsInferenceS
                   const SizedBox(width: 8),
                   IconButton(
                     icon: _isRefreshing
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.refresh, size: 20),
                     onPressed: _isRefreshing ? null : _refreshModels,
                     style: IconButton.styleFrom(
@@ -393,31 +429,44 @@ class _ModelsInferenceSettingsScreenState extends ConsumerState<ModelsInferenceS
               if (models.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('No models found. Pull one using the + button.')),
+                  child: Center(
+                      child: Text(
+                          'No models found. Pull one using the + button.')),
                 );
               }
               return Column(
                 children: [
                   for (final model in models) ...[
                     ListTile(
-                      title: Text(model.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      title: Text(model.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Row(
                         children: [
-                          Text('${(model.size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB', style: const TextStyle(fontSize: 12)),
+                          Text(
+                              '${(model.size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB',
+                              style: const TextStyle(fontSize: 12)),
                           const SizedBox(width: 8),
-                          if (model.name.toLowerCase().contains('vision') || model.name.toLowerCase().contains('llava'))
+                          if (model.name.toLowerCase().contains('vision') ||
+                              model.name.toLowerCase().contains('llava'))
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.tertiary.withValues(alpha: 0.15),
+                                color: theme.colorScheme.tertiary
+                                    .withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.visibility, size: 12, color: theme.colorScheme.tertiary),
+                                  Icon(Icons.visibility,
+                                      size: 12,
+                                      color: theme.colorScheme.tertiary),
                                   const SizedBox(width: 4),
-                                  Text("Vision", style: TextStyle(fontSize: 10, color: theme.colorScheme.tertiary)),
+                                  Text("Vision",
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          color: theme.colorScheme.tertiary)),
                                 ],
                               ),
                             ),
@@ -431,7 +480,8 @@ class _ModelsInferenceSettingsScreenState extends ConsumerState<ModelsInferenceS
                             groupValue: defaultModel,
                             onChanged: (val) {
                               HapticFeedback.selectionClick();
-                              storage.saveSetting(AppConstants.defaultModelKey, val);
+                              storage.saveSetting(
+                                  AppConstants.defaultModelKey, val);
                               setState(() {});
                             },
                             activeColor: theme.colorScheme.primary,
@@ -442,15 +492,19 @@ class _ModelsInferenceSettingsScreenState extends ConsumerState<ModelsInferenceS
                               HapticFeedback.lightImpact();
                               showDialog(
                                 context: context,
-                                builder: (context) => ModelSettingsDialog(modelName: model.name),
+                                builder: (context) =>
+                                    ModelSettingsDialog(modelName: model.name),
                               );
                             },
                           ),
                           IconButton(
-                            icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+                            icon: Icon(Icons.delete_outline,
+                                color: theme.colorScheme.error),
                             onPressed: () async {
                               HapticFeedback.mediumImpact();
-                              await ref.read(ollamaServiceProvider).deleteModel(model.name);
+                              await ref
+                                  .read(ollamaServiceProvider)
+                                  .deleteModel(model.name);
                               _refreshModels();
                             },
                           ),
@@ -468,7 +522,9 @@ class _ModelsInferenceSettingsScreenState extends ConsumerState<ModelsInferenceS
             ),
             error: (e, _) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: Text('Error: $e', style: TextStyle(color: theme.colorScheme.error))),
+              child: Center(
+                  child: Text('Error: $e',
+                      style: TextStyle(color: theme.colorScheme.error))),
             ),
           ),
         ],
@@ -484,17 +540,20 @@ class KnowledgeSearchSettingsScreen extends ConsumerStatefulWidget {
   const KnowledgeSearchSettingsScreen({super.key});
 
   @override
-  ConsumerState<KnowledgeSearchSettingsScreen> createState() => _KnowledgeSearchSettingsScreenState();
+  ConsumerState<KnowledgeSearchSettingsScreen> createState() =>
+      _KnowledgeSearchSettingsScreenState();
 }
 
-class _KnowledgeSearchSettingsScreenState extends ConsumerState<KnowledgeSearchSettingsScreen> {
+class _KnowledgeSearchSettingsScreenState
+    extends ConsumerState<KnowledgeSearchSettingsScreen> {
   late TextEditingController _tavilyKeyController;
 
   @override
   void initState() {
     super.initState();
     final storage = ref.read(storageServiceProvider);
-    final key = storage.getSetting('tavily_api_key', defaultValue: '') as String? ?? '';
+    final key =
+        storage.getSetting('tavily_api_key', defaultValue: '') as String? ?? '';
     _tavilyKeyController = TextEditingController(text: key);
   }
 
@@ -519,8 +578,10 @@ class _KnowledgeSearchSettingsScreenState extends ConsumerState<KnowledgeSearchS
         children: [
           ListTile(
             title: const Text('Knowledge Base (Documents)'),
-            subtitle: const Text('Manage Retrieval-Augmented Generation (RAG) files'),
-            leading: Icon(Icons.library_books, color: theme.colorScheme.primary),
+            subtitle:
+                const Text('Manage Retrieval-Augmented Generation (RAG) files'),
+            leading:
+                Icon(Icons.library_books, color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -538,7 +599,8 @@ class _KnowledgeSearchSettingsScreenState extends ConsumerState<KnowledgeSearchS
           const SizedBox(height: 8),
           Text(
             'A Tavily API key enables real-time search capabilities for local AI models. Get a free key at tavily.com.',
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -548,9 +610,11 @@ class _KnowledgeSearchSettingsScreenState extends ConsumerState<KnowledgeSearchS
               hintText: 'Enter your Tavily API Key (tvly-...)',
               labelText: 'Tavily API Key',
               prefixIcon: const Icon(Icons.vpn_key_outlined),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               filled: true,
-              fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.15),
+              fillColor: theme.colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.15),
             ),
             onChanged: (val) async {
               final storage = ref.read(storageServiceProvider);
@@ -570,15 +634,18 @@ class ChatsDataSettingsScreen extends ConsumerStatefulWidget {
   const ChatsDataSettingsScreen({super.key});
 
   @override
-  ConsumerState<ChatsDataSettingsScreen> createState() => _ChatsDataSettingsScreenState();
+  ConsumerState<ChatsDataSettingsScreen> createState() =>
+      _ChatsDataSettingsScreenState();
 }
 
-class _ChatsDataSettingsScreenState extends ConsumerState<ChatsDataSettingsScreen> {
+class _ChatsDataSettingsScreenState
+    extends ConsumerState<ChatsDataSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final storage = ref.watch(storageServiceProvider);
-    final autoSave = storage.getSetting(AppConstants.autoSaveChatsKey, defaultValue: true);
+    final autoSave =
+        storage.getSetting(AppConstants.autoSaveChatsKey, defaultValue: true);
 
     return Scaffold(
       appBar: M3AppBar(
@@ -642,7 +709,8 @@ class _ChatsDataSettingsScreenState extends ConsumerState<ChatsDataSettingsScree
           ListTile(
             title: const Text('Media Gallery'),
             subtitle: const Text('Browse all shared images and attachments'),
-            leading: Icon(Icons.photo_library_outlined, color: theme.colorScheme.primary),
+            leading: Icon(Icons.photo_library_outlined,
+                color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -653,7 +721,8 @@ class _ChatsDataSettingsScreenState extends ConsumerState<ChatsDataSettingsScree
           ListTile(
             title: const Text('Tag Management'),
             subtitle: const Text('Organize and rename chat session tags'),
-            leading: Icon(Icons.label_outline, color: theme.colorScheme.primary),
+            leading:
+                Icon(Icons.label_outline, color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -662,9 +731,13 @@ class _ChatsDataSettingsScreenState extends ConsumerState<ChatsDataSettingsScree
           ),
           const Divider(height: 24),
           ListTile(
-            title: Text('Clear All History', style: TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.bold)),
+            title: Text('Clear All History',
+                style: TextStyle(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.bold)),
             subtitle: const Text('Permanently wipe out local chat databases'),
-            leading: Icon(Icons.delete_sweep_rounded, color: theme.colorScheme.error),
+            leading: Icon(Icons.delete_sweep_rounded,
+                color: theme.colorScheme.error),
             trailing: const Icon(Icons.chevron_right),
             onTap: () async {
               HapticFeedback.mediumImpact();
@@ -672,7 +745,8 @@ class _ChatsDataSettingsScreenState extends ConsumerState<ChatsDataSettingsScree
                 context: context,
                 builder: (c) => AlertDialog(
                   title: const Text('Clear All History?'),
-                  content: const Text('This will delete all chats permanently. This operation is irreversible.'),
+                  content: const Text(
+                      'This will delete all chats permanently. This operation is irreversible.'),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(c, false),
@@ -680,7 +754,8 @@ class _ChatsDataSettingsScreenState extends ConsumerState<ChatsDataSettingsScree
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(c, true),
-                      style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+                      style: TextButton.styleFrom(
+                          foregroundColor: theme.colorScheme.error),
                       child: const Text('Clear permanently'),
                     ),
                   ],
@@ -689,11 +764,12 @@ class _ChatsDataSettingsScreenState extends ConsumerState<ChatsDataSettingsScree
 
               if (confirm == true) {
                 await storage.clearAllChats();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('History cleared successfully'), behavior: SnackBarBehavior.floating),
-                  );
-                }
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('History cleared successfully'),
+                      behavior: SnackBarBehavior.floating),
+                );
               }
             },
           ),
@@ -710,16 +786,19 @@ class AppearanceThemesSettingsScreen extends ConsumerStatefulWidget {
   const AppearanceThemesSettingsScreen({super.key});
 
   @override
-  ConsumerState<AppearanceThemesSettingsScreen> createState() => _AppearanceThemesSettingsScreenState();
+  ConsumerState<AppearanceThemesSettingsScreen> createState() =>
+      _AppearanceThemesSettingsScreenState();
 }
 
-class _AppearanceThemesSettingsScreenState extends ConsumerState<AppearanceThemesSettingsScreen> {
+class _AppearanceThemesSettingsScreenState
+    extends ConsumerState<AppearanceThemesSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeMode = ref.watch(themeProvider);
     final storage = ref.watch(storageServiceProvider);
-    final haptic = storage.getSetting(AppConstants.hapticFeedbackKey, defaultValue: false);
+    final haptic =
+        storage.getSetting(AppConstants.hapticFeedbackKey, defaultValue: false);
 
     return Scaffold(
       appBar: M3AppBar(
@@ -747,12 +826,15 @@ class _AppearanceThemesSettingsScreenState extends ConsumerState<AppearanceTheme
                   segments: const [
                     ButtonSegment(value: ThemeMode.light, label: Text('Light')),
                     ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
-                    ButtonSegment(value: ThemeMode.system, label: Text('System')),
+                    ButtonSegment(
+                        value: ThemeMode.system, label: Text('System')),
                   ],
                   selected: {themeMode},
                   onSelectionChanged: (Set<ThemeMode> newSelection) {
                     HapticFeedback.selectionClick();
-                    ref.read(themeProvider.notifier).setThemeMode(newSelection.first);
+                    ref
+                        .read(themeProvider.notifier)
+                        .setThemeMode(newSelection.first);
                   },
                 ),
               ],
@@ -761,7 +843,8 @@ class _AppearanceThemesSettingsScreenState extends ConsumerState<AppearanceTheme
           const Divider(height: 1),
           SwitchListTile(
             title: const Text('Haptic Feedback'),
-            subtitle: const Text('Subtle haptic sensations on touch interaction'),
+            subtitle:
+                const Text('Subtle haptic sensations on touch interaction'),
             value: haptic,
             onChanged: (val) async {
               if (val) HapticFeedback.lightImpact();
@@ -773,7 +856,8 @@ class _AppearanceThemesSettingsScreenState extends ConsumerState<AppearanceTheme
           ListTile(
             title: const Text('Chat UI Customization'),
             subtitle: const Text('Colors, Fonts, Message Corner Radius'),
-            leading: Icon(Icons.palette_outlined, color: theme.colorScheme.primary),
+            leading:
+                Icon(Icons.palette_outlined, color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -793,10 +877,12 @@ class SystemToolsSettingsScreen extends ConsumerStatefulWidget {
   const SystemToolsSettingsScreen({super.key});
 
   @override
-  ConsumerState<SystemToolsSettingsScreen> createState() => _SystemToolsSettingsScreenState();
+  ConsumerState<SystemToolsSettingsScreen> createState() =>
+      _SystemToolsSettingsScreenState();
 }
 
-class _SystemToolsSettingsScreenState extends ConsumerState<SystemToolsSettingsScreen> {
+class _SystemToolsSettingsScreenState
+    extends ConsumerState<SystemToolsSettingsScreen> {
   final UpdateService _updateService = UpdateService();
   bool _autoUpdateEnabled = true;
   bool _isCheckingForUpdates = false;
@@ -876,8 +962,10 @@ class _SystemToolsSettingsScreenState extends ConsumerState<SystemToolsSettingsS
         children: [
           ListTile(
             title: const Text('Inference Benchmark'),
-            subtitle: const Text('Measure local model tokens per second and latency'),
-            leading: Icon(Icons.rocket_launch_outlined, color: theme.colorScheme.primary),
+            subtitle:
+                const Text('Measure local model tokens per second and latency'),
+            leading: Icon(Icons.rocket_launch_outlined,
+                color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -888,7 +976,8 @@ class _SystemToolsSettingsScreenState extends ConsumerState<SystemToolsSettingsS
           ListTile(
             title: const Text('User Display Profile'),
             subtitle: const Text('Customize your displays, name, and details'),
-            leading: Icon(Icons.person_outline, color: theme.colorScheme.primary),
+            leading:
+                Icon(Icons.person_outline, color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -898,7 +987,8 @@ class _SystemToolsSettingsScreenState extends ConsumerState<SystemToolsSettingsS
           const Divider(height: 1),
           ListTile(
             title: const Text('Activity History Log'),
-            subtitle: const Text('View and query past operations and usage statistics'),
+            subtitle: const Text(
+                'View and query past operations and usage statistics'),
             leading: Icon(Icons.history, color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
@@ -909,8 +999,10 @@ class _SystemToolsSettingsScreenState extends ConsumerState<SystemToolsSettingsS
           const Divider(height: 1),
           ListTile(
             title: const Text('Usage Statistics Tracker'),
-            subtitle: const Text('View active prompt enhancement and token analytics'),
-            leading: Icon(Icons.bar_chart_outlined, color: theme.colorScheme.primary),
+            subtitle: const Text(
+                'View active prompt enhancement and token analytics'),
+            leading: Icon(Icons.bar_chart_outlined,
+                color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -921,7 +1013,8 @@ class _SystemToolsSettingsScreenState extends ConsumerState<SystemToolsSettingsS
           ListTile(
             title: const Text('Debug Error Log'),
             subtitle: const Text('View system diagnostics error records'),
-            leading: Icon(Icons.bug_report_outlined, color: theme.colorScheme.primary),
+            leading: Icon(Icons.bug_report_outlined,
+                color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -939,12 +1032,14 @@ class _SystemToolsSettingsScreenState extends ConsumerState<SystemToolsSettingsS
           const SizedBox(height: 12),
           SwitchListTile(
             title: const Text('Auto-check for Updates'),
-            subtitle: const Text('Check for updates when the application opens'),
+            subtitle:
+                const Text('Check for updates when the application opens'),
             value: _autoUpdateEnabled,
             onChanged: _toggleAutoUpdate,
             secondary: Icon(
               Icons.update,
-              color: _autoUpdateEnabled ? theme.colorScheme.primary : Colors.grey,
+              color:
+                  _autoUpdateEnabled ? theme.colorScheme.primary : Colors.grey,
             ),
           ),
           const Divider(height: 1),
@@ -952,9 +1047,13 @@ class _SystemToolsSettingsScreenState extends ConsumerState<SystemToolsSettingsS
             title: const Text('Check for Updates Now'),
             subtitle: const Text('Manually query latest GitHub releases'),
             leading: _isCheckingForUpdates
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.refresh),
-            trailing: _isCheckingForUpdates ? null : const Icon(Icons.chevron_right),
+            trailing:
+                _isCheckingForUpdates ? null : const Icon(Icons.chevron_right),
             onTap: _isCheckingForUpdates ? null : _checkForUpdatesManually,
           ),
           const Divider(height: 1),

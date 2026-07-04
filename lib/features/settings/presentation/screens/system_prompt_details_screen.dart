@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
-import '../../../../services/storage_service.dart';
 import '../../../chat/domain/models/system_prompt.dart';
 
 class SystemPromptDetailsScreen extends ConsumerStatefulWidget {
@@ -23,7 +22,6 @@ class _SystemPromptDetailsScreenState
   late TextEditingController _titleController;
   late TextEditingController _contentController;
   final _formKey = GlobalKey<FormState>();
-  bool _isEditing = false;
   SystemPrompt? _existingPrompt;
 
   @override
@@ -36,7 +34,6 @@ class _SystemPromptDetailsScreenState
 
   void _loadPrompt() {
     if (widget.promptId == null || widget.promptId == 'new') {
-      _isEditing = true;
       return;
     }
 

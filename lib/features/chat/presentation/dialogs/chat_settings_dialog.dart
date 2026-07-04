@@ -185,8 +185,9 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
               activeColor: colorScheme.primary,
               inactiveColor: colorScheme.surfaceContainerHighest,
               onChanged: (val) {
-                if ((val * 10).round() % 2 == 0)
+                if ((val * 10).round() % 2 == 0) {
                   HapticFeedback.selectionClick();
+                }
                 setState(() => _temp = val);
               },
             ),

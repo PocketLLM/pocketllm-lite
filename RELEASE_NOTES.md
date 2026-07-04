@@ -1,11 +1,8 @@
-# Release Notes - Version 1.0.24
+# Release Notes - Version 1.0.30
 
-## **Highlights: In-App Update Permissions & Waveform HUD**
-This release introduces high-fidelity runtime permissions and a premium Material 3 expressive visual HUD for our in-app update mechanism:
-1. **Android unknown-source APK Installer Guard**: Integrates pre-download checks for `REQUEST_INSTALL_PACKAGES` permission on Android. If not enabled, the system cleanly prompts the user and auto-redirects to settings via `openAppSettings()` for seamless OTA updates.
-2. **Mathematically Flowing Waveform Loader**: Introduces a stunning, soundwave-like visualizer inside the update dialog driven by mathematical sine phase shift algorithms.
-3. **M3 Expressive Download HUD**: Upgrades the standard progress indicators into a gorgeous, focused, and locked dashboard featuring a smooth, physics-based, glowing gradient progress bar with custom shadows and clean monospace percentage readouts.
-4. **App Installation Command**: Updated build instructions for releasing `flutter build apk --split-per-abi --release`.
+## **Highlights: Model Loading Status Indicator**
+This release introduces user-friendly feedback during offline model initialization:
+1. **Model Loading Status Indicator**: Displays a clear message (*Loading model, please wait...*) in the chat message bubble during offline GGUF model loading, indicating that the model is actively loading into RAM before token generation starts.
 
 ---
 

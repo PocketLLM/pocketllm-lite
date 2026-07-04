@@ -550,20 +550,21 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen> {
                       final skill = await _fetchAndParseSkill(url);
                       setDialogState(() => _isImporting = false);
 
+                      if (!context.mounted) return;
                       if (skill != null) {
-                        Navigator.pop(dialogContext);
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext);
+                        }
                         _showInstallPreview(context, skill);
                       } else {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                  'Failed to fetch or parse SKILL.md. Check URL & network.'),
-                              backgroundColor: colorScheme.error,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                                'Failed to fetch or parse SKILL.md. Check URL & network.'),
+                            backgroundColor: colorScheme.error,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
                       }
                     },
               child: const Text('Fetch'),

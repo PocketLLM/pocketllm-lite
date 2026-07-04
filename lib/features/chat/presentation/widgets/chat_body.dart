@@ -8,8 +8,10 @@ import '../../domain/models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../providers/connection_status_provider.dart';
 import '../providers/draft_message_provider.dart';
-import 'chat_bubble.dart';
 import 'package:pocketllm_lite/features/profile/presentation/providers/profile_provider.dart';
+import '../../../../providers/model_manager_provider.dart';
+import '../../../../models/local_model.dart';
+import 'chat_bubble.dart';
 
 class ChatBody extends ConsumerStatefulWidget {
   const ChatBody({super.key});
@@ -93,9 +95,15 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
       }
     });
 
+    final selectedModel =
+        ref.watch(chatProvider.select((s) => s.selectedModel));
+    final localState = ref.watch(modelManagerProvider);
+    final isLocalModel = localState.models.containsKey(selectedModel) &&
+        localState.models[selectedModel]?.status == DownloadStatus.downloaded;
+
     return connectionStatusAsync.when(
       data: (isConnected) {
-        if (!isConnected) {
+        if (!isConnected && !isLocalModel) {
           return _DisconnectedState();
         }
 
@@ -372,6 +380,19 @@ class _StreamingChatBubbleState extends ConsumerState<_StreamingChatBubble> {
     final thinking = ref.watch(
       chatProvider.select((s) => s.streamingThinkingContent),
     );
+    final isModelLoading = ref.watch(
+      chatProvider.select((s) => s.isModelLoading),
+    );
+
+    if (isModelLoading) {
+      return ChatBubble(
+        message: ChatMessage(
+          role: 'assistant',
+          content: '*Loading model, please wait...*',
+          timestamp: _timestamp,
+        ),
+      );
+    }
 
     return ChatBubble(
       message: ChatMessage(

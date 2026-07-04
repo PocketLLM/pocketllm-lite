@@ -13,6 +13,11 @@ class LocalModel {
   final DownloadStatus status;
   final double downloadProgress;
   final bool isCustomImport;
+  final String? description;
+  final String? provider;
+  final String? family;
+  final List<String>? capabilities;
+  final Map<String, String>? benchmarks;
 
   const LocalModel({
     required this.id,
@@ -23,6 +28,11 @@ class LocalModel {
     this.status = DownloadStatus.notDownloaded,
     this.downloadProgress = 0.0,
     this.isCustomImport = false,
+    this.description,
+    this.provider,
+    this.family,
+    this.capabilities,
+    this.benchmarks,
   });
 
   /// Factory constructors or helpers to classify GGUF variants
@@ -50,6 +60,11 @@ class LocalModel {
     DownloadStatus? status,
     double? downloadProgress,
     bool? isCustomImport,
+    String? description,
+    String? provider,
+    String? family,
+    List<String>? capabilities,
+    Map<String, String>? benchmarks,
   }) {
     return LocalModel(
       id: id ?? this.id,
@@ -60,6 +75,11 @@ class LocalModel {
       status: status ?? this.status,
       downloadProgress: downloadProgress ?? this.downloadProgress,
       isCustomImport: isCustomImport ?? this.isCustomImport,
+      description: description ?? this.description,
+      provider: provider ?? this.provider,
+      family: family ?? this.family,
+      capabilities: capabilities ?? this.capabilities,
+      benchmarks: benchmarks ?? this.benchmarks,
     );
   }
 
@@ -73,6 +93,11 @@ class LocalModel {
       'status': status.index,
       'downloadProgress': downloadProgress,
       'isCustomImport': isCustomImport ? 1 : 0,
+      'description': description,
+      'provider': provider,
+      'family': family,
+      'capabilities': capabilities,
+      'benchmarks': benchmarks,
     };
   }
 
@@ -86,6 +111,14 @@ class LocalModel {
       status: DownloadStatus.values[map['status'] as int? ?? 0],
       downloadProgress: (map['downloadProgress'] as num? ?? 0.0).toDouble(),
       isCustomImport: (map['isCustomImport'] as int? ?? 0) == 1,
+      description: map['description'] as String?,
+      provider: map['provider'] as String?,
+      family: map['family'] as String?,
+      capabilities: (map['capabilities'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      benchmarks: (map['benchmarks'] as Map<dynamic, dynamic>?)
+          ?.map((k, v) => MapEntry(k as String, v as String)),
     );
   }
 }
