@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Your Private AI, Completely Offline.</strong><br/>
-  Run Llama 3, DeepSeek-R1, Mistral, Phi-3 & Gemma on your phone — no cloud, no tracking, no compromise.
+  Run Llama 3, DeepSeek-R1, Mistral, Phi-3 & Gemma on your phone no cloud, no tracking, no compromise.
 </p>
 
 <p align="center">
