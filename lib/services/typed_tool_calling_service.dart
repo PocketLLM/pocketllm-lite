@@ -1,28 +1,28 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 class TypedToolCall {
   final String id;
   final String toolName;
   final Map<String, dynamic> arguments;
-
   const TypedToolCall({
     required this.id,
     required this.toolName,
     required this.arguments,
   });
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'toolName': toolName,
-        'arguments': arguments,
-      };
-
-  factory TypedToolCall.fromJson(Map<String, dynamic> json) => TypedToolCall(
-        id: json['id'] as String? ?? 'call_${Random().nextInt(100000)}',
-        toolName: json['tool'] as String? ?? json['toolName'] as String,
-        arguments: json['arguments'] as Map<String, dynamic>? ?? {},
-      );
+  factory TypedToolCall.fromJson(Map<String, dynamic> json) {
+    final name = json['tool'] ?? json['toolName'];
+    if (name is! String || name.isEmpty || json['arguments'] is! Map) {
+      throw const FormatException('Tool call requires tool and arguments.');
+    }
+    return TypedToolCall(
+      id: json['id'] as String? ??
+          'call_${DateTime.now().microsecondsSinceEpoch}',
+      toolName: name,
+      arguments: Map<String, dynamic>.from(json['arguments'] as Map),
+    );
+  }
 }
 
 class TypedToolResult {
@@ -32,8 +32,7 @@ class TypedToolResult {
   final dynamic output;
   final String? error;
   final DateTime executedAt;
-
-  TypedToolResult({
+  const TypedToolResult({
     required this.toolCallId,
     required this.toolName,
     required this.success,
@@ -41,161 +40,147 @@ class TypedToolResult {
     this.error,
     required this.executedAt,
   });
-
-  Map<String, dynamic> toJson() => {
-        'toolCallId': toolCallId,
-        'toolName': toolName,
-        'success': success,
-        'output': output,
-        'error': error,
-        'executedAt': executedAt.toIso8601String(),
-      };
 }
 
 class ToolDefinition {
   final String name;
   final String description;
   final Map<String, dynamic> parametersSchema;
-  final String networkScope; // 'offline', 'local_network', 'internet_required'
+  final String networkScope;
   final bool requiresConfirmation;
-
+  final Duration timeout;
+  final Future<dynamic> Function(Map<String, dynamic> arguments) handler;
   const ToolDefinition({
     required this.name,
     required this.description,
     required this.parametersSchema,
+    required this.handler,
     this.networkScope = 'offline',
     this.requiresConfirmation = false,
+    this.timeout = const Duration(seconds: 20),
   });
 }
 
 class TypedToolCallingService {
-  static final TypedToolCallingService _instance = TypedToolCallingService._internal();
-  factory TypedToolCallingService() => _instance;
-  TypedToolCallingService._internal();
-
   final Map<String, ToolDefinition> _registeredTools = {};
   final List<TypedToolResult> _executionHistory = [];
 
-  List<TypedToolResult> get executionHistory => List.unmodifiable(_executionHistory);
+  List<TypedToolResult> get executionHistory =>
+      List.unmodifiable(_executionHistory);
 
-  void registerTool(ToolDefinition def) {
-    _registeredTools[def.name] = def;
+  void registerTool(ToolDefinition definition) {
+    _registeredTools[definition.name] = definition;
   }
 
   ToolDefinition? getTool(String name) => _registeredTools[name];
 
   List<TypedToolCall> parseToolCalls(String responseText) {
-    final List<TypedToolCall> calls = [];
-
-    final trimmed = responseText.trim();
-    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-      try {
-        final decoded = jsonDecode(trimmed);
-        if (decoded is Map<String, dynamic> && decoded.containsKey('tool')) {
-          calls.add(TypedToolCall.fromJson(decoded));
-          return calls;
+    final calls = <TypedToolCall>[];
+    var start = responseText.indexOf('{');
+    while (start >= 0) {
+      var depth = 0;
+      var inString = false;
+      var escaped = false;
+      var end = -1;
+      for (var index = start; index < responseText.length; index++) {
+        final character = responseText[index];
+        if (escaped) {
+          escaped = false;
+          continue;
         }
-      } catch (_) {}
-    }
-
-    int start = responseText.indexOf('{');
-    while (start != -1) {
-      int depth = 0;
-      int end = -1;
-      for (int i = start; i < responseText.length; i++) {
-        if (responseText[i] == '{') depth++;
-        if (responseText[i] == '}') depth--;
+        if (character == r'\') {
+          escaped = true;
+          continue;
+        }
+        if (character == '"') inString = !inString;
+        if (inString) continue;
+        if (character == '{') depth++;
+        if (character == '}') depth--;
         if (depth == 0) {
-          end = i;
+          end = index;
           break;
         }
       }
-
-      if (end != -1) {
-        final candidate = responseText.substring(start, end + 1);
-        try {
-          final decoded = jsonDecode(candidate);
-          if (decoded is Map<String, dynamic> && decoded.containsKey('tool')) {
-            calls.add(TypedToolCall.fromJson(decoded));
-          }
-        } catch (_) {}
-        start = responseText.indexOf('{', end + 1);
-      } else {
-        break;
+      if (end < 0) break;
+      try {
+        final decoded = jsonDecode(responseText.substring(start, end + 1));
+        if (decoded is Map<String, dynamic> && decoded.containsKey('tool')) {
+          calls.add(TypedToolCall.fromJson(decoded));
+        }
+      } on FormatException {
+        // Non-tool JSON fragments are ignored.
       }
+      start = responseText.indexOf('{', end + 1);
     }
-
     return calls;
   }
 
   Future<TypedToolResult> executeToolCall(TypedToolCall call) async {
-    final tool = _registeredTools[call.toolName];
-    if (tool == null) {
-      final res = TypedToolResult(
-        toolCallId: call.id,
-        toolName: call.toolName,
-        success: false,
-        error: 'Unknown tool: ${call.toolName}',
-        executedAt: DateTime.now(),
-      );
-      _executionHistory.add(res);
-      return res;
+    final definition = _registeredTools[call.toolName];
+    if (definition == null) {
+      return _record(call,
+          success: false, error: 'Unknown tool: ${call.toolName}');
     }
-
+    final validation = _validate(definition.parametersSchema, call.arguments);
+    if (validation != null) {
+      return _record(call, success: false, error: validation);
+    }
     try {
-      dynamic output;
-      if (call.toolName == 'calculator') {
-        final expr = call.arguments['expression'] as String? ?? '0';
-        output = _evaluateMathExpression(expr);
-      } else if (call.toolName == 'system_info') {
-        output = {
-          'os': 'PocketLLM Native Core',
-          'status': 'Optimal',
-          'time': DateTime.now().toIso8601String(),
-        };
-      } else {
-        output = {'message': 'Tool ${call.toolName} executed successfully.'};
-      }
-
-      final res = TypedToolResult(
-        toolCallId: call.id,
-        toolName: call.toolName,
-        success: true,
-        output: output,
-        executedAt: DateTime.now(),
-      );
-      _executionHistory.add(res);
-      return res;
-    } catch (e) {
-      final res = TypedToolResult(
-        toolCallId: call.id,
-        toolName: call.toolName,
-        success: false,
-        error: e.toString(),
-        executedAt: DateTime.now(),
-      );
-      _executionHistory.add(res);
-      return res;
+      final output = await definition.handler(call.arguments).timeout(
+            definition.timeout,
+          );
+      return _record(call, success: true, output: output);
+    } on TimeoutException {
+      return _record(call, success: false, error: 'Tool execution timed out.');
+    } catch (error) {
+      return _record(call, success: false, error: error.toString());
     }
   }
 
-  double _evaluateMathExpression(String expr) {
-    // Basic safe expression evaluator
-    final cleaned = expr.replaceAll(' ', '');
-    if (cleaned.contains('+')) {
-      final parts = cleaned.split('+');
-      return (double.tryParse(parts[0]) ?? 0) + (double.tryParse(parts[1]) ?? 0);
-    } else if (cleaned.contains('*')) {
-      final parts = cleaned.split('*');
-      return (double.tryParse(parts[0]) ?? 0) * (double.tryParse(parts[1]) ?? 0);
-    } else if (cleaned.contains('-')) {
-      final parts = cleaned.split('-');
-      return (double.tryParse(parts[0]) ?? 0) - (double.tryParse(parts[1]) ?? 0);
-    } else if (cleaned.contains('/')) {
-      final parts = cleaned.split('/');
-      final denom = double.tryParse(parts[1]) ?? 1;
-      return (double.tryParse(parts[0]) ?? 0) / (denom == 0 ? 1 : denom);
+  String? _validate(
+    Map<String, dynamic> schema,
+    Map<String, dynamic> arguments,
+  ) {
+    final properties = Map<String, dynamic>.from(
+      schema['properties'] as Map? ?? const {},
+    );
+    final required = List<String>.from(schema['required'] as List? ?? const []);
+    for (final field in required) {
+      if (!arguments.containsKey(field)) {
+        return 'Missing required field: $field';
+      }
     }
-    return double.tryParse(cleaned) ?? 0.0;
+    for (final entry in arguments.entries) {
+      final property = properties[entry.key];
+      if (property == null && schema['additionalProperties'] == false) {
+        return 'Unsupported field: ${entry.key}';
+      }
+      final type = property is Map ? property['type'] : null;
+      if (type == 'string' && entry.value is! String) {
+        return 'Field ${entry.key} must be a string';
+      }
+      if (type == 'number' && entry.value is! num) {
+        return 'Field ${entry.key} must be a number';
+      }
+    }
+    return null;
+  }
+
+  TypedToolResult _record(
+    TypedToolCall call, {
+    required bool success,
+    dynamic output,
+    String? error,
+  }) {
+    final result = TypedToolResult(
+      toolCallId: call.id,
+      toolName: call.toolName,
+      success: success,
+      output: output,
+      error: error,
+      executedAt: DateTime.now(),
+    );
+    _executionHistory.add(result);
+    return result;
   }
 }
