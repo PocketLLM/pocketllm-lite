@@ -6,6 +6,9 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
 import android.os.StatFs
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -13,6 +16,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val storageChannel = "pocketllm_lite/storage"
     private val deviceChannel = "pocketllm_lite/device"
+    private val ocrChannel = "pocketllm_lite/ocr"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -69,6 +73,32 @@ class MainActivity : FlutterActivity() {
                 )
             } catch (e: Exception) {
                 result.error("DEVICE_PROFILE_ERROR", e.localizedMessage, null)
+            }
+        }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ocrChannel).setMethodCallHandler { call, result ->
+            if (call.method != "recognizeText") {
+                result.notImplemented()
+                return@setMethodCallHandler
+            }
+            val imagePath = call.argument<String>("path")
+            if (imagePath.isNullOrBlank()) {
+                result.error("OCR_INPUT_ERROR", "An image path is required", null)
+                return@setMethodCallHandler
+            }
+            try {
+                val image = InputImage.fromFilePath(this, android.net.Uri.fromFile(java.io.File(imagePath)))
+                val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                recognizer.process(image)
+                    .addOnSuccessListener { recognized ->
+                        result.success(mapOf("text" to recognized.text, "confidence" to null))
+                        recognizer.close()
+                    }
+                    .addOnFailureListener { error ->
+                        result.error("OCR_PROCESSING_ERROR", error.localizedMessage, null)
+                        recognizer.close()
+                    }
+            } catch (error: Exception) {
+                result.error("OCR_INPUT_ERROR", error.localizedMessage, null)
             }
         }
     }
