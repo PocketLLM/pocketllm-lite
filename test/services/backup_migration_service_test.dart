@@ -1,36 +1,70 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketllm_lite/services/backup_migration_service.dart';
 
 void main() {
-  group('BackupMigrationService Tests', () {
+  group('authenticated backup', () {
     final service = BackupMigrationService();
 
-    test('creates backup json with valid SHA-256 checksum and restores successfully', () {
-      final jsonStr = service.createBackupJson(
+    test('encrypts payload and restores it with the correct password',
+        () async {
+      final encrypted = await service.createEncryptedBackup(
+        password: 'correct horse battery staple',
         settings: {'theme': 'dark'},
-        chats: [{'id': 'c1'}],
-        memories: [{'id': 'm1'}],
-        personas: [{'id': 'p1'}],
+        chats: [
+          {'id': 'c1', 'content': 'private chat text'},
+        ],
+        memories: [
+          {'id': 'm1'},
+        ],
+        personas: [
+          {'id': 'p1'},
+        ],
       );
 
-      expect(jsonStr.contains('"version":"1.0.35"'), isTrue);
-      expect(jsonStr.contains('"checksum":'), isTrue);
+      expect(encrypted, contains('AES-256-GCM'));
+      expect(encrypted, isNot(contains('private chat text')));
+      expect(encrypted, isNot(contains('"theme":"dark"')));
 
-      final valid = service.verifyAndRestoreBackup(jsonStr);
-      expect(valid, isTrue);
+      final restored = await service.decryptBackup(
+        encryptedJson: encrypted,
+        password: 'correct horse battery staple',
+      );
+      expect(restored.schemaVersion, 2);
+      expect(restored.settings['theme'], 'dark');
+      expect(restored.chats.single['id'], 'c1');
     });
 
-    test('rejects tampered backup json with invalid checksum', () {
-      final jsonStr = service.createBackupJson(
-        settings: {'theme': 'dark'},
-        chats: [],
-        memories: [],
-        personas: [],
+    test('wrong password and ciphertext corruption fail authentication',
+        () async {
+      final encrypted = await service.createEncryptedBackup(
+        password: 'correct horse battery staple',
+        settings: const {},
+        chats: const [],
+        memories: const [],
+        personas: const [],
       );
 
-      final tampered = jsonStr.replaceAll('"theme":"dark"', '"theme":"light"');
-      final valid = service.verifyAndRestoreBackup(tampered);
-      expect(valid, isFalse);
+      expect(
+        () => service.decryptBackup(
+          encryptedJson: encrypted,
+          password: 'incorrect password',
+        ),
+        throwsA(isA<BackupDecryptError>()),
+      );
+
+      final envelope = jsonDecode(encrypted) as Map<String, dynamic>;
+      final bytes = base64Decode(envelope['ciphertext'] as String);
+      bytes[0] ^= 0xff;
+      envelope['ciphertext'] = base64Encode(bytes);
+      expect(
+        () => service.decryptBackup(
+          encryptedJson: jsonEncode(envelope),
+          password: 'correct horse battery staple',
+        ),
+        throwsA(isA<BackupDecryptError>()),
+      );
     });
   });
 }

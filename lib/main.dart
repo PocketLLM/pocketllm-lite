@@ -14,6 +14,7 @@ import 'services/update_service.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cactus/cactus.dart' as cactus;
 import 'services/network_policy_service.dart';
 
 // Global navigator key for showing dialogs from anywhere
@@ -25,6 +26,7 @@ void main() async {
 
   // Disable network font fetching to ensure strictly local assets
   GoogleFonts.config.allowRuntimeFetching = false;
+  cactus.CactusConfig.isTelemetryEnabled = false;
 
   final storageService = StorageService();
   await storageService.init();

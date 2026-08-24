@@ -1,5 +1,8 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../../core/widgets/m3_empty_state.dart';
 import '../../../../services/audio_transcription_service.dart';
@@ -8,41 +11,59 @@ class AudioTranscriptionScreen extends ConsumerStatefulWidget {
   const AudioTranscriptionScreen({super.key});
 
   @override
-  ConsumerState<AudioTranscriptionScreen> createState() => _AudioTranscriptionScreenState();
+  ConsumerState<AudioTranscriptionScreen> createState() =>
+      _AudioTranscriptionScreenState();
 }
 
-class _AudioTranscriptionScreenState extends ConsumerState<AudioTranscriptionScreen> {
+class _AudioTranscriptionScreenState
+    extends ConsumerState<AudioTranscriptionScreen> {
   AudioTranscriptionResult? _currentResult;
   bool _isProcessing = false;
+  String? _error;
 
-  Future<void> _processSampleAudio() async {
-    setState(() => _isProcessing = true);
-    final result = await AudioTranscriptionService().transcribeAudioFile(
-      filePath: '/sample/project_review.mp3',
-      fileName: 'project_architecture_review.mp3',
+  Future<void> _pickAndTranscribe() async {
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['wav', 'mp3', 'm4a', 'aac', 'flac'],
     );
+    final selected = picked?.files.single;
+    if (selected?.path == null) return;
     setState(() {
-      _currentResult = result;
-      _isProcessing = false;
+      _isProcessing = true;
+      _error = null;
     });
+    try {
+      final result = await AudioTranscriptionService().transcribeAudioFile(
+        filePath: selected!.path!,
+        fileName: selected.name,
+      );
+      if (mounted) setState(() => _currentResult = result);
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return Scaffold(
       appBar: M3AppBar(
         title: 'Audio Workspace',
-        subtitle: 'Offline Speech Transcription & Summaries',
+        subtitle: 'On-device Whisper transcription',
         actions: [
           if (_currentResult != null)
             IconButton(
-              icon: const Icon(Icons.share_rounded),
-              onPressed: () {
-                final md = _currentResult!.exportToMarkdown();
+              tooltip: 'Copy transcript',
+              icon: const Icon(Icons.copy_rounded),
+              onPressed: () async {
+                await Clipboard.setData(
+                  ClipboardData(text: _currentResult!.exportToMarkdown()),
+                );
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Exported transcript (${md.length} chars) to clipboard')),
+                  const SnackBar(content: Text('Transcript copied')),
                 );
               },
             ),
@@ -53,12 +74,17 @@ class _AudioTranscriptionScreenState extends ConsumerState<AudioTranscriptionScr
           : _currentResult == null
               ? M3EmptyState(
                   icon: Icons.graphic_eq_rounded,
-                  title: 'No Active Audio Session',
-                  description: 'Import or record an audio file to view timestamped transcriptions, meeting summaries, and extracted tasks.',
+                  title: _error == null
+                      ? 'No audio selected'
+                      : 'Transcription failed',
+                  description: _error ??
+                      'Choose an audio file. The first run downloads a Whisper model unless Strict Offline blocks it; audio stays on device.',
                   action: FilledButton.icon(
-                    icon: const Icon(Icons.mic_rounded),
-                    label: const Text('Start Audio Session'),
-                    onPressed: _processSampleAudio,
+                    icon: const Icon(Icons.audio_file_rounded),
+                    label: Text(
+                      _error == null ? 'Choose audio file' : 'Try another file',
+                    ),
+                    onPressed: _pickAndTranscribe,
                   ),
                 )
               : ListView(
@@ -72,63 +98,30 @@ class _AudioTranscriptionScreenState extends ConsumerState<AudioTranscriptionScr
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.audio_file_rounded, color: theme.colorScheme.primary),
-                                const SizedBox(width: 8),
+                                Icon(
+                                  Icons.audio_file_rounded,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     _currentResult!.fileName,
-                                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                    style: theme.textTheme.titleMedium,
                                   ),
                                 ),
-                                Chip(label: Text('${_currentResult!.durationSeconds}s')),
                               ],
                             ),
-                            const Divider(height: 24),
-                            Text(
-                              'Meeting Summary',
-                              style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(_currentResult!.summary),
+                            const SizedBox(height: 16),
+                            SelectableText(_currentResult!.text),
                           ],
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      'Action Items & Tasks',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    ..._currentResult!.extractedTasks.map(
-                      (task) => Card.outlined(
-                        child: ListTile(
-                          leading: Icon(Icons.check_circle_outline_rounded, color: theme.colorScheme.tertiary),
-                          title: Text(task),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Timestamped Transcript',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    ..._currentResult!.segments.map(
-                      (seg) => Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: theme.colorScheme.primaryContainer,
-                            child: Text(
-                              seg.speaker.substring(0, 1),
-                              style: TextStyle(color: theme.colorScheme.onPrimaryContainer),
-                            ),
-                          ),
-                          title: Text(seg.text),
-                          subtitle: Text('[${seg.formatTimestamp()}] ${seg.speaker}'),
-                        ),
-                      ),
+                    OutlinedButton.icon(
+                      onPressed: _pickAndTranscribe,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Transcribe another file'),
                     ),
                   ],
                 ),
