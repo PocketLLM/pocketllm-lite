@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers.dart';
 import '../../../../services/device_spec_service.dart';
 import '../../../../services/model_recommendation_engine.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 
 class ComparisonResult {
   final String modelId;
   final String responseText;
-  final int timeToFirstTokenMs;
-  final double tokensPerSec;
+  final int? timeToFirstTokenMs;
+  final double? tokensPerSec;
   final int totalTimeMs;
   final double peakRamGB;
   final bool isWinner;
@@ -28,7 +29,8 @@ class ModelComparisonScreen extends ConsumerStatefulWidget {
   const ModelComparisonScreen({super.key});
 
   @override
-  ConsumerState<ModelComparisonScreen> createState() => _ModelComparisonScreenState();
+  ConsumerState<ModelComparisonScreen> createState() =>
+      _ModelComparisonScreenState();
 }
 
 class _ModelComparisonScreenState extends ConsumerState<ModelComparisonScreen> {
@@ -64,8 +66,9 @@ class _ModelComparisonScreenState extends ConsumerState<ModelComparisonScreen> {
     final stopwatch = Stopwatch()..start();
 
     // Model A execution
-    int ttftA = 240;
-    StringBuffer bufferA = StringBuffer();
+    int? ttftA;
+    final bufferA = StringBuffer();
+    var succeededA = false;
     try {
       final streamA = ollamaService.generateChatStream(
         _modelA,
@@ -82,13 +85,15 @@ class _ModelComparisonScreenState extends ConsumerState<ModelComparisonScreen> {
         }
         bufferA.write(chunk);
       }
+      succeededA = true;
     } catch (e) {
       bufferA.write('Model A inference failed: $e');
     }
 
     final totalMsA = stopwatch.elapsedMilliseconds;
     final tokenCountA = (bufferA.length / 4.0).ceil();
-    final tpsA = (tokenCountA / (totalMsA / 1000.0)).clamp(0.0, 99.0);
+    final tpsA =
+        succeededA && totalMsA > 0 ? tokenCountA / (totalMsA / 1000.0) : null;
 
     final profile = await DeviceSpecService().getHardwareProfile();
     final recA = ModelRecommendationEngine().evaluateModel(
@@ -110,8 +115,9 @@ class _ModelComparisonScreenState extends ConsumerState<ModelComparisonScreen> {
     // Model B execution
     stopwatch.reset();
     stopwatch.start();
-    int ttftB = 310;
-    StringBuffer bufferB = StringBuffer();
+    int? ttftB;
+    final bufferB = StringBuffer();
+    var succeededB = false;
     try {
       final streamB = ollamaService.generateChatStream(
         _modelB,
@@ -128,13 +134,15 @@ class _ModelComparisonScreenState extends ConsumerState<ModelComparisonScreen> {
         }
         bufferB.write(chunk);
       }
+      succeededB = true;
     } catch (e) {
       bufferB.write('Model B inference failed: $e');
     }
 
     final totalMsB = stopwatch.elapsedMilliseconds;
     final tokenCountB = (bufferB.length / 4.0).ceil();
-    final tpsB = (tokenCountB / (totalMsB / 1000.0)).clamp(0.0, 99.0);
+    final tpsB =
+        succeededB && totalMsB > 0 ? tokenCountB / (totalMsB / 1000.0) : null;
 
     final recB = ModelRecommendationEngine().evaluateModel(
       profile: profile,
@@ -162,9 +170,7 @@ class _ModelComparisonScreenState extends ConsumerState<ModelComparisonScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('A/B Model Comparison'),
-      ),
+      appBar: const M3AppBar(title: 'A/B Model Comparison'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -180,7 +186,8 @@ class _ModelComparisonScreenState extends ConsumerState<ModelComparisonScreen> {
                     controller: _promptController,
                     maxLines: 3,
                     decoration: const InputDecoration(
-                      hintText: 'Enter test prompt for side-by-side comparison...',
+                      hintText:
+                          'Enter test prompt for side-by-side comparison...',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -224,10 +231,12 @@ class _ModelComparisonScreenState extends ConsumerState<ModelComparisonScreen> {
                           ? const SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.compare_arrows_rounded),
-                      label: Text(_isComparing ? 'Running Side-by-Side Inference...' : 'Compare Models'),
+                      label: Text(_isComparing
+                          ? 'Running Side-by-Side Inference...'
+                          : 'Compare Models'),
                     ),
                   ),
                 ],
@@ -269,15 +278,28 @@ class _ModelComparisonScreenState extends ConsumerState<ModelComparisonScreen> {
                 Chip(label: Text('Model $label')),
                 const Spacer(),
                 if (isSelectedWinner)
-                  const Icon(Icons.emoji_events_rounded, color: Colors.amber),
+                  Icon(
+                    Icons.emoji_events_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
               ],
             ),
-            Text(res.modelId, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(res.modelId,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             const Divider(),
-            Text('TTFT: ${res.timeToFirstTokenMs} ms'),
-            Text('Speed: ${res.tokensPerSec.toStringAsFixed(1)} tokens/sec'),
-            Text('Total Time: ${(res.totalTimeMs / 1000.0).toStringAsFixed(1)}s'),
-            Text('Est. Peak RAM: ${res.peakRamGB.toStringAsFixed(1)} GB'),
+            Text(
+              res.timeToFirstTokenMs == null
+                  ? 'TTFT: unavailable'
+                  : 'TTFT: ${res.timeToFirstTokenMs} ms',
+            ),
+            Text(
+              res.tokensPerSec == null
+                  ? 'Approx. output rate: unavailable'
+                  : 'Approx. output rate: ${res.tokensPerSec!.toStringAsFixed(1)} tokens/sec',
+            ),
+            Text(
+                'Total Time: ${(res.totalTimeMs / 1000.0).toStringAsFixed(1)}s'),
+            Text('Estimated RAM need: ${res.peakRamGB.toStringAsFixed(1)} GB'),
             const Divider(),
             Text(
               res.responseText.isEmpty ? 'No response' : res.responseText,
@@ -290,7 +312,8 @@ class _ModelComparisonScreenState extends ConsumerState<ModelComparisonScreen> {
               onPressed: () {
                 setState(() => _selectedWinner = res.modelId);
               },
-              child: Text(isSelectedWinner ? 'Winner Selected' : 'Select Winner'),
+              child:
+                  Text(isSelectedWinner ? 'Winner Selected' : 'Select Winner'),
             ),
           ],
         ),

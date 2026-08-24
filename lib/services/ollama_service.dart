@@ -5,14 +5,19 @@ import '../core/constants/app_constants.dart';
 import '../core/utils/url_validator.dart';
 import '../features/chat/domain/models/ollama_model.dart';
 import '../features/chat/domain/models/pull_progress.dart';
+import 'network_gateway.dart';
+import 'network_policy_service.dart';
 
 class OllamaService {
   String _baseUrl;
-  final http.Client _client;
+  final NetworkGateway _network;
 
-  OllamaService({String? baseUrl, http.Client? client})
-      : _baseUrl = baseUrl ?? AppConstants.defaultOllamaBaseUrl,
-        _client = client ?? http.Client() {
+  OllamaService({
+    String? baseUrl,
+    http.Client? client,
+    NetworkPolicyService? networkPolicy,
+  })  : _baseUrl = baseUrl ?? AppConstants.defaultOllamaBaseUrl,
+        _network = NetworkGateway(client: client, policy: networkPolicy) {
     // Security: Validate URL scheme to prevent non-HTTP protocols
     if (!UrlValidator.isHttpUrlString(_baseUrl)) {
       throw ArgumentError(
@@ -32,8 +37,13 @@ class OllamaService {
 
   Future<bool> checkConnection() async {
     try {
-      final response = await _client
-          .get(Uri.parse('$_baseUrl/api/tags'))
+      final response = await _network
+          .get(
+            Uri.parse('$_baseUrl/api/tags'),
+            purpose: ConnectionPurpose.remoteInference,
+            trigger: 'Ollama connection check',
+            infoSent: 'HTTP request metadata',
+          )
           .timeout(AppConstants.apiConnectionTimeout);
       return response.statusCode == 200;
     } catch (e) {
@@ -43,8 +53,13 @@ class OllamaService {
 
   Future<List<OllamaModel>> listModels() async {
     try {
-      final response = await _client
-          .get(Uri.parse('$_baseUrl/api/tags'))
+      final response = await _network
+          .get(
+            Uri.parse('$_baseUrl/api/tags'),
+            purpose: ConnectionPurpose.remoteInference,
+            trigger: 'List Ollama models',
+            infoSent: 'HTTP request metadata',
+          )
           .timeout(AppConstants.apiConnectionTimeout);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -102,8 +117,13 @@ class OllamaService {
       // because we want a streamed response.
       // However, for testing with MockClient, we want to use the injected client.
       // Standard http.Client.send returns a StreamedResponse.
-      final streamedResponse = await _client
-          .send(request)
+      final streamedResponse = await _network
+          .send(
+            request,
+            purpose: ConnectionPurpose.remoteInference,
+            trigger: 'Ollama chat generation',
+            infoSent: 'Model ID, conversation messages, and sampling options',
+          )
           .timeout(AppConstants.apiConnectionTimeout);
 
       if (streamedResponse.statusCode == 200) {
@@ -150,8 +170,13 @@ class OllamaService {
     request.body = jsonEncode({"name": modelName});
 
     try {
-      final streamedResponse = await _client
-          .send(request)
+      final streamedResponse = await _network
+          .send(
+            request,
+            purpose: ConnectionPurpose.modelDownload,
+            trigger: 'Pull Ollama model',
+            infoSent: 'Requested model ID',
+          )
           .timeout(AppConstants.apiConnectionTimeout);
 
       if (streamedResponse.statusCode == 200) {
@@ -178,8 +203,14 @@ class OllamaService {
 
   Future<void> deleteModel(String modelName) async {
     final url = Uri.parse('$_baseUrl/api/delete');
-    await _client
-        .delete(url, body: jsonEncode({"name": modelName}))
+    await _network
+        .delete(
+          url,
+          purpose: ConnectionPurpose.remoteInference,
+          trigger: 'Delete Ollama model',
+          infoSent: 'Requested model ID',
+          body: jsonEncode({"name": modelName}),
+        )
         .timeout(AppConstants.apiConnectionTimeout);
   }
 
@@ -206,9 +237,12 @@ class OllamaService {
     };
 
     try {
-      final response = await _client
+      final response = await _network
           .post(
             url,
+            purpose: ConnectionPurpose.remoteInference,
+            trigger: 'Ollama prompt enhancement',
+            infoSent: 'Model ID, system prompt, and user prompt',
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode(body),
           )

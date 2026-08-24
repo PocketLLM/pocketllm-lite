@@ -14,7 +14,7 @@ class OfflineNotificationPopup extends StatelessWidget {
         size: 32,
       ),
       title: Text(
-        'Offline Only',
+        'Local-first privacy',
         style: theme.textTheme.headlineSmall?.copyWith(
           color: theme.colorScheme.onSurface,
         ),
@@ -25,14 +25,14 @@ class OfflineNotificationPopup extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'This app is designed to run completely offline.',
+              'Local inference can run without a cloud account.',
               style: theme.textTheme.titleSmall?.copyWith(
                 color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'All AI processing happens locally on your device using Ollama. No data is sent to external servers.',
+              'Cactus runs supported models on-device. Ollama sends prompts to the endpoint you configure. Optional downloads, search, updates, and skill installs use the network only when enabled.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

@@ -19,6 +19,7 @@ class BackupArchivePayload {
   final List<dynamic> chats;
   final List<dynamic> memories;
   final List<dynamic> personas;
+  final List<dynamic> prompts;
 
   const BackupArchivePayload({
     required this.schemaVersion,
@@ -28,6 +29,7 @@ class BackupArchivePayload {
     required this.chats,
     required this.memories,
     required this.personas,
+    this.prompts = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -38,6 +40,7 @@ class BackupArchivePayload {
         'chats': chats,
         'memories': memories,
         'personas': personas,
+        'prompts': prompts,
       };
 
   factory BackupArchivePayload.fromJson(Map<String, dynamic> json) {
@@ -52,6 +55,7 @@ class BackupArchivePayload {
       chats: List<dynamic>.from(json['chats'] as List? ?? const []),
       memories: List<dynamic>.from(json['memories'] as List? ?? const []),
       personas: List<dynamic>.from(json['personas'] as List? ?? const []),
+      prompts: List<dynamic>.from(json['prompts'] as List? ?? const []),
     );
   }
 }
@@ -81,6 +85,7 @@ class BackupMigrationService {
     required List<dynamic> chats,
     required List<dynamic> memories,
     required List<dynamic> personas,
+    List<dynamic> prompts = const [],
   }) async {
     if (password.length < 8) {
       throw const BackupDecryptError(
@@ -95,6 +100,7 @@ class BackupMigrationService {
       chats: chats,
       memories: memories,
       personas: personas,
+      prompts: prompts,
     );
     final salt = _randomBytes(_saltLength);
     final nonce = _randomBytes(_nonceLength);

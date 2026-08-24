@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/providers.dart';
+import '../../../../services/backup_migration_service.dart';
+import '../../../../services/local_memory_service.dart';
 
 enum ExportFormat { json, csv, markdown, pdf }
 
@@ -25,6 +26,15 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
   bool _includeSettings = true;
   ExportFormat _selectedFormat = ExportFormat.json;
   bool _isLoading = false;
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -48,17 +58,46 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
       String subject;
 
       if (_selectedFormat == ExportFormat.json) {
-        // JSON Export (Backup)
+        final password = _passwordController.text;
+        if (password.length < 8 ||
+            password != _confirmPasswordController.text) {
+          throw const BackupDecryptError(
+            'Passwords must match and contain at least 8 characters.',
+          );
+        }
         final data = storage.exportData(
           includeChats: _includeChats,
           includePrompts: _includePrompts,
           includeSettings: _includeSettings,
           chatIds: widget.selectedChatIds?.toList(),
         );
-        final jsonString = const JsonEncoder.withIndent('  ').convert(data);
-        file = File('${directory.path}/pocketllm_backup_$timestamp.json');
-        await file.writeAsString(jsonString);
-        subject = 'pocketllm_backup_$timestamp.json';
+        final encrypted = await BackupMigrationService().createEncryptedBackup(
+          password: password,
+          settings:
+              Map<String, dynamic>.from(data['settings'] as Map? ?? const {}),
+          chats: List<dynamic>.from(data['chats'] as List? ?? const []),
+          memories: LocalMemoryService()
+              .getMemories()
+              .map((memory) => memory.toJson())
+              .toList(growable: false),
+          personas: storage
+              .getPersonas()
+              .map(
+                (persona) => {
+                  'id': persona.id,
+                  'name': persona.name,
+                  'systemPrompt': persona.systemPrompt,
+                  'temperature': persona.temperature,
+                  'avatarIcon': persona.avatarIcon,
+                  'modelId': persona.modelId,
+                },
+              )
+              .toList(growable: false),
+          prompts: List<dynamic>.from(data['prompts'] as List? ?? const []),
+        );
+        file = File('${directory.path}/pocketllm_backup_$timestamp.pllm');
+        await file.writeAsString(encrypted, flush: true);
+        subject = 'pocketllm_backup_$timestamp.pllm';
       } else if (_selectedFormat == ExportFormat.csv) {
         // CSV Export (Summary)
         final csvString = storage.exportToCsv(
@@ -156,7 +195,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
               items: const [
                 DropdownMenuItem(
                   value: ExportFormat.json,
-                  child: Text('JSON (Full Backup)'),
+                  child: Text('Encrypted backup (.pllm)'),
                 ),
                 DropdownMenuItem(
                   value: ExportFormat.csv,
@@ -223,6 +262,24 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                     ),
                   ),
                 ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Backup password',
+                  helperText:
+                      'At least 8 characters. This password cannot be recovered.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _confirmPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Confirm password',
+                ),
+              ),
             ] else ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -275,10 +332,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
               ? const SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Text('Export'),
         ),

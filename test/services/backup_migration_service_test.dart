@@ -21,6 +21,9 @@ void main() {
         personas: [
           {'id': 'p1'},
         ],
+        prompts: [
+          {'id': 'prompt-1', 'content': 'Be concise'},
+        ],
       );
 
       expect(encrypted, contains('AES-256-GCM'));
@@ -34,6 +37,7 @@ void main() {
       expect(restored.schemaVersion, 2);
       expect(restored.settings['theme'], 'dark');
       expect(restored.chats.single['id'], 'c1');
+      expect(restored.prompts.single['id'], 'prompt-1');
     });
 
     test('wrong password and ciphertext corruption fail authentication',

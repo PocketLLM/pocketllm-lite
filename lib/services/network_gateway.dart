@@ -51,6 +51,18 @@ class NetworkGateway {
     return _client.send(request);
   }
 
+  Future<http.Response> delete(
+    Uri uri, {
+    required ConnectionPurpose purpose,
+    required String trigger,
+    required String infoSent,
+    Map<String, String>? headers,
+    Object? body,
+  }) {
+    _requireAllowed(uri, purpose, trigger, infoSent);
+    return _client.delete(uri, headers: headers, body: body);
+  }
+
   void _requireAllowed(
     Uri uri,
     ConnectionPurpose purpose,

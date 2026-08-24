@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
+import '../../../../core/providers.dart';
+import '../../../chat/presentation/providers/chat_provider.dart';
+import '../../../../services/inference_service.dart';
 import '../../../../services/model_profile_registry.dart';
 
 class PromptLabScreen extends ConsumerStatefulWidget {
@@ -21,24 +24,59 @@ class _PromptLabScreenState extends ConsumerState<PromptLabScreen> {
   String? _outputResult;
   bool _isRunning = false;
 
-  void _runExperiment() {
-    setState(() => _isRunning = true);
-    final prompt = _systemPromptController.text.replaceAll('{{topic}}', _variableController.text.trim());
+  Future<void> _runExperiment() async {
+    final prompt = _systemPromptController.text
+        .replaceAll('{{topic}}', _variableController.text.trim())
+        .trim();
+    if (prompt.isEmpty) return;
 
-    Future.delayed(const Duration(milliseconds: 600), () {
+    setState(() => _isRunning = true);
+    final model = ref.read(chatProvider).selectedModel;
+    final output = StringBuffer();
+
+    try {
+      final stream = ref.read(generationPipelineProvider).stream(
+            ChatRequest(
+              modelId: model,
+              messages: [ChatRequestMessage(role: 'user', content: prompt)],
+              temperature: _temperature,
+              topP: _topP,
+            ),
+          );
+      await for (final token in stream) {
+        output.write(token.text);
+      }
+      if (output.isEmpty) {
+        throw StateError('The selected model returned no text.');
+      }
       if (!mounted) return;
       setState(() {
-        _outputResult = 'PROMPT LAB RUN:\n\nSystem Instruction: "$prompt"\nTemperature: $_temperature, TopP: $_topP\n\nResult: Recursion in Dart is a technique where a function calls itself until a base termination condition is satisfied.';
-        _isRunning = false;
+        _outputResult =
+            'Model: $model\nTemperature: $_temperature\nTop P: $_topP\n\n${output.toString()}';
       });
-    });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _outputResult = 'Experiment failed: $error';
+      });
+    } finally {
+      if (mounted) setState(() => _isRunning = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _systemPromptController.dispose();
+    _variableController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final registry = ModelProfileRegistry();
-    final profile = registry.getProfileForModel('qwen3-1.7b');
+    final model =
+        ref.watch(chatProvider.select((state) => state.selectedModel));
+    final profile = ModelProfileRegistry().getProfileForModel(model);
 
     return Scaffold(
       appBar: const M3AppBar(
@@ -56,15 +94,19 @@ class _PromptLabScreenState extends ConsumerState<PromptLabScreen> {
                 children: [
                   Text(
                     'Active Model Profile Defaults',
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
+                      Chip(label: Text('Model: $model')),
                       Chip(label: Text('Family: ${profile.modelFamily}')),
-                      Chip(label: Text('Chat Template: ${profile.chatTemplate}')),
+                      Chip(
+                          label:
+                              Text('Chat Template: ${profile.chatTemplate}')),
                       Chip(label: Text('Context: ${profile.contextLength}')),
                     ],
                   ),
@@ -109,7 +151,7 @@ class _PromptLabScreenState extends ConsumerState<PromptLabScreen> {
           const SizedBox(height: 16),
           FilledButton.icon(
             icon: const Icon(Icons.play_arrow_rounded),
-            label: const Text('Run Benchmark Experiment'),
+            label: const Text('Run Model Experiment'),
             onPressed: _isRunning ? null : _runExperiment,
           ),
           if (_isRunning) ...[
@@ -120,7 +162,8 @@ class _PromptLabScreenState extends ConsumerState<PromptLabScreen> {
             const SizedBox(height: 24),
             Text(
               'Experiment Output',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Card.outlined(

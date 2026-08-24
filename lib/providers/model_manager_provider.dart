@@ -179,7 +179,7 @@ class ModelManagerNotifier extends Notifier<ModelManagerState> {
           provider: 'Alibaba',
           family: 'Qwen 3',
           description:
-              'The top-tier 1.7B parameter model in the Qwen family, delivering state-of-the-art coding and mathematical reasoning on device.',
+              'A bundled Qwen model identifier whose runtime availability is checked on-device.',
           capabilities: [
             'Advanced Coding',
             'Complex Math',
@@ -363,7 +363,7 @@ class ModelManagerNotifier extends Notifier<ModelManagerState> {
           provider: 'Liquid AI',
           family: 'LFM 2 VL',
           description:
-              'Liquid AI\'s flagship local vision model, offering state-of-the-art visual understanding and reasoning on device.',
+              'A bundled Liquid AI model identifier whose runtime availability is checked on-device.',
           capabilities: [
             'Multimodal',
             'Spatial Coding',
@@ -376,7 +376,17 @@ class ModelManagerNotifier extends Notifier<ModelManagerState> {
             'ARC-Challenge': '72.5%',
           },
         ),
-      },
+      }.map(
+        (id, model) => MapEntry(
+          id,
+          model.copyWith(
+            description:
+                'Bundled model identifier. Availability and capabilities are verified against the installed Cactus runtime.',
+            capabilities: const ['Local inference'],
+            benchmarks: const {},
+          ),
+        ),
+      ),
     );
   }
 
@@ -385,7 +395,7 @@ class ModelManagerNotifier extends Notifier<ModelManagerState> {
     try {
       final lm = CactusLM();
       final liveModels = await lm.getModels();
-      final updatedModels = Map<String, LocalModel>.from(state.models);
+      final updatedModels = <String, LocalModel>{};
 
       for (final liveModel in liveModels) {
         final slug = liveModel.slug;

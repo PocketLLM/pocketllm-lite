@@ -4,12 +4,15 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers.dart';
 import '../../../../models/network_audit_log.dart';
 import '../../../../services/network_policy_service.dart';
+import '../../../../core/utils/url_validator.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 
 class PrivacyNetworkScreen extends ConsumerStatefulWidget {
   const PrivacyNetworkScreen({super.key});
 
   @override
-  ConsumerState<PrivacyNetworkScreen> createState() => _PrivacyNetworkScreenState();
+  ConsumerState<PrivacyNetworkScreen> createState() =>
+      _PrivacyNetworkScreenState();
 }
 
 class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
@@ -23,7 +26,8 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
       AppConstants.ollamaBaseUrlKey,
       defaultValue: AppConstants.defaultOllamaBaseUrl,
     );
-    _ollamaUrlController.text = urlVal is String ? urlVal : AppConstants.defaultOllamaBaseUrl;
+    _ollamaUrlController.text =
+        urlVal is String ? urlVal : AppConstants.defaultOllamaBaseUrl;
   }
 
   @override
@@ -34,8 +38,14 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
 
   Future<void> _updateOllamaEndpoint(String newUrl) async {
     final storage = ref.read(storageServiceProvider);
-    final uri = Uri.tryParse(newUrl.trim());
-    if (uri == null) return;
+    final normalizedUrl = newUrl.trim();
+    if (!UrlValidator.isHttpUrlString(normalizedUrl)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid HTTP or HTTPS URL.')),
+      );
+      return;
+    }
+    final uri = Uri.parse(normalizedUrl);
 
     final isLoopback = NetworkPolicyService().isLoopback(uri);
 
@@ -45,7 +55,8 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
         builder: (context) => AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error),
+              Icon(Icons.warning_amber_rounded,
+                  color: Theme.of(context).colorScheme.error),
               const SizedBox(width: 8),
               const Text('Remote Endpoint Warning'),
             ],
@@ -73,16 +84,18 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
           AppConstants.ollamaBaseUrlKey,
           defaultValue: AppConstants.defaultOllamaBaseUrl,
         );
-        _ollamaUrlController.text = urlVal is String ? urlVal : AppConstants.defaultOllamaBaseUrl;
+        _ollamaUrlController.text =
+            urlVal is String ? urlVal : AppConstants.defaultOllamaBaseUrl;
         return;
       }
     }
 
-    await storage.saveSetting(AppConstants.ollamaBaseUrlKey, newUrl.trim());
+    ref.read(ollamaServiceProvider).updateBaseUrl(normalizedUrl);
+    await storage.saveSetting(AppConstants.ollamaBaseUrlKey, normalizedUrl);
     if (mounted) {
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Updated Ollama endpoint to ${newUrl.trim()}')),
+        SnackBar(content: Text('Updated Ollama endpoint to $normalizedUrl')),
       );
     }
   }
@@ -121,21 +134,23 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
       AppConstants.githubSkillsEnabledKey,
       defaultValue: true,
     );
-    final githubSkillsEnabled = githubSkillsVal is bool ? githubSkillsVal : true;
+    final githubSkillsEnabled =
+        githubSkillsVal is bool ? githubSkillsVal : true;
 
     final ollamaUrlVal = storage.getSetting(
       AppConstants.ollamaBaseUrlKey,
       defaultValue: AppConstants.defaultOllamaBaseUrl,
     );
-    final currentOllamaUrl = ollamaUrlVal is String ? ollamaUrlVal : AppConstants.defaultOllamaBaseUrl;
+    final currentOllamaUrl = ollamaUrlVal is String
+        ? ollamaUrlVal
+        : AppConstants.defaultOllamaBaseUrl;
 
-    final ollamaUri = Uri.tryParse(currentOllamaUrl) ?? Uri.parse(AppConstants.defaultOllamaBaseUrl);
+    final ollamaUri = Uri.tryParse(currentOllamaUrl) ??
+        Uri.parse(AppConstants.defaultOllamaBaseUrl);
     final isOllamaLocal = networkService.isLoopback(ollamaUri);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Privacy & Network Centre'),
-      ),
+      appBar: const M3AppBar(title: 'Privacy & Network Centre'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -156,15 +171,19 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
             child: SwitchListTile(
               secondary: Icon(
                 Icons.cloud_off_rounded,
-                color: strictOffline ? theme.colorScheme.primary : theme.colorScheme.outline,
+                color: strictOffline
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.outline,
               ),
-              title: const Text('Strict Offline Mode', style: TextStyle(fontWeight: FontWeight.bold)),
+              title: const Text('Strict Offline Mode',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               subtitle: const Text(
                 'Blocks every non-loopback connection at application level. No external network request will be permitted.',
               ),
               value: strictOffline,
               onChanged: (val) async {
-                await storage.saveSetting(AppConstants.strictOfflineModeKey, val);
+                await storage.saveSetting(
+                    AppConstants.strictOfflineModeKey, val);
                 setState(() {});
               },
             ),
@@ -182,22 +201,33 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                     children: [
                       const Icon(Icons.dns_rounded),
                       const SizedBox(width: 8),
-                      const Text('Inference Endpoint Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Text('Inference Endpoint Status',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
                       const Spacer(),
                       Chip(
                         avatar: Icon(
-                          isOllamaLocal ? Icons.verified_user_rounded : Icons.cell_tower_rounded,
+                          isOllamaLocal
+                              ? Icons.verified_user_rounded
+                              : Icons.cell_tower_rounded,
                           size: 16,
-                          color: isOllamaLocal ? Colors.green : Colors.orange,
+                          color: isOllamaLocal
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.error,
                         ),
                         label: Text(
                           isOllamaLocal ? 'Local Loopback' : 'Remote Network',
                           style: TextStyle(
-                            color: isOllamaLocal ? Colors.green : Colors.orange,
+                            color: isOllamaLocal
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.error,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        backgroundColor: (isOllamaLocal ? Colors.green : Colors.orange).withValues(alpha: 0.1),
+                        backgroundColor: (isOllamaLocal
+                                ? theme.colorScheme.primaryContainer
+                                : theme.colorScheme.errorContainer)
+                            .withValues(alpha: 0.7),
                       ),
                     ],
                   ),
@@ -208,7 +238,8 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                       labelText: 'Ollama Base URL',
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.check_circle_rounded),
-                        onPressed: () => _updateOllamaEndpoint(_ollamaUrlController.text),
+                        onPressed: () =>
+                            _updateOllamaEndpoint(_ollamaUrlController.text),
                       ),
                     ),
                     onSubmitted: _updateOllamaEndpoint,
@@ -216,8 +247,8 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                   const SizedBox(height: 4),
                   Text(
                     isOllamaLocal
-                      ? 'Local inference: Prompts stay on your machine.'
-                      : 'Remote inference: Prompts sent to $currentOllamaUrl',
+                        ? 'Local inference: Prompts stay on your machine.'
+                        : 'Remote inference: Prompts sent to $currentOllamaUrl',
                     style: theme.textTheme.bodySmall,
                   ),
                 ],
@@ -227,7 +258,8 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
           const SizedBox(height: 16),
 
           // ── Transparent Feature Permission Toggles ──
-          Text('External Connections & Services', style: theme.textTheme.titleMedium),
+          Text('External Connections & Services',
+              style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
 
           Card(
@@ -236,12 +268,14 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                 SwitchListTile(
                   secondary: const Icon(Icons.system_update_rounded),
                   title: const Text('Automatic GitHub Update Check'),
-                  subtitle: const Text('Checks GitHub Releases for new APK builds (Default: Off). Sends no user content.'),
+                  subtitle: const Text(
+                      'Checks GitHub Releases for new APK builds (Default: Off). Sends no user content.'),
                   value: autoUpdate,
                   onChanged: strictOffline
                       ? null
                       : (val) async {
-                          await storage.saveSetting(AppConstants.autoUpdateCheckKey, val);
+                          await storage.saveSetting(
+                              AppConstants.autoUpdateCheckKey, val);
                           setState(() {});
                         },
                 ),
@@ -249,12 +283,14 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                 SwitchListTile(
                   secondary: const Icon(Icons.explore_rounded),
                   title: const Text('Hugging Face Model Discovery'),
-                  subtitle: const Text('Allows searching and downloading GGUF models from huggingface.co'),
+                  subtitle: const Text(
+                      'Allows searching and downloading GGUF models from huggingface.co'),
                   value: onlineModels,
                   onChanged: strictOffline
                       ? null
                       : (val) async {
-                          await storage.saveSetting(AppConstants.onlineModelBrowsingKey, val);
+                          await storage.saveSetting(
+                              AppConstants.onlineModelBrowsingKey, val);
                           setState(() {});
                         },
                 ),
@@ -262,12 +298,14 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                 SwitchListTile(
                   secondary: const Icon(Icons.search_rounded),
                   title: const Text('Tavily Web Search'),
-                  subtitle: const Text('Sends user search queries to api.tavily.com when web search is enabled.'),
+                  subtitle: const Text(
+                      'Sends user search queries to api.tavily.com when web search is enabled.'),
                   value: tavilyEnabled,
                   onChanged: strictOffline
                       ? null
                       : (val) async {
-                          await storage.saveSetting(AppConstants.tavilySearchEnabledKey, val);
+                          await storage.saveSetting(
+                              AppConstants.tavilySearchEnabledKey, val);
                           setState(() {});
                         },
                 ),
@@ -275,12 +313,14 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                 SwitchListTile(
                   secondary: const Icon(Icons.extension_rounded),
                   title: const Text('GitHub Skill Installation'),
-                  subtitle: const Text('Downloads skill Markdown manifests from GitHub user repositories.'),
+                  subtitle: const Text(
+                      'Downloads skill Markdown manifests from GitHub user repositories.'),
                   value: githubSkillsEnabled,
                   onChanged: strictOffline
                       ? null
                       : (val) async {
-                          await storage.saveSetting(AppConstants.githubSkillsEnabledKey, val);
+                          await storage.saveSetting(
+                              AppConstants.githubSkillsEnabledKey, val);
                           setState(() {});
                         },
                 ),
@@ -288,7 +328,8 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                 ListTile(
                   leading: const Icon(Icons.font_download_off_rounded),
                   title: const Text('Network Fonts Status'),
-                  subtitle: const Text('Disabled runtime fetching. Fonts are strictly bundled local assets.'),
+                  subtitle: const Text(
+                      'Disabled runtime fetching. Fonts are strictly bundled local assets.'),
                   trailing: Chip(
                     label: const Text('Local Assets Only'),
                     backgroundColor: theme.colorScheme.secondaryContainer,
@@ -321,7 +362,8 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                 return const Card(
                   child: Padding(
                     padding: EdgeInsets.all(16),
-                    child: Text('No external connections recorded in this session.'),
+                    child: Text(
+                        'No external connections recorded in this session.'),
                   ),
                 );
               }
@@ -336,12 +378,17 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                     return ListTile(
                       dense: true,
                       leading: Icon(
-                        log.allowed ? Icons.check_circle_outline_rounded : Icons.block_rounded,
-                        color: log.allowed ? Colors.green : Colors.red,
+                        log.allowed
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.block_rounded,
+                        color: log.allowed
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.error,
                         size: 20,
                       ),
                       title: Text('${log.domain} (${log.purpose})'),
-                      subtitle: Text('${log.trigger} • Sent: ${log.infoSent}${log.blockReason != null ? " • ${log.blockReason}" : ""}'),
+                      subtitle: Text(
+                          '${log.trigger} • Sent: ${log.infoSent}${log.blockReason != null ? " • ${log.blockReason}" : ""}'),
                       trailing: Text(
                         '${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}:${log.timestamp.second.toString().padLeft(2, '0')}',
                         style: theme.textTheme.bodySmall,
@@ -368,7 +415,9 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
         Icon(
           strict ? Icons.shield_rounded : Icons.security_rounded,
           size: 32,
-          color: strict ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+          color: strict
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -376,8 +425,11 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                strict ? 'Strict Offline Mode Active' : 'Local-First Inference Active',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                strict
+                    ? 'Strict Offline Mode Active'
+                    : 'Local-First Inference Active',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 2),
               Text(

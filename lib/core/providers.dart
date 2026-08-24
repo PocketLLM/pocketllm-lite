@@ -6,13 +6,21 @@ import '../services/storage_service.dart';
 import '../services/huggingface_service.dart';
 import '../services/tool_calling_service.dart';
 import '../services/generation_pipeline.dart';
+import 'constants/app_constants.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
   throw UnimplementedError('StorageService must be initialized in main.dart');
 });
 
 final ollamaServiceProvider = Provider<OllamaService>((ref) {
-  return OllamaService();
+  final storage = ref.watch(storageServiceProvider);
+  final savedUrl = storage.getSetting(
+    AppConstants.ollamaBaseUrlKey,
+    defaultValue: AppConstants.defaultOllamaBaseUrl,
+  );
+  return OllamaService(
+    baseUrl: savedUrl is String ? savedUrl : AppConstants.defaultOllamaBaseUrl,
+  );
 });
 
 final errorLogServiceProvider = Provider<ErrorLogService>((ref) {

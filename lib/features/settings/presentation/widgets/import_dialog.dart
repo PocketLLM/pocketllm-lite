@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../../../../core/providers.dart';
+import '../../../../features/chat/domain/models/chat_persona.dart';
+import '../../../../services/backup_migration_service.dart';
+import '../../../../services/local_memory_service.dart';
 
 class ImportDialog extends ConsumerStatefulWidget {
   const ImportDialog({super.key});
@@ -20,12 +23,20 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
   int _chatsCount = 0;
   int _promptsCount = 0;
   int _settingsCount = 0;
+  final _passwordController = TextEditingController();
+  BackupArchivePayload? _encryptedPayload;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickFile() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['json'],
+        allowedExtensions: ['pllm', 'json'],
       );
 
       if (result != null && result.files.single.path != null) {
@@ -33,7 +44,27 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
 
         final file = File(result.files.single.path!);
         final content = await file.readAsString();
-        final data = jsonDecode(content) as Map<String, dynamic>;
+        final envelope = jsonDecode(content) as Map<String, dynamic>;
+        final isEncrypted = envelope['format'] == 'pocketllm-backup';
+        if (isEncrypted && _passwordController.text.length < 8) {
+          throw const BackupDecryptError(
+            'Enter the backup password before selecting the .pllm file.',
+          );
+        }
+        final payload = isEncrypted
+            ? await BackupMigrationService().decryptBackup(
+                encryptedJson: content,
+                password: _passwordController.text,
+              )
+            : null;
+        final data = payload == null
+            ? envelope
+            : <String, dynamic>{
+                'version': 2,
+                'chats': payload.chats,
+                'prompts': payload.prompts,
+                'settings': payload.settings,
+              };
 
         // Simple validation
         if (data['chats'] == null &&
@@ -44,6 +75,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
 
         setState(() {
           _previewData = data;
+          _encryptedPayload = payload;
           _chatsCount = (data['chats'] as List?)?.length ?? 0;
           _promptsCount = (data['prompts'] as List?)?.length ?? 0;
           _settingsCount = (data['settings'] as Map?)?.length ?? 0;
@@ -71,15 +103,39 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
     try {
       final storage = ref.read(storageServiceProvider);
       final result = await storage.importData(_previewData!);
+      var personasImported = 0;
+      var memoriesImported = 0;
+      for (final item in _encryptedPayload?.personas ?? const []) {
+        final data = Map<String, dynamic>.from(item as Map);
+        await storage.savePersona(
+          ChatPersona(
+            id: data['id'] as String,
+            name: data['name'] as String,
+            systemPrompt: data['systemPrompt'] as String,
+            temperature: (data['temperature'] as num?)?.toDouble() ?? 0.7,
+            avatarIcon: data['avatarIcon'] as String? ?? '🤖',
+            modelId: data['modelId'] as String?,
+          ),
+        );
+        personasImported++;
+      }
+      for (final item in _encryptedPayload?.memories ?? const []) {
+        final memory = UserMemoryEntry.fromJson(
+          Map<String, dynamic>.from(item as Map),
+        );
+        if (await LocalMemoryService().saveMemory(memory)) {
+          memoriesImported++;
+        }
+      }
 
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Imported ${result['chats']} chats, ${result['prompts']} prompts, and ${result['settings']} settings.',
+              'Imported ${result['chats']} chats, ${result['prompts']} prompts, ${result['settings']} settings, $personasImported personas, and $memoriesImported memories.',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
       }
@@ -106,13 +162,24 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
         children: [
           if (_previewData == null) ...[
             const Text(
-              'Restore your chats and prompts from a JSON backup file.',
+              'Restore an encrypted .pllm backup, or import a legacy plaintext JSON export.',
               style: TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Note: Existing items with the same ID will be overwritten.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Backup password for .pllm files',
+              ),
             ),
           ] else ...[
             const Text(
@@ -148,10 +215,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.folder_open, size: 18),
             label: const Text('Select File'),
@@ -163,10 +227,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.check, size: 18),
             label: const Text('Import'),
@@ -178,7 +239,11 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
   Widget _buildStatRow(IconData icon, String label, int count) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.grey),
+        Icon(
+          icon,
+          size: 16,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         const SizedBox(width: 8),
         Text('$label: '),
         Text('$count', style: const TextStyle(fontWeight: FontWeight.bold)),
