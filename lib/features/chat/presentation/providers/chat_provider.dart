@@ -602,7 +602,10 @@ class ChatNotifier extends Notifier<ChatState> {
               // Convert single quotes in JSON string to double quotes
               final cleanJson = toolArgsRaw.replaceAll("'", '"');
               final Map<String, dynamic> args = jsonDecode(cleanJson);
-              toolResult = await tool.handler(args);
+              final validationError = toolService.validateArguments(tool, args);
+              toolResult = validationError == null
+                  ? await tool.handler(args)
+                  : 'Tool validation failed: $validationError';
             } catch (e) {
               toolResult = 'Error invoking tool: $e';
             }

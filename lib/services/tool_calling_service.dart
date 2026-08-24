@@ -163,6 +163,27 @@ class ToolCallingService {
     return _tools[name];
   }
 
+  String? validateArguments(ToolDefinition tool, Map<String, dynamic> args) {
+    final properties = Map<String, dynamic>.from(
+      tool.parameters['properties'] as Map? ?? const {},
+    );
+    final required = List<String>.from(
+      tool.parameters['required'] as List? ?? const [],
+    );
+    for (final name in required) {
+      if (!args.containsKey(name)) return 'Missing required argument: $name';
+    }
+    for (final entry in args.entries) {
+      final schema = properties[entry.key];
+      if (schema == null) return 'Unsupported argument: ${entry.key}';
+      final type = (schema as Map)['type'];
+      if (type == 'string' && entry.value is! String) {
+        return 'Argument ${entry.key} must be a string';
+      }
+    }
+    return null;
+  }
+
   double _evaluateBasicExpression(String expression) {
     return SafeMathExpression().evaluate(expression);
   }
@@ -172,10 +193,10 @@ class ToolCallingService {
     final buffer = StringBuffer();
     buffer.writeln('\n### AVAILABLE TOOLS');
     buffer.writeln(
-      'You have access to the following native tools that you can trigger. If you need to use a tool to answer the user, you MUST write exactly:',
+      'You have access to native tools. To call one, return exactly one JSON object:',
     );
     buffer.writeln(
-      '<tool_call name="TOOL_NAME" args=\'{"PARAM_NAME": "VALUE"}\' />',
+      '{"tool":"TOOL_NAME","arguments":{"PARAM_NAME":"VALUE"}}',
     );
     buffer.writeln(
       'Do NOT write anything else when calling a tool. The tool result will be returned to you in the next turn.',
@@ -194,8 +215,21 @@ class ToolCallingService {
     return buffer.toString();
   }
 
-  /// Parse `<tool_call name="calculator" args='{"expression": "2 + 2"}' />` pattern
   Map<String, String>? parseToolCall(String text) {
+    final trimmed = text.trim();
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is Map<String, dynamic> &&
+          decoded['tool'] is String &&
+          decoded['arguments'] is Map) {
+        return {
+          'name': decoded['tool'] as String,
+          'args': jsonEncode(decoded['arguments']),
+        };
+      }
+    } on FormatException {
+      // Legacy XML is accepted only as a compatibility adapter.
+    }
     final regExp = RegExp(
       r'<tool_call\s+name="([^"]+)"\s+args=\s*[\x27"]([^\x27"]+)[\x27"]\s*/>',
     );
