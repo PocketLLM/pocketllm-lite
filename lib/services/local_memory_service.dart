@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import '../features/chat/domain/models/chat_message.dart';
+import 'storage_service.dart';
 
 enum MemoryType {
   personalFact,
@@ -11,24 +14,15 @@ enum MemoryType {
 }
 
 extension MemoryTypeExtension on MemoryType {
-  String get displayName {
-    switch (this) {
-      case MemoryType.personalFact:
-        return 'Personal Fact';
-      case MemoryType.preference:
-        return 'Preference';
-      case MemoryType.project:
-        return 'Project';
-      case MemoryType.people:
-        return 'Person / Contact';
-      case MemoryType.goal:
-        return 'Goal';
-      case MemoryType.writingStyle:
-        return 'Writing Style';
-      case MemoryType.reusableInstruction:
-        return 'Reusable Instruction';
-    }
-  }
+  String get displayName => switch (this) {
+        MemoryType.personalFact => 'Personal Fact',
+        MemoryType.preference => 'Preference',
+        MemoryType.project => 'Project',
+        MemoryType.people => 'Person / Contact',
+        MemoryType.goal => 'Goal',
+        MemoryType.writingStyle => 'Writing Style',
+        MemoryType.reusableInstruction => 'Reusable Instruction',
+      };
 }
 
 class UserMemoryEntry {
@@ -42,7 +36,9 @@ class UserMemoryEntry {
   final bool pinned;
   final bool enabled;
   final DateTime createdAt;
-  DateTime? lastUsedAt;
+  final DateTime updatedAt;
+  final DateTime? lastUsedAt;
+  final List<double>? embedding;
 
   UserMemoryEntry({
     required this.id,
@@ -55,8 +51,35 @@ class UserMemoryEntry {
     this.pinned = false,
     this.enabled = true,
     required this.createdAt,
+    DateTime? updatedAt,
     this.lastUsedAt,
-  });
+    this.embedding,
+  }) : updatedAt = updatedAt ?? createdAt;
+
+  UserMemoryEntry copyWith({
+    String? fact,
+    double? confidence,
+    bool? pinned,
+    bool? enabled,
+    DateTime? updatedAt,
+    DateTime? lastUsedAt,
+    List<double>? embedding,
+  }) =>
+      UserMemoryEntry(
+        id: id,
+        type: type,
+        subject: subject,
+        fact: fact ?? this.fact,
+        confidence: confidence ?? this.confidence,
+        sourceMessageId: sourceMessageId,
+        sensitive: sensitive,
+        pinned: pinned ?? this.pinned,
+        enabled: enabled ?? this.enabled,
+        createdAt: createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+        embedding: embedding ?? this.embedding,
+      );
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -69,135 +92,178 @@ class UserMemoryEntry {
         'pinned': pinned,
         'enabled': enabled,
         'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
         'lastUsedAt': lastUsedAt?.toIso8601String(),
+        'embedding': embedding,
       };
 
-  factory UserMemoryEntry.fromJson(Map<String, dynamic> json) => UserMemoryEntry(
-        id: json['id'] as String,
-        type: MemoryType.values.firstWhere(
-          (e) => e.name == json['type'],
-          orElse: () => MemoryType.personalFact,
-        ),
-        subject: json['subject'] as String? ?? 'user',
-        fact: json['fact'] as String,
-        confidence: (json['confidence'] as num?)?.toDouble() ?? 0.90,
-        sourceMessageId: json['sourceMessageId'] as String?,
-        sensitive: json['sensitive'] as bool? ?? false,
-        pinned: json['pinned'] as bool? ?? false,
-        enabled: json['enabled'] as bool? ?? true,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        lastUsedAt: json['lastUsedAt'] != null ? DateTime.parse(json['lastUsedAt'] as String) : null,
-      );
+  factory UserMemoryEntry.fromJson(Map<String, dynamic> json) {
+    final createdAt = DateTime.parse(json['createdAt'] as String);
+    return UserMemoryEntry(
+      id: json['id'] as String,
+      type: MemoryType.values.firstWhere(
+        (value) => value.name == json['type'],
+        orElse: () => MemoryType.personalFact,
+      ),
+      subject: json['subject'] as String? ?? 'user',
+      fact: json['fact'] as String,
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.9,
+      sourceMessageId: json['sourceMessageId'] as String?,
+      sensitive: json['sensitive'] as bool? ?? false,
+      pinned: json['pinned'] as bool? ?? false,
+      enabled: json['enabled'] as bool? ?? true,
+      createdAt: createdAt,
+      updatedAt: json['updatedAt'] == null
+          ? createdAt
+          : DateTime.parse(json['updatedAt'] as String),
+      lastUsedAt: json['lastUsedAt'] == null
+          ? null
+          : DateTime.parse(json['lastUsedAt'] as String),
+      embedding: (json['embedding'] as List?)
+          ?.map((value) => (value as num).toDouble())
+          .toList(growable: false),
+    );
+  }
 }
 
 class LocalMemoryService {
+  static const _storageKey = 'local_memory_records_v2';
   static final LocalMemoryService _instance = LocalMemoryService._internal();
   factory LocalMemoryService() => _instance;
   LocalMemoryService._internal();
 
+  StorageService? _storage;
   final List<UserMemoryEntry> _memories = [];
 
-  List<UserMemoryEntry> getMemories({MemoryType? type, bool enabledOnly = false}) {
-    return _memories.where((m) {
-      if (enabledOnly && !m.enabled) return false;
-      if (type != null && m.type != type) return false;
-      return true;
-    }).toList();
-  }
-
-  void saveMemory(UserMemoryEntry entry) {
-    if (isSensitive(entry.fact)) return; // Suppress sensitive memories automatically
-    final idx = _memories.indexWhere((m) => m.id == entry.id);
-    if (idx >= 0) {
-      _memories[idx] = entry;
-    } else {
-      _memories.add(entry);
-    }
-  }
-
-  void deleteMemory(String id) {
-    _memories.removeWhere((m) => m.id == id);
-  }
-
-  void toggleMemory(String id, bool enabled) {
-    final idx = _memories.indexWhere((m) => m.id == id);
-    if (idx >= 0) {
-      final old = _memories[idx];
-      _memories[idx] = UserMemoryEntry(
-        id: old.id,
-        type: old.type,
-        subject: old.subject,
-        fact: old.fact,
-        confidence: old.confidence,
-        sourceMessageId: old.sourceMessageId,
-        sensitive: old.sensitive,
-        pinned: old.pinned,
-        enabled: enabled,
-        createdAt: old.createdAt,
-        lastUsedAt: old.lastUsedAt,
-      );
-    }
-  }
-
-  bool isSensitive(String text) {
-    final lower = text.toLowerCase();
-    final sensitiveKeywords = [
-      'password',
-      'secret',
-      'credit card',
-      'ssn',
-      'social security',
-      'api_key',
-      'private_key',
-      'token',
-      'bank account',
-      'medical record',
-    ];
-    return sensitiveKeywords.any((kw) => lower.contains(kw));
-  }
-
-  List<UserMemoryEntry> extractMemoriesFromConversation(List<ChatMessage> messages) {
-    final List<UserMemoryEntry> extracted = [];
-
-    for (final msg in messages) {
-      if (msg.role != 'user') continue;
-      final text = msg.content;
-      final lower = text.toLowerCase();
-
-      // Rule-based extraction heuristics
-      if (lower.contains('my name is ') || lower.contains("i'm a ") || lower.contains('i live in ')) {
-        final factText = text.trim();
-        if (!isSensitive(factText)) {
-          extracted.add(UserMemoryEntry(
-            id: 'mem_${DateTime.now().millisecondsSinceEpoch}_${extracted.length}',
-            type: MemoryType.personalFact,
-            subject: 'user',
-            fact: factText,
-            confidence: 0.92,
-            sourceMessageId: msg.timestamp.millisecondsSinceEpoch.toString(),
-            createdAt: DateTime.now(),
-          ));
-        }
-      } else if (lower.contains('i prefer ') || lower.contains('i like ') || lower.contains('always write ')) {
-        final factText = text.trim();
-        if (!isSensitive(factText)) {
-          extracted.add(UserMemoryEntry(
-            id: 'mem_${DateTime.now().millisecondsSinceEpoch}_${extracted.length}',
-            type: MemoryType.preference,
-            subject: 'user',
-            fact: factText,
-            confidence: 0.88,
-            sourceMessageId: msg.timestamp.millisecondsSinceEpoch.toString(),
-            createdAt: DateTime.now(),
-          ));
+  Future<void> init(StorageService storage) async {
+    _storage = storage;
+    _memories.clear();
+    final raw = storage.getSetting(_storageKey, defaultValue: const []);
+    if (raw is List) {
+      for (final item in raw) {
+        if (item is Map) {
+          try {
+            _memories.add(
+              UserMemoryEntry.fromJson(Map<String, dynamic>.from(item)),
+            );
+          } catch (_) {
+            // Preserve valid entries if a single legacy record is malformed.
+          }
         }
       }
     }
+  }
 
-    for (final mem in extracted) {
-      saveMemory(mem);
+  List<UserMemoryEntry> getMemories({
+    MemoryType? type,
+    bool enabledOnly = false,
+  }) =>
+      _memories
+          .where((memory) =>
+              (!enabledOnly || memory.enabled) &&
+              (type == null || memory.type == type))
+          .toList(growable: false);
+
+  Future<bool> saveMemory(UserMemoryEntry entry) async {
+    if (isSensitive(entry.fact)) return false;
+    final normalized = _normalize(entry.fact);
+    final index = _memories.indexWhere((memory) =>
+        memory.id == entry.id ||
+        (memory.type == entry.type &&
+            memory.subject.toLowerCase() == entry.subject.toLowerCase() &&
+            _normalize(memory.fact) == normalized));
+    if (index >= 0) {
+      final current = _memories[index];
+      _memories[index] = entry.copyWith(
+        confidence: entry.confidence > current.confidence
+            ? entry.confidence
+            : current.confidence,
+        updatedAt: DateTime.now(),
+      );
+    } else {
+      _memories.add(entry);
     }
+    await _persist();
+    return true;
+  }
 
+  Future<void> deleteMemory(String id) async {
+    _memories.removeWhere((memory) => memory.id == id);
+    await _persist();
+  }
+
+  Future<void> toggleMemory(String id, bool enabled) async {
+    final index = _memories.indexWhere((memory) => memory.id == id);
+    if (index < 0) return;
+    _memories[index] = _memories[index].copyWith(
+      enabled: enabled,
+      updatedAt: DateTime.now(),
+    );
+    await _persist();
+  }
+
+  Future<void> markUsed(String id) async {
+    final index = _memories.indexWhere((memory) => memory.id == id);
+    if (index < 0) return;
+    _memories[index] = _memories[index].copyWith(lastUsedAt: DateTime.now());
+    await _persist();
+  }
+
+  bool isSensitive(String text) {
+    final patterns = <RegExp>[
+      RegExp(
+        r'\b(password|passphrase|api[_ -]?key|access[_ -]?token|private[_ -]?key|secret)\b',
+        caseSensitive: false,
+      ),
+      RegExp(r'\b(?:\d[ -]*?){13,19}\b'),
+      RegExp(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'),
+      RegExp(
+        r'\b(bank account|routing number|social security|ssn)\b',
+        caseSensitive: false,
+      ),
+    ];
+    return patterns.any((pattern) => pattern.hasMatch(text));
+  }
+
+  Future<List<UserMemoryEntry>> extractMemoriesFromConversation(
+    List<ChatMessage> messages,
+  ) async {
+    final extracted = <UserMemoryEntry>[];
+    for (final message in messages.where((item) => item.role == 'user')) {
+      final lower = message.content.toLowerCase();
+      final type = lower.contains('i prefer ') ||
+              lower.contains('i like ') ||
+              lower.contains('always write ')
+          ? MemoryType.preference
+          : lower.contains('my name is ') ||
+                  lower.contains("i'm a ") ||
+                  lower.contains('i live in ')
+              ? MemoryType.personalFact
+              : null;
+      if (type == null || isSensitive(message.content)) continue;
+      final memory = UserMemoryEntry(
+        id: 'mem_${message.timestamp.microsecondsSinceEpoch}',
+        type: type,
+        subject: 'user',
+        fact: message.content.trim(),
+        confidence: type == MemoryType.personalFact ? 0.92 : 0.88,
+        sourceMessageId: message.timestamp.microsecondsSinceEpoch.toString(),
+        createdAt: DateTime.now(),
+      );
+      if (await saveMemory(memory)) extracted.add(memory);
+    }
     return extracted;
   }
+
+  Future<void> _persist() async {
+    final storage = _storage;
+    if (storage == null) return;
+    await storage.saveSetting(
+      _storageKey,
+      _memories.map((memory) => memory.toJson()).toList(growable: false),
+    );
+  }
+
+  String _normalize(String value) =>
+      value.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
 }

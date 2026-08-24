@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../services/local_memory_service.dart';
+import '../../../../core/widgets/m3_app_bar.dart';
 
 class MemoryInspectorScreen extends ConsumerStatefulWidget {
   const MemoryInspectorScreen({super.key});
 
   @override
-  ConsumerState<MemoryInspectorScreen> createState() => _MemoryInspectorScreenState();
+  ConsumerState<MemoryInspectorScreen> createState() =>
+      _MemoryInspectorScreenState();
 }
 
 class _MemoryInspectorScreenState extends ConsumerState<MemoryInspectorScreen> {
@@ -53,7 +55,7 @@ class _MemoryInspectorScreenState extends ConsumerState<MemoryInspectorScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               if (controller.text.trim().isNotEmpty) {
                 final mem = UserMemoryEntry(
                   id: 'mem_${DateTime.now().millisecondsSinceEpoch}',
@@ -63,7 +65,8 @@ class _MemoryInspectorScreenState extends ConsumerState<MemoryInspectorScreen> {
                   confidence: 1.0,
                   createdAt: DateTime.now(),
                 );
-                LocalMemoryService().saveMemory(mem);
+                await LocalMemoryService().saveMemory(mem);
+                if (!context.mounted) return;
                 setState(() {});
                 Navigator.pop(context);
               }
@@ -82,8 +85,8 @@ class _MemoryInspectorScreenState extends ConsumerState<MemoryInspectorScreen> {
     final memories = memoryService.getMemories(type: _selectedCategory);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Local Memory Inspector'),
+      appBar: M3AppBar(
+        title: 'Local Memory Inspector',
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
@@ -124,7 +127,8 @@ class _MemoryInspectorScreenState extends ConsumerState<MemoryInspectorScreen> {
           Expanded(
             child: memories.isEmpty
                 ? const Center(
-                    child: Text('No persistent memories recorded in this category.'),
+                    child: Text(
+                        'No persistent memories recorded in this category.'),
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.all(16),
@@ -143,15 +147,18 @@ class _MemoryInspectorScreenState extends ConsumerState<MemoryInspectorScreen> {
                             children: [
                               Switch(
                                 value: mem.enabled,
-                                onChanged: (val) {
-                                  memoryService.toggleMemory(mem.id, val);
+                                onChanged: (val) async {
+                                  await memoryService.toggleMemory(mem.id, val);
+                                  if (!mounted) return;
                                   setState(() {});
                                 },
                               ),
                               IconButton(
-                                icon: Icon(Icons.delete_outline_rounded, color: theme.colorScheme.error),
-                                onPressed: () {
-                                  memoryService.deleteMemory(mem.id);
+                                icon: Icon(Icons.delete_outline_rounded,
+                                    color: theme.colorScheme.error),
+                                onPressed: () async {
+                                  await memoryService.deleteMemory(mem.id);
+                                  if (!mounted) return;
                                   setState(() {});
                                 },
                               ),
