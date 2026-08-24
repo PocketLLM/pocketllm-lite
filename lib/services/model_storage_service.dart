@@ -28,9 +28,8 @@ class ModelStorageService {
       final int freeBytes =
           await _storageChannel.invokeMethod('getFreeDiskSpace');
       return freeBytes;
-    } catch (_) {
-      // Fallback estimate: return 8GB if the platform channel isn't registered yet or not supported
-      return 8 * 1024 * 1024 * 1024;
+    } catch (error) {
+      throw StateError('Free storage could not be measured: $error');
     }
   }
 

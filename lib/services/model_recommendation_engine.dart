@@ -41,7 +41,8 @@ class ModelRecommendationResult {
 }
 
 class ModelRecommendationEngine {
-  static final ModelRecommendationEngine _instance = ModelRecommendationEngine._internal();
+  static final ModelRecommendationEngine _instance =
+      ModelRecommendationEngine._internal();
   factory ModelRecommendationEngine() => _instance;
   ModelRecommendationEngine._internal();
 
@@ -72,42 +73,35 @@ class ModelRecommendationEngine {
     final kvCacheGB = (contextLength / 8192.0) * 0.45;
     final estimatedRamGB = (parameterCountB * quantFactor) + kvCacheGB;
 
-    // 1. Memory Fit (0.0 to 1.0)
-    double memoryFit = 0.0;
-    if (estimatedRamGB <= profile.availableRamGB * 0.70) {
+    final availableRam = profile.availableRamGB;
+    final totalRam = profile.totalRamGB;
+    // Unknown hardware must not be converted into a confident recommendation.
+    double memoryFit = 0.5;
+    if (availableRam != null && estimatedRamGB <= availableRam * 0.70) {
       memoryFit = 1.0;
-    } else if (estimatedRamGB <= profile.availableRamGB) {
+    } else if (availableRam != null && estimatedRamGB <= availableRam) {
       memoryFit = 0.75;
-    } else if (estimatedRamGB <= profile.totalRamGB * 0.90) {
+    } else if (totalRam != null && estimatedRamGB <= totalRam * 0.90) {
       memoryFit = 0.40;
-    } else {
+    } else if (totalRam != null) {
       memoryFit = 0.10;
     }
 
     // 2. Predicted Speed (0.0 to 1.0)
     double predictedSpeedScore = 0.8;
-    int minTps = 8;
-    int maxTps = 14;
     if (parameterCountB <= 2.0) {
       predictedSpeedScore = 1.0;
-      minTps = 12;
-      maxTps = 22;
     } else if (parameterCountB <= 4.0) {
       predictedSpeedScore = 0.85;
-      minTps = 8;
-      maxTps = 15;
     } else if (parameterCountB <= 8.0) {
       predictedSpeedScore = 0.60;
-      minTps = 4;
-      maxTps = 9;
     } else {
       predictedSpeedScore = 0.30;
-      minTps = 1;
-      maxTps = 4;
     }
 
     // 3. Context Capacity
-    double contextScore = (contextLength >= 8192) ? 1.0 : (contextLength / 8192.0);
+    double contextScore =
+        (contextLength >= 8192) ? 1.0 : (contextLength / 8192.0);
 
     // 4. Task Match
     double taskMatch = 0.8;
@@ -119,7 +113,11 @@ class ModelRecommendationEngine {
     double batteryEfficiency = (parameterCountB <= 3.0) ? 1.0 : 0.5;
 
     // 6. Runtime Support
-    double runtimeSupport = profile.hasGpuAcceleration ? 1.0 : 0.7;
+    double runtimeSupport = profile.hasGpuAcceleration == null
+        ? 0.5
+        : profile.hasGpuAcceleration!
+            ? 1.0
+            : 0.7;
 
     // Algorithm: 0.30*memory_fit + 0.20*predicted_speed + 0.15*context_capacity + 0.15*task_match + 0.10*battery_efficiency + 0.10*runtime_support
     final compatibilityScore = (0.30 * memoryFit) +
@@ -130,11 +128,13 @@ class ModelRecommendationEngine {
         (0.10 * runtimeSupport);
 
     RecommendationBadge badge;
-    if (compatibilityScore >= 0.75 && estimatedRamGB <= profile.availableRamGB) {
+    if (availableRam == null || totalRam == null) {
+      badge = RecommendationBadge.riskOfCrash;
+    } else if (compatibilityScore >= 0.75 && estimatedRamGB <= availableRam) {
       badge = RecommendationBadge.recommended;
-    } else if (compatibilityScore >= 0.55 && estimatedRamGB <= profile.totalRamGB) {
+    } else if (compatibilityScore >= 0.55 && estimatedRamGB <= totalRam) {
       badge = RecommendationBadge.canRun;
-    } else if (estimatedRamGB <= profile.totalRamGB * 1.1) {
+    } else if (estimatedRamGB <= totalRam * 1.1) {
       badge = RecommendationBadge.riskOfCrash;
     } else {
       badge = RecommendationBadge.tooLarge;
@@ -159,7 +159,7 @@ class ModelRecommendationEngine {
       badge: badge,
       compatibilityScore: compatibilityScore,
       estimatedRamUsageGB: estimatedRamGB,
-      estimatedSpeed: '$minTps–$maxTps tokens/sec',
+      estimatedSpeed: 'Not benchmarked on this device',
       bestFor: bestFor,
       notRecommendedFor: notRecommendedFor,
     );
