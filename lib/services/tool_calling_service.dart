@@ -1,6 +1,8 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'storage_service.dart';
+import 'network_gateway.dart';
+import 'network_policy_service.dart';
+import 'safe_math_expression.dart';
 
 class ToolDefinition {
   final String name;
@@ -19,8 +21,10 @@ class ToolDefinition {
 class ToolCallingService {
   final Map<String, ToolDefinition> _tools = {};
   final StorageService _storage;
+  final NetworkGateway _network;
 
-  ToolCallingService(this._storage) {
+  ToolCallingService(this._storage, {NetworkGateway? network})
+      : _network = network ?? NetworkGateway() {
     _registerDefaultTools();
   }
 
@@ -44,13 +48,7 @@ class ToolCallingService {
         handler: (args) async {
           final expr = args['expression'] as String? ?? '';
           try {
-            // Simple robust math parser
-            final cleanExpr = expr.replaceAll(
-              RegExp(r'[^0-9\+\-\*\/\(\)\. ]'),
-              '',
-            );
-            // We can evaluate simple basic expressions
-            final result = _evaluateBasicExpression(cleanExpr);
+            final result = _evaluateBasicExpression(expr);
             return 'Calculation result for "$expr": $result';
           } catch (e) {
             return 'Error evaluating mathematical expression: $e';
@@ -75,40 +73,8 @@ class ToolCallingService {
       ),
     );
 
-    // 3. Wikipedia Summary Search Tool
-    registerTool(
-      ToolDefinition(
-        name: 'knowledge_search',
-        description:
-            'Query general knowledge summaries. Input format: {"query": "search query string, e.g. Quantum Physics"}',
-        parameters: {
-          'type': 'object',
-          'properties': {
-            'query': {'type': 'string', 'description': 'Topic to search'},
-          },
-          'required': ['query'],
-        },
-        handler: (args) async {
-          final query = args['query'] as String? ?? '';
-          if (query.trim().isEmpty) return 'Please specify a search query.';
-
-          // Custom local knowledge responses for offline robustness
-          final normalized = query.toLowerCase();
-          if (normalized.contains('quantum')) {
-            return 'Quantum Physics is a fundamental theory in physics that provides a description of the physical properties of nature at the scale of atoms and subatomic particles. It is the foundation of all quantum physics including quantum chemistry, quantum field theory, quantum technology, and quantum information science.';
-          } else if (normalized.contains('pocketllm') ||
-              normalized.contains('pocket llm')) {
-            return 'PocketLLM Lite is an advanced, privacy-first, on-device AI chat client that allows executing local inference pipelines (Ollama, Cactus) completely offline on native devices with RAG and advanced tools.';
-          } else if (normalized.contains('deepseek') ||
-              normalized.contains('r1')) {
-            return 'DeepSeek R1 is a state-of-the-art open-source mixture-of-experts reasoning model that features extensive <think> blocks, enabling complex chain-of-thought logic prior to emitting final replies.';
-          }
-          return 'Knowledge Summary for "$query": Search completed successfully. General references point to $query being a highly searched technical topic. Offline database holds standard reference structures.';
-        },
-      ),
-    );
-
-    // 4. Tavily Web Search Tool
+    // Knowledge search is intentionally not registered until a real local corpus
+    // is selected. Web search remains an explicit, policy-gated online tool.
     registerTool(
       ToolDefinition(
         name: 'web_search',
@@ -135,8 +101,11 @@ class ToolCallingService {
 
           try {
             final url = Uri.parse('https://api.tavily.com/search');
-            final response = await http.post(
+            final response = await _network.post(
               url,
+              purpose: ConnectionPurpose.webSearch,
+              trigger: 'tool_web_search',
+              infoSent: 'Search query text',
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode({
                 'api_key': apiKey,
@@ -194,32 +163,8 @@ class ToolCallingService {
     return _tools[name];
   }
 
-  /// Evaluates simple mathematical expression containing +, -, *, /, (, )
   double _evaluateBasicExpression(String expression) {
-    // A simple basic parser that does not use external packages
-    final tokens = expression.replaceAll(' ', '').split('');
-    if (tokens.isEmpty) return 0;
-
-    // Quick evaluate basic arithmetic
-    try {
-      // Support basic simple calculations
-      if (expression.contains('+')) {
-        final parts = expression.split('+');
-        return parts.map((e) => double.parse(e.trim())).reduce((a, b) => a + b);
-      } else if (expression.contains('-')) {
-        final parts = expression.split('-');
-        return double.parse(parts[0].trim()) - double.parse(parts[1].trim());
-      } else if (expression.contains('*')) {
-        final parts = expression.split('*');
-        return parts.map((e) => double.parse(e.trim())).reduce((a, b) => a * b);
-      } else if (expression.contains('/')) {
-        final parts = expression.split('/');
-        return double.parse(parts[0].trim()) / double.parse(parts[1].trim());
-      }
-      return double.parse(expression.trim());
-    } catch (e) {
-      return 0.0;
-    }
+    return SafeMathExpression().evaluate(expression);
   }
 
   /// System instruction block to give models capability to call registered tools
