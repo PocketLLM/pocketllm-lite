@@ -5,6 +5,7 @@ import '../services/ollama_service.dart';
 import '../services/storage_service.dart';
 import '../services/huggingface_service.dart';
 import '../services/tool_calling_service.dart';
+import '../services/generation_pipeline.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
   throw UnimplementedError('StorageService must be initialized in main.dart');
@@ -33,6 +34,12 @@ final huggingFaceServiceProvider = Provider<HuggingFaceService>((ref) {
 
 final toolCallingServiceProvider = Provider<ToolCallingService>((ref) {
   return ToolCallingService(ref.watch(storageServiceProvider));
+});
+
+final generationPipelineProvider = Provider<GenerationPipeline>((ref) {
+  return GenerationPipeline(
+    inferenceFactory: ref.watch(inferenceServiceFactoryProvider),
+  );
 });
 
 // Re-export RAG providers from rag_service.dart

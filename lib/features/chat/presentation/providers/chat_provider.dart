@@ -406,8 +406,6 @@ class ChatNotifier extends Notifier<ChatState> {
       lastTtftMs: 0,
     );
 
-    final inferenceFactory = ref.read(inferenceServiceFactoryProvider);
-
     try {
       // Augment the last user query with RAG if enabled
       final messages = <ChatRequestMessage>[];
@@ -482,10 +480,7 @@ class ChatNotifier extends Notifier<ChatState> {
         topK: state.topK,
       );
 
-      final service = await inferenceFactory.chooseForModel(
-        state.selectedModel,
-      );
-      final stream = service.chatStream(request);
+      final stream = ref.read(generationPipelineProvider).stream(request);
 
       final hapticEnabled = ref
           .read(storageServiceProvider)
