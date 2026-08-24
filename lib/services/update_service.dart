@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:ota_update/ota_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'network_policy_service.dart';
+import 'network_gateway.dart';
 
 /// Model representing a GitHub release
 class AppRelease {
@@ -102,11 +102,13 @@ class UpdateService {
   static final UpdateService _instance = UpdateService._internal();
   factory UpdateService() => _instance;
   UpdateService._internal();
+  final NetworkGateway _network = NetworkGateway();
 
   /// Check if auto-update is enabled (disabled by default)
   Future<bool> isAutoUpdateEnabled() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_autoUpdateKey) ?? false; // Disabled by default for privacy
+    return prefs.getBool(_autoUpdateKey) ??
+        false; // Disabled by default for privacy
   }
 
   /// Set auto-update preference
@@ -154,20 +156,6 @@ class UpdateService {
       }
 
       final uri = Uri.parse(_releasesApiUrl);
-      final policy = NetworkPolicyService().evaluateConnection(
-        uri: uri,
-        purpose: ConnectionPurpose.updateCheck,
-        trigger: force ? 'manual_update_check' : 'auto_update_check',
-        infoSent: 'Standard HTTP GET header (Accept json), no user content',
-      );
-
-      if (!policy.allowed) {
-        return UpdateCheckResult(
-          updateAvailable: false,
-          error: policy.reason ?? 'Blocked by network policy',
-        );
-      }
-
       // Get current app version
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
@@ -177,8 +165,11 @@ class UpdateService {
       }
 
       // Fetch latest release from GitHub
-      final response = await http.get(
+      final response = await _network.get(
         uri,
+        purpose: ConnectionPurpose.updateCheck,
+        trigger: force ? 'manual_update_check' : 'auto_update_check',
+        infoSent: 'App version and standard HTTP headers; no user content',
         headers: {'Accept': 'application/vnd.github.v3+json'},
       ).timeout(const Duration(seconds: 10));
 

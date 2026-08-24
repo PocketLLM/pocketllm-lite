@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
+import 'network_policy_service.dart';
+import 'network_gateway.dart';
 
 class ModelDownloadProgress {
   final double progress;
@@ -151,6 +153,16 @@ class ModelDownloadService {
     );
 
     try {
+      final downloadUri = Uri.parse(url);
+      final policy = NetworkPolicyService().evaluateConnection(
+        uri: downloadUri,
+        purpose: ConnectionPurpose.modelDownload,
+        trigger: 'model_download_dialog',
+        infoSent: 'Requested model file path; no user content',
+      );
+      if (!policy.allowed) {
+        throw NetworkPolicyError(policy.reason ?? 'Model download blocked.');
+      }
       final response = await _dio.download(
         url,
         targetFilePath,

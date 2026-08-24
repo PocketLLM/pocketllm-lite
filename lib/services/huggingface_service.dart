@@ -1,12 +1,16 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../features/model_browser/domain/hf_model.dart';
+import 'network_gateway.dart';
+import 'network_policy_service.dart';
 
 class HuggingFaceService {
-  final http.Client _client = http.Client();
+  final NetworkGateway _network;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   static const String _hfTokenKey = 'hf_access_token';
+
+  HuggingFaceService({NetworkGateway? network})
+      : _network = network ?? NetworkGateway();
 
   Future<void> setToken(String token) async {
     await _secureStorage.write(key: _hfTokenKey, value: token);
@@ -47,7 +51,13 @@ class HuggingFaceService {
 
     final uri = Uri.https('huggingface.co', '/api/models', queryParams);
 
-    final response = await _client.get(uri, headers: _buildHeaders(token));
+    final response = await _network.get(
+      uri,
+      purpose: ConnectionPurpose.modelSearch,
+      trigger: 'huggingface_model_search',
+      infoSent: 'Search query and optional authorization token',
+      headers: _buildHeaders(token),
+    );
 
     if (response.statusCode == 200) {
       final List<dynamic> jsonList = jsonDecode(response.body);
@@ -63,7 +73,13 @@ class HuggingFaceService {
     final token = await getToken();
     final uri = Uri.https('huggingface.co', '/api/models/$modelId');
 
-    final response = await _client.get(uri, headers: _buildHeaders(token));
+    final response = await _network.get(
+      uri,
+      purpose: ConnectionPurpose.modelSearch,
+      trigger: 'huggingface_model_details',
+      infoSent: 'Model identifier and optional authorization token',
+      headers: _buildHeaders(token),
+    );
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
@@ -71,8 +87,11 @@ class HuggingFaceService {
       // Also fetch README.md for description
       String? description;
       try {
-        final readmeResponse = await _client.get(
+        final readmeResponse = await _network.get(
           Uri.parse('https://huggingface.co/$modelId/resolve/main/README.md'),
+          purpose: ConnectionPurpose.modelSearch,
+          trigger: 'huggingface_model_readme',
+          infoSent: 'Model identifier and optional authorization token',
           headers: _buildHeaders(token),
         );
         if (readmeResponse.statusCode == 200) {
@@ -104,7 +123,13 @@ class HuggingFaceService {
     final token = await getToken();
     final uri = Uri.https('huggingface.co', '/api/models/$modelId/tree/main');
 
-    final response = await _client.get(uri, headers: _buildHeaders(token));
+    final response = await _network.get(
+      uri,
+      purpose: ConnectionPurpose.modelSearch,
+      trigger: 'huggingface_model_files',
+      infoSent: 'Model identifier and optional authorization token',
+      headers: _buildHeaders(token),
+    );
 
     if (response.statusCode == 200) {
       final List<dynamic> jsonList = jsonDecode(response.body);
