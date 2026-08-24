@@ -72,3 +72,11 @@
 - [ ] Produce `PocketLLM-Lite-v1.0.36-android.apk` and `SHA256SUMS.txt`; verify package/version/install/launch.
 - [ ] Commit logical batches, push the release branch, tag `v1.0.36`, publish the GitHub release, and attach verified artifacts.
 
+## Final execution status
+
+- Tasks 1, 4, and 5 completed with source, negative-path tests, and release/device evidence.
+- Task 2 completed for shared inference, memory preparation, canonical tools, and Chat's bounded loop. Central tool execution for non-Chat clients remains deferred and documented.
+- Task 3 completed for persistent memories and real retrieval algorithms. Existing document storage/RAG paths remain, but universal citation quality is not claimed.
+- Task 6 removed displayed invented metadata and retained runtime discovery. A dated signed model manifest remains deferred.
+- Task 7 completed automated coverage and an Android emulator install/launch/visual pass. Physical-device inference, OCR, Whisper, and exhaustive button traversal were unavailable.
+- Task 8 completed documentation, clean format, zero-issue analysis, 96 tests, obfuscated universal/split release builds, checksum, package inspection, and emulator smoke. Production tag/release publication is blocked because the repository has no production signing configuration and the artifact verifies as Android Debug signed.

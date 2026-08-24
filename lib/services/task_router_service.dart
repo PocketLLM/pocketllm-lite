@@ -104,13 +104,15 @@ class TaskRouterService {
     String? manualOverrideModelId,
   }) {
     if (manualOverrideModelId != null && manualOverrideModelId.isNotEmpty) {
-      final exists = availableModels.any((m) => m.modelId == manualOverrideModelId);
+      final exists =
+          availableModels.any((m) => m.modelId == manualOverrideModelId);
       if (exists) {
         return TaskRouterResult(
           selectedModelId: manualOverrideModelId,
           task: task,
           isManualOverride: true,
-          selectionReason: 'User manual override active ($manualOverrideModelId)',
+          selectionReason:
+              'User manual override active ($manualOverrideModelId)',
         );
       }
     }
@@ -185,7 +187,8 @@ class TaskRouterService {
       if (taskScore > bestScore) {
         bestScore = taskScore;
         bestCandidate = candidate;
-        reason = 'Selected ${candidate.modelId} (Score: ${taskScore.toStringAsFixed(2)}) for ${task.displayName}';
+        reason =
+            'Selected ${candidate.modelId} (Score: ${taskScore.toStringAsFixed(2)}) for ${task.displayName}';
       }
     }
 

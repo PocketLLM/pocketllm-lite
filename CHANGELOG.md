@@ -12,6 +12,39 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.36] - 2026-08-25
+
+### Added
+
+- Authenticated `.pllm` backups using PBKDF2-HMAC-SHA256 and AES-256-GCM, connected to the Export and Import dialogs.
+- Persistent local memory records with sensitivity filtering and retrieval into generation context.
+- Android device telemetry for RAM, storage, ABI, CPU cores, battery, and thermal status.
+- Android on-device text recognition using the bundled ML Kit Latin recognizer.
+- Real Cactus Whisper file transcription and authenticated OpenAI-compatible service routes.
+- Application-owned network gateway and auditable policy decisions for model, search, skill, update, font, and Ollama requests.
+
+### Changed
+
+- Routed Chat and Prompt Lab through the shared Cactus/Ollama generation pipeline.
+- Replaced keyword-overlap labels with real BM25, cosine scoring when vectors exist, and MMR diversification.
+- Replaced XML-first tool instructions with canonical JSON calls, strict argument validation, safe arithmetic, timeouts, and real-handler requirements.
+- Replaced fixed hardware, OCR, transcript, latency, benchmark, and success values with measurements, explicit estimates, or unavailable states.
+- Rewrote privacy, onboarding, model help, README, and release copy to describe local-first behavior and optional network use precisely.
+
+### Fixed
+
+- Applied saved Ollama endpoints at service creation and blocked disallowed remote inference before HTTP I/O.
+- Disabled Cactus telemetry before initializing the runtime.
+- Replaced the fixed OpenAI server key with a generated secret stored in secure storage.
+- Removed false-success mobile action, offline knowledge, OCR, transcription, and Prompt Lab responses.
+
+### Known limitations
+
+- OCR is Android-only in this release.
+- Encrypted restore validates the whole archive before import, but individual Hive writes are not transactional as one atomic database operation.
+- The OpenAI-compatible service is covered by live localhost tests but has no in-app start/stop screen yet.
+- Physical-device model, OCR, Whisper, and accelerator performance remains device-dependent.
+
 ## [1.0.35] - 2026-08-04
 
 ### Added

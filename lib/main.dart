@@ -13,7 +13,6 @@ import 'services/update_service.dart';
 
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
-import 'package:google_fonts/google_fonts.dart';
 import 'package:cactus/cactus.dart' as cactus;
 import 'services/network_policy_service.dart';
 import 'services/local_memory_service.dart';
@@ -25,8 +24,6 @@ void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Disable network font fetching to ensure strictly local assets
-  GoogleFonts.config.allowRuntimeFetching = false;
   cactus.CactusConfig.isTelemetryEnabled = false;
 
   final storageService = StorageService();

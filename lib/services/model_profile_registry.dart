@@ -50,7 +50,8 @@ class ModelProfile {
 }
 
 class ModelProfileRegistry {
-  static final ModelProfileRegistry _instance = ModelProfileRegistry._internal();
+  static final ModelProfileRegistry _instance =
+      ModelProfileRegistry._internal();
   factory ModelProfileRegistry() => _instance;
   ModelProfileRegistry._internal();
 
@@ -135,9 +136,13 @@ class ModelProfileRegistry {
     final lower = modelId.toLowerCase();
 
     if (lower.contains('qwen')) return _profiles['qwen']!;
-    if (lower.contains('deepseek') || lower.contains('r1')) return _profiles['deepseek']!;
+    if (lower.contains('deepseek') || lower.contains('r1')) {
+      return _profiles['deepseek']!;
+    }
     if (lower.contains('llama')) return _profiles['llama']!;
-    if (lower.contains('mistral') || lower.contains('mixtral')) return _profiles['mistral']!;
+    if (lower.contains('mistral') || lower.contains('mixtral')) {
+      return _profiles['mistral']!;
+    }
     if (lower.contains('gemma')) return _profiles['gemma']!;
 
     // Generic default

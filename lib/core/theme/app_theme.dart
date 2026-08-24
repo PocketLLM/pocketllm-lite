@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Material 3 Expressive Design System for PocketLLM Lite.
 ///
@@ -23,86 +22,86 @@ class AppTheme {
 
   // ── Typography ──
   static TextTheme _buildTextTheme(TextTheme base) {
-    return GoogleFonts.interTextTheme(base).copyWith(
-      displayLarge: GoogleFonts.inter(
+    return base.copyWith(
+      displayLarge: base.displayLarge?.copyWith(
         fontSize: 57,
         fontWeight: FontWeight.w500,
         letterSpacing: -0.25,
         height: 1.12,
       ),
-      displayMedium: GoogleFonts.inter(
+      displayMedium: base.displayMedium?.copyWith(
         fontSize: 45,
         fontWeight: FontWeight.w500,
         height: 1.16,
       ),
-      displaySmall: GoogleFonts.inter(
+      displaySmall: base.displaySmall?.copyWith(
         fontSize: 36,
         fontWeight: FontWeight.w500,
         height: 1.22,
       ),
-      headlineLarge: GoogleFonts.inter(
+      headlineLarge: base.headlineLarge?.copyWith(
         fontSize: 32,
         fontWeight: FontWeight.w600,
         height: 1.25,
       ),
-      headlineMedium: GoogleFonts.inter(
+      headlineMedium: base.headlineMedium?.copyWith(
         fontSize: 28,
         fontWeight: FontWeight.w600,
         height: 1.29,
       ),
-      headlineSmall: GoogleFonts.inter(
+      headlineSmall: base.headlineSmall?.copyWith(
         fontSize: 24,
         fontWeight: FontWeight.w600,
         height: 1.33,
       ),
-      titleLarge: GoogleFonts.inter(
+      titleLarge: base.titleLarge?.copyWith(
         fontSize: 22,
         fontWeight: FontWeight.w600,
         height: 1.27,
       ),
-      titleMedium: GoogleFonts.inter(
+      titleMedium: base.titleMedium?.copyWith(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.15,
         height: 1.50,
       ),
-      titleSmall: GoogleFonts.inter(
+      titleSmall: base.titleSmall?.copyWith(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.1,
         height: 1.43,
       ),
-      bodyLarge: GoogleFonts.inter(
+      bodyLarge: base.bodyLarge?.copyWith(
         fontSize: 16,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.15,
         height: 1.50,
       ),
-      bodyMedium: GoogleFonts.inter(
+      bodyMedium: base.bodyMedium?.copyWith(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.25,
         height: 1.43,
       ),
-      bodySmall: GoogleFonts.inter(
+      bodySmall: base.bodySmall?.copyWith(
         fontSize: 12,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.4,
         height: 1.33,
       ),
-      labelLarge: GoogleFonts.inter(
+      labelLarge: base.labelLarge?.copyWith(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.1,
         height: 1.43,
       ),
-      labelMedium: GoogleFonts.inter(
+      labelMedium: base.labelMedium?.copyWith(
         fontSize: 12,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
         height: 1.33,
       ),
-      labelSmall: GoogleFonts.inter(
+      labelSmall: base.labelSmall?.copyWith(
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,

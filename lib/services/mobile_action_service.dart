@@ -35,8 +35,10 @@ class MobileActionService {
   final List<MobileActionRequest> _pendingActions = [];
   final List<MobileActionRequest> _executedActions = [];
 
-  List<MobileActionRequest> get pendingActions => List.unmodifiable(_pendingActions);
-  List<MobileActionRequest> get executedActions => List.unmodifiable(_executedActions);
+  List<MobileActionRequest> get pendingActions =>
+      List.unmodifiable(_pendingActions);
+  List<MobileActionRequest> get executedActions =>
+      List.unmodifiable(_executedActions);
 
   MobileActionRequest createReminderRequest({
     required String title,

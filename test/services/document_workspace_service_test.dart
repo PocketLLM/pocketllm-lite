@@ -8,7 +8,9 @@ void main() {
     workspaceService = DocumentWorkspaceService();
   });
 
-  test('semantic chunker preserves headings, pages, and generates inline citations', () {
+  test(
+      'semantic chunker preserves headings, pages, and generates inline citations',
+      () {
     const rawContent = '''
 # Introduction to Local LLMs
 Local LLMs execute AI inference entirely on-device without cloud services.
@@ -30,7 +32,8 @@ Quantization Q4_K_M reduces memory bandwidth while retaining accuracy.
   });
 
   test('collection search matches query terms accurately', () {
-    const rawContent = 'Flutter desktop and mobile applications use Riverpod providers for state management.';
+    const rawContent =
+        'Flutter desktop and mobile applications use Riverpod providers for state management.';
     workspaceService.semanticChunking(
       documentId: 'doc_flutter',
       documentName: 'Flutter_Arch.txt',

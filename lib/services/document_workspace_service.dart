@@ -35,7 +35,8 @@ class DocumentCollection {
 }
 
 class DocumentWorkspaceService {
-  static final DocumentWorkspaceService _instance = DocumentWorkspaceService._internal();
+  static final DocumentWorkspaceService _instance =
+      DocumentWorkspaceService._internal();
   factory DocumentWorkspaceService() => _instance;
   DocumentWorkspaceService._internal();
 

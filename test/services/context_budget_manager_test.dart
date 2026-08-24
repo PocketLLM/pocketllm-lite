@@ -10,7 +10,8 @@ void main() {
   });
 
   test('token estimator returns proportional count', () {
-    final tokens = manager.estimateTokens('Hello world! This is a test prompt.');
+    final tokens =
+        manager.estimateTokens('Hello world! This is a test prompt.');
     expect(tokens, greaterThan(0));
     expect(tokens, lessThan(30));
   });
@@ -18,7 +19,8 @@ void main() {
   test('context fit retains all messages when within budget', () {
     final messages = [
       ChatMessage(role: 'user', content: 'Hi', timestamp: DateTime.now()),
-      ChatMessage(role: 'assistant', content: 'Hello!', timestamp: DateTime.now()),
+      ChatMessage(
+          role: 'assistant', content: 'Hello!', timestamp: DateTime.now()),
     ];
 
     final result = manager.fitContext(

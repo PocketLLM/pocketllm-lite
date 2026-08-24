@@ -224,7 +224,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         const Divider(height: 1, indent: 56),
         ListTile(
-          title: const Text('Privacy & Network Centre', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text('Privacy & Network Centre',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           subtitle: const Text(
               'Strict Offline Mode, endpoint transparency, connection audit log, and privacy controls'),
           leading: Icon(Icons.shield_rounded, color: theme.colorScheme.primary),
@@ -239,7 +240,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           title: const Text('Prompt Lab & Engineering'),
           subtitle: const Text(
               'Variable replacement, sampling overrides, and parameter benchmarks'),
-          leading: Icon(Icons.science_outlined, color: theme.colorScheme.primary),
+          leading:
+              Icon(Icons.science_outlined, color: theme.colorScheme.primary),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             HapticFeedback.lightImpact();
@@ -251,7 +253,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           title: const Text('Audio Workspace & Speech'),
           subtitle: const Text(
               'Offline speech transcription, meeting summaries, and task extractions'),
-          leading: Icon(Icons.graphic_eq_rounded, color: theme.colorScheme.primary),
+          leading:
+              Icon(Icons.graphic_eq_rounded, color: theme.colorScheme.primary),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             HapticFeedback.lightImpact();

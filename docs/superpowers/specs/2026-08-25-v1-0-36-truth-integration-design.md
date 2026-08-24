@@ -42,3 +42,6 @@ Each repaired service gets negative-path tests that prove the old false-success 
 
 The release is publishable only after format, analysis, unit tests, supported integration tests, release APK build, checksum generation, and available emulator smoke tests. GitHub publication follows only if those gates pass; signing limitations are disclosed.
 
+## Implemented variance
+
+The final v1.0.36 implementation shares inference and memory preparation through `GenerationPipeline`, but Chat still owns its bounded tool-response loop. The developer API therefore performs generation without executing tool requests. This is documented as follow-up work rather than represented as complete orchestration. Backup envelopes are authenticated as a whole before restore, while subsequent Hive record writes are per-record and are not described as atomic.

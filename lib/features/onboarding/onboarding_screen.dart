@@ -67,9 +67,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                       _buildPage(
                         title: 'Welcome to PocketLLM',
                         description:
-                            'Your privacy-first, offline AI companion.\n\n'
-                            'No data leaves your device. All computations '
-                            'happen locally using the powerful Ollama engine.',
+                            'A local-first assistant with clear network controls.\n\n'
+                            'Use supported on-device Cactus models or an Ollama endpoint you choose. Optional online features stay under your control.',
                         icon: Icons.security_outlined,
                         shape: Shapes.gem,
                         containerColor: theme.colorScheme.primaryContainer,
@@ -78,8 +77,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                       _buildPage(
                         title: 'Setup & Chat',
                         description:
-                            'Connect to your local Ollama server (Termux or '
-                            'Desktop) and start chatting instantly.\n\n'
+                            'Choose a downloaded on-device model, or connect to an Ollama server in Termux or on a trusted computer.\n\n'
                             'Customize your experience with different models, '
                             'system prompts, and themes.',
                         icon: Icons.chat_bubble_outline_rounded,
@@ -228,11 +226,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shield_outlined, size: 56, color: theme.colorScheme.primary),
+          Icon(Icons.shield_outlined,
+              size: 56, color: theme.colorScheme.primary),
           const SizedBox(height: 16),
           Text(
             'Privacy & Connection Controls',
-            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: theme.textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
@@ -247,30 +247,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               children: [
                 CheckboxListTile(
                   title: const Text('Check GitHub for updates automatically?'),
-                  subtitle: const Text('Connects to api.github.com for new releases. (Default: Off)'),
+                  subtitle: const Text(
+                      'Connects to api.github.com for new releases. (Default: Off)'),
                   value: autoUpdate,
                   onChanged: (val) async {
-                    await storage.saveSetting(AppConstants.autoUpdateCheckKey, val ?? false);
+                    await storage.saveSetting(
+                        AppConstants.autoUpdateCheckKey, val ?? false);
                     setState(() {});
                   },
                 ),
                 const Divider(height: 1),
                 CheckboxListTile(
                   title: const Text('Allow optional online model browsing?'),
-                  subtitle: const Text('Enables searching Hugging Face for downloadable GGUF models.'),
+                  subtitle: const Text(
+                      'Enables searching Hugging Face for downloadable GGUF models.'),
                   value: onlineModels,
                   onChanged: (val) async {
-                    await storage.saveSetting(AppConstants.onlineModelBrowsingKey, val ?? true);
+                    await storage.saveSetting(
+                        AppConstants.onlineModelBrowsingKey, val ?? true);
                     setState(() {});
                   },
                 ),
                 const Divider(height: 1),
                 SwitchListTile(
                   title: const Text('Enable Strict Offline Mode'),
-                  subtitle: const Text('Blocks all non-loopback network calls at application level.'),
+                  subtitle: const Text(
+                      'Blocks all non-loopback network calls at application level.'),
                   value: strictOffline,
                   onChanged: (val) async {
-                    await storage.saveSetting(AppConstants.strictOfflineModeKey, val);
+                    await storage.saveSetting(
+                        AppConstants.strictOfflineModeKey, val);
                     setState(() {});
                   },
                 ),

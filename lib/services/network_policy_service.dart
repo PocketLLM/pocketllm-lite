@@ -21,7 +21,8 @@ class NetworkPolicyResult {
 }
 
 class NetworkPolicyService {
-  static final NetworkPolicyService _instance = NetworkPolicyService._internal();
+  static final NetworkPolicyService _instance =
+      NetworkPolicyService._internal();
   factory NetworkPolicyService() => _instance;
   NetworkPolicyService._internal();
 
@@ -30,7 +31,8 @@ class NetworkPolicyService {
   final StreamController<List<NetworkAuditEntry>> _auditLogController =
       StreamController<List<NetworkAuditEntry>>.broadcast();
 
-  Stream<List<NetworkAuditEntry>> get auditLogStream => _auditLogController.stream;
+  Stream<List<NetworkAuditEntry>> get auditLogStream =>
+      _auditLogController.stream;
   List<NetworkAuditEntry> get auditLog => List.unmodifiable(_auditLog);
 
   void init(StorageService storageService) {
@@ -186,7 +188,8 @@ class NetworkPolicyService {
         break;
 
       case ConnectionPurpose.fontDownload:
-        const reason = 'Runtime font downloading is disabled (fonts bundled locally)';
+        const reason =
+            'Runtime font downloading is disabled (fonts bundled locally)';
         _logAudit(
           domain: domain,
           purpose: purpose.name,

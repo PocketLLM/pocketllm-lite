@@ -46,7 +46,8 @@ class ContextBudgetResult {
 }
 
 class ContextBudgetManager {
-  static final ContextBudgetManager _instance = ContextBudgetManager._internal();
+  static final ContextBudgetManager _instance =
+      ContextBudgetManager._internal();
   factory ContextBudgetManager() => _instance;
   ContextBudgetManager._internal();
 
@@ -70,7 +71,8 @@ class ContextBudgetManager {
     final memTokens = estimateTokens(memoryContext ?? '');
 
     int totalStaticTokens = sysTokens + docTokens + memTokens;
-    int availableChatTokens = maxContextTokens - budget.responseReservationBudget - totalStaticTokens;
+    int availableChatTokens =
+        maxContextTokens - budget.responseReservationBudget - totalStaticTokens;
     if (availableChatTokens < 200) availableChatTokens = 200;
 
     int currentChatTokens = 0;
@@ -108,13 +110,19 @@ class ContextBudgetManager {
       timestamp: olderMessages.last.timestamp,
     );
 
-    final List<ChatMessage> resultMessages = [summaryMessage, ...recentMessages];
+    final List<ChatMessage> resultMessages = [
+      summaryMessage,
+      ...recentMessages
+    ];
 
     return ContextBudgetResult(
       fittedMessages: resultMessages,
       wasSummarized: true,
-      summaryNotice: 'Older messages were summarized locally to fit the model\'s context window.',
-      totalTokensUsed: estimateTokens(summaryContent) + currentChatTokens + totalStaticTokens,
+      summaryNotice:
+          'Older messages were summarized locally to fit the model\'s context window.',
+      totalTokensUsed: estimateTokens(summaryContent) +
+          currentChatTokens +
+          totalStaticTokens,
       remainingBudget: availableChatTokens - currentChatTokens,
     );
   }

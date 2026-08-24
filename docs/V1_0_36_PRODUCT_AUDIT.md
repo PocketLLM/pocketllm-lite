@@ -34,5 +34,28 @@ Audit started 2026-08-25 from clean commit `f6d779a` on Flutter 3.41.9 / Dart 3.
 
 ## Audit status
 
-This is a working document. Rows and evidence are updated only after implementation and direct verification.
+The false-success paths above were repaired or removed on branch `Mr-dark-debug/v1.0.36-truth-integration`.
 
+| Area | Final disposition | Evidence boundary |
+|---|---|---|
+| Chat / inference | Repaired | Chat and Prompt Lab call `GenerationPipeline`; Cactus/Ollama adapters return actual streams or errors |
+| Tool calls | Repaired with architectural follow-up | Canonical JSON, validation, safe calculator, bounded Chat loop, real handlers; tool execution is not yet centralized inside `GenerationPipeline` |
+| Memory / retrieval | Repaired | Versioned persistence and restart tests; BM25, cosine for supplied vectors, and MMR tests; lexical fallback is labeled |
+| Documents / RAG | Existing partial capability | Existing ingestion/vector-store paths remain; end-to-end source citation quality was not device-verified in this release |
+| OCR | Repaired on Android | Actual input bytes reach bundled ML Kit recognizer; iOS returns unsupported |
+| Audio files | Repaired | Actual selected file reaches Cactus Whisper; summaries, speakers, tasks, and timestamps are no longer invented |
+| Backup | Repaired and UI-connected | `.pllm` export/import uses authenticated encryption; restore record writes are not one atomic Hive transaction |
+| OpenAI server | Repaired service, UI gap | Live localhost tests cover authenticated models/chat/SSE/embeddings; no in-app control screen |
+| Strict Offline | Repaired for application-owned I/O | Gateway protects HTTP clients and model downloads evaluate policy before Dio I/O; OS/SDK behavior outside app-owned transport is not claimed |
+| Device profile | Repaired on Android | Native RAM/storage/ABI/core/battery/thermal measurements; unsupported values are unknown |
+| Model catalog | Claims sanitized | Runtime discovery replaces displayed benchmark/capability claims after scan; no dated signed model manifest yet |
+| Mobile actions | False success removed | Typed actions require a registered real handler or return unavailable |
+| Documentation | Rewritten | README, changelog, release notes, decisions, limitations, competitor research, and verification matrix describe measured scope |
+
+## Release blockers and deferred work
+
+- A production Android signing key is not configured. A release-mode build may use the repository's debug-signing fallback and must not be published as a production release.
+- Physical-device Cactus inference, Whisper performance, OCR accuracy, thermal behavior, and upgrade testing were not available in this environment.
+- The developer API needs an in-app start/stop/configuration screen before it should be advertised as a general user feature.
+- Tool execution should move from Chat into `GenerationPipeline` so non-Chat clients share one agent loop.
+- Cactus Flutter is an archived upstream dependency; a maintained backend contingency is required.
