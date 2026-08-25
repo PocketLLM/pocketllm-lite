@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:path/path.dart' as p;
 import '../../../core/widgets/m3_app_bar.dart';
 import '../providers/model_browser_provider.dart';
 import '../domain/hf_model.dart';
 import '../../../services/model_download_service.dart';
+import '../../../core/providers.dart';
+import '../../../models/model_manifest.dart';
+import '../../../providers/model_manager_provider.dart';
 
 class ModelDetailScreen extends ConsumerWidget {
   final String modelId;
@@ -42,6 +46,12 @@ class ModelDetailScreen extends ConsumerWidget {
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: theme.colorScheme.primary,
                         ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildStatChip(
+                        theme,
+                        Icons.gavel_outlined,
+                        model.license ?? 'License not declared',
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -87,7 +97,13 @@ class ModelDetailScreen extends ConsumerWidget {
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate((context, index) {
                         final file = files[index];
-                        return _buildFileCard(context, file, model, theme);
+                        return _buildFileCard(
+                          context,
+                          ref,
+                          file,
+                          model,
+                          theme,
+                        );
                       }, childCount: files.length),
                     ),
                   );
@@ -156,6 +172,7 @@ class ModelDetailScreen extends ConsumerWidget {
 
   Widget _buildFileCard(
     BuildContext context,
+    WidgetRef ref,
     HFModelFile file,
     HFModel model,
     ThemeData theme,
@@ -176,21 +193,57 @@ class ModelDetailScreen extends ConsumerWidget {
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
         subtitle: Text(
-          'Size: ${sizeGB.toStringAsFixed(2)} GB • Quantization: ${file.type}',
+          'Size: ${sizeGB.toStringAsFixed(2)} GB • Quantization: ${file.type}\n'
+          'Estimated RAM: ${(sizeGB * 1.25).toStringAsFixed(2)} GB + context cache',
           style: const TextStyle(fontSize: 12),
         ),
         trailing: FilledButton.icon(
-          onPressed: () async {
-            // Trigger download via ModelDownloadService
-            final service = ModelDownloadService();
-            await service.downloadModelWithDialog(
-              context,
-              modelName: '${model.name} (${file.type})',
-              url: file.url,
-              expectedFilename: file.filename,
-              expectedSizeBytes: file.sizeBytes,
-            );
-          },
+          onPressed: model.license == null
+              ? null
+              : () async {
+                  final service = ModelDownloadService();
+                  final token =
+                      await ref.read(huggingFaceServiceProvider).getToken();
+                  if (!context.mounted) return;
+                  final path = await service.downloadModelWithDialog(
+                    context,
+                    modelName: '${model.name} (${file.type})',
+                    url: file.url,
+                    expectedFilename: file.filename,
+                    expectedSizeBytes: file.sizeBytes,
+                    expectedSha256: file.sha256,
+                    headers: token?.isNotEmpty == true
+                        ? {'Authorization': 'Bearer $token'}
+                        : null,
+                  );
+                  if (path == null) return;
+                  final id = p.basename(p.dirname(path));
+                  final manifest = ModelManifest(
+                    id: id,
+                    displayName: file.filename.split('/').last,
+                    source: 'huggingface:${model.id}',
+                    provider: model.author,
+                    quantization: file.type == 'Unknown' ? null : file.type,
+                    fileSizeBytes: file.sizeBytes,
+                    license: model.license,
+                    licenseUrl: model.licenseUrl,
+                    backendCompatibility: const ['Cactus folder runtime'],
+                    minimumBackendVersion: '1.3.0',
+                    sha256: file.sha256,
+                    status: ModelSupportStatus.installedUntested,
+                    lastVerified: DateTime.now().toUtc(),
+                  );
+                  ref
+                      .read(modelManagerProvider.notifier)
+                      .addCustomImport(path, file.filename, manifest: manifest);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Model verified and registered locally.'),
+                      ),
+                    );
+                  }
+                },
           icon: const Icon(Icons.download, size: 16),
           label: const Text('Download'),
           style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),

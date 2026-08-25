@@ -7,6 +7,7 @@ import '../../../core/widgets/m3_app_bar.dart';
 import '../../../core/widgets/m3_section_header.dart';
 import 'dart:async';
 import '../../../models/local_model.dart';
+import '../../../models/model_manifest.dart';
 import '../../../providers/model_manager_provider.dart';
 import '../../../core/providers.dart';
 import '../../../services/inference_service.dart';
@@ -43,11 +44,14 @@ class _ModelCatalogScreenState extends ConsumerState<ModelCatalogScreen>
       ref.read(modelManagerProvider.notifier).unloadActiveModel();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.white),
-              SizedBox(width: 8),
-              Expanded(
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.onError,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
                 child: Text(
                   'Memory Pressure Warning: Current local model unloaded from RAM to prevent crash.',
                 ),
@@ -158,7 +162,7 @@ class _ModelCatalogScreenState extends ConsumerState<ModelCatalogScreen>
     return Scaffold(
       appBar: M3AppBar(
         title: 'Local GGUF Models',
-        subtitle: 'Manage and run offline Cactus AI models',
+        subtitle: 'Manage locally installed GGUF model files',
         onBack: () => context.pop(),
         actions: [
           IconButton(
@@ -207,7 +211,7 @@ class _ModelCatalogScreenState extends ConsumerState<ModelCatalogScreen>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Already have a quantized Llama, Gemma or Qwen model downloaded? Pick it from your file explorer to register it instantly without repeating downloads.',
+                        'Choose a GGUF file to copy into app storage. Runtime compatibility is confirmed only after the model loads successfully.',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onPrimaryContainer
                               .withValues(alpha: 0.8),
@@ -230,10 +234,10 @@ class _ModelCatalogScreenState extends ConsumerState<ModelCatalogScreen>
             ),
           ),
 
-          // Standard Catalog Models Section
+          // Managed local models section
           const SliverToBoxAdapter(
             child: M3SectionHeader(
-              title: 'Standard GGUF Catalog',
+              title: 'Managed GGUF Files',
             ),
           ),
           SliverList(
@@ -433,7 +437,7 @@ class _ModelCatalogScreenState extends ConsumerState<ModelCatalogScreen>
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Loaded in RAM Accelerator context',
+                      'Loaded in the active local runtime',
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: colorScheme.tertiary,
                         fontWeight: FontWeight.bold,
@@ -621,6 +625,7 @@ class _ModelCatalogScreenState extends ConsumerState<ModelCatalogScreen>
         bool isTesting = false;
         double tps = 0.0;
         int ttftMs = 0;
+        bool speedEstimated = true;
         StreamSubscription<ChatToken>? subscription;
 
         return StatefulBuilder(
@@ -631,6 +636,7 @@ class _ModelCatalogScreenState extends ConsumerState<ModelCatalogScreen>
                 generatedText = 'Preparing cactus inference...';
                 tps = 0.0;
                 ttftMs = 0;
+                speedEstimated = true;
               });
 
               final startTime = DateTime.now();
@@ -682,6 +688,7 @@ class _ModelCatalogScreenState extends ConsumerState<ModelCatalogScreen>
                     setDialogState(() {
                       if (metrics.tokensPerSecond > 0) {
                         tps = metrics.tokensPerSecond;
+                        speedEstimated = metrics.tokenCountsEstimated;
                       }
                       isTesting = false;
                     });
@@ -785,7 +792,7 @@ class _ModelCatalogScreenState extends ConsumerState<ModelCatalogScreen>
                             ),
                           ),
                           Text(
-                            'Speed: ${tps.toStringAsFixed(1)} tokens/s',
+                            'Speed: ${speedEstimated ? '≈' : ''}${tps.toStringAsFixed(1)} tokens/s',
                             style: theme.textTheme.labelSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: colorScheme.primary,
@@ -995,7 +1002,7 @@ class _ModelDetailsSheetContent extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   model.description ??
-                      'This is a local GGUF model imported into PocketLLM Lite. It can be used for fully offline inference, utilizing native llama.cpp execution to process natural language right on your mobile device.',
+                      'This GGUF file is registered in PocketLLM Lite. Its architecture and capabilities remain unverified until the configured local runtime loads it successfully.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     height: 1.5,
@@ -1050,71 +1057,6 @@ class _ModelDetailsSheetContent extends ConsumerWidget {
                         ),
                       );
                     }).toList(),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Benchmarks
-                if (model.benchmarks != null &&
-                    model.benchmarks!.isNotEmpty) ...[
-                  Text(
-                    'Standard Benchmarks',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Card(
-                    elevation: 0,
-                    color: colorScheme.surfaceContainerLow,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color:
-                            colorScheme.outlineVariant.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        children: model.benchmarks!.entries.map((entry) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 6.0, horizontal: 8.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  entry.key,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primaryContainer
-                                        .withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    entry.value,
-                                    style:
-                                        theme.textTheme.labelMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -1187,6 +1129,7 @@ class _ModelDetailsSheetContent extends ConsumerWidget {
           ),
         );
       case DownloadStatus.downloaded:
+        final statusLabel = model.manifest?.status.label ?? 'Installed';
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
@@ -1194,7 +1137,7 @@ class _ModelDetailsSheetContent extends ConsumerWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            'Ready Offline',
+            statusLabel,
             style: theme.textTheme.labelSmall?.copyWith(
               color: colorScheme.onSecondaryContainer,
               fontWeight: FontWeight.bold,

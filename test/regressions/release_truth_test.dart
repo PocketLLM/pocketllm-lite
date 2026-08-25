@@ -45,4 +45,20 @@ void main() {
 
     expect(violations, isEmpty);
   });
+
+  test('shipping source has no invented catalog or duplicate tool paths', () {
+    final modelManager =
+        File('lib/providers/model_manager_provider.dart').readAsStringSync();
+    expect(modelManager, isNot(contains('MMLU')));
+    expect(modelManager, isNot(contains('GSM8K')));
+    expect(modelManager, isNot(contains('CactusLM')));
+    expect(modelManager, isNot(contains('.getModels()')));
+    expect(File('lib/services/typed_tool_calling_service.dart').existsSync(),
+        isFalse);
+    expect(File('lib/services/document_workspace_service.dart').existsSync(),
+        isFalse);
+    expect(
+        File('lib/services/model_profile_registry.dart').existsSync(), isFalse);
+    expect(File('lib/services/task_router_service.dart').existsSync(), isFalse);
+  });
 }

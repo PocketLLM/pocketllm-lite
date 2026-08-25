@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../services/local_memory_service.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
+import '../../../../core/widgets/m3_empty_state.dart';
+import '../../../../core/widgets/m3_section_header.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers.dart';
 
 class MemoryInspectorScreen extends ConsumerStatefulWidget {
   const MemoryInspectorScreen({super.key});
@@ -83,6 +87,12 @@ class _MemoryInspectorScreenState extends ConsumerState<MemoryInspectorScreen> {
     final theme = Theme.of(context);
     final memoryService = LocalMemoryService();
     final memories = memoryService.getMemories(type: _selectedCategory);
+    final storage = ref.watch(storageServiceProvider);
+    final autoExtraction = storage.getSetting(
+          AppConstants.autoMemoryExtractionKey,
+          defaultValue: false,
+        ) ==
+        true;
 
     return Scaffold(
       appBar: M3AppBar(
@@ -96,6 +106,29 @@ class _MemoryInspectorScreenState extends ConsumerState<MemoryInspectorScreen> {
       ),
       body: Column(
         children: [
+          const M3SectionHeader(
+            title: 'Memory controls',
+            icon: Icons.shield_outlined,
+          ),
+          SwitchListTile(
+            title: const Text('Automatic local extraction'),
+            subtitle: const Text(
+              'After a reply, the selected local model may save explicit, '
+              'durable facts. Off by default; secrets are rejected.',
+            ),
+            value: autoExtraction,
+            onChanged: (value) async {
+              await storage.saveSetting(
+                AppConstants.autoMemoryExtractionKey,
+                value,
+              );
+              if (mounted) setState(() {});
+            },
+          ),
+          const M3SectionHeader(
+            title: 'Saved memories',
+            icon: Icons.memory_rounded,
+          ),
           // Category filter chip bar
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -126,9 +159,11 @@ class _MemoryInspectorScreenState extends ConsumerState<MemoryInspectorScreen> {
           const Divider(height: 1),
           Expanded(
             child: memories.isEmpty
-                ? const Center(
-                    child: Text(
-                        'No persistent memories recorded in this category.'),
+                ? const M3EmptyState(
+                    icon: Icons.memory_outlined,
+                    title: 'No saved memories',
+                    description:
+                        'Add one manually or enable automatic local extraction.',
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.all(16),

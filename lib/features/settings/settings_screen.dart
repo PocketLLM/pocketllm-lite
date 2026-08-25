@@ -252,7 +252,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ListTile(
           title: const Text('Audio Workspace & Speech'),
           subtitle: const Text(
-              'Offline speech transcription, meeting summaries, and task extractions'),
+              'Offline speech transcription using an installed Whisper model'),
           leading:
               Icon(Icons.graphic_eq_rounded, color: theme.colorScheme.primary),
           trailing: const Icon(Icons.chevron_right),

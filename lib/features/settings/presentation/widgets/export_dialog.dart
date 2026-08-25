@@ -7,7 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/providers.dart';
 import '../../../../services/backup_migration_service.dart';
-import '../../../../services/local_memory_service.dart';
+import '../../../../services/rag_service.dart';
 
 enum ExportFormat { json, csv, markdown, pdf }
 
@@ -65,35 +65,28 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
             'Passwords must match and contain at least 8 characters.',
           );
         }
-        final data = storage.exportData(
-          includeChats: _includeChats,
-          includePrompts: _includePrompts,
-          includeSettings: _includeSettings,
+        final data = storage.exportBackupData(
           chatIds: widget.selectedChatIds?.toList(),
         );
+        if (!_includeChats) data['chats'] = <dynamic>[];
+        if (!_includePrompts) data['prompts'] = <dynamic>[];
+        if (!_includeSettings) data['settings'] = <String, dynamic>{};
+        final documentIndex =
+            await ref.read(vectorStoreServiceProvider).exportArchive();
         final encrypted = await BackupMigrationService().createEncryptedBackup(
           password: password,
           settings:
               Map<String, dynamic>.from(data['settings'] as Map? ?? const {}),
           chats: List<dynamic>.from(data['chats'] as List? ?? const []),
-          memories: LocalMemoryService()
-              .getMemories()
-              .map((memory) => memory.toJson())
-              .toList(growable: false),
-          personas: storage
-              .getPersonas()
-              .map(
-                (persona) => {
-                  'id': persona.id,
-                  'name': persona.name,
-                  'systemPrompt': persona.systemPrompt,
-                  'temperature': persona.temperature,
-                  'avatarIcon': persona.avatarIcon,
-                  'modelId': persona.modelId,
-                },
-              )
-              .toList(growable: false),
+          memories: List<dynamic>.from(
+            data['memories'] as List? ?? const [],
+          ),
+          personas: List<dynamic>.from(
+            data['personas'] as List? ?? const [],
+          ),
           prompts: List<dynamic>.from(data['prompts'] as List? ?? const []),
+          skills: List<dynamic>.from(data['skills'] as List? ?? const []),
+          documentIndex: documentIndex,
         );
         file = File('${directory.path}/pocketllm_backup_$timestamp.pllm');
         await file.writeAsString(encrypted, flush: true);

@@ -64,9 +64,11 @@ class _UpdateDialogState extends State<UpdateDialog>
   }
 
   Future<void> _startDownload() async {
-    if (widget.release.apkDownloadUrl == null) {
+    if (widget.release.apkDownloadUrl == null ||
+        widget.release.apkSha256 == null) {
       setState(() {
-        _error = 'No APK download URL available';
+        _error =
+            'Direct installation requires an APK and a published SHA-256 checksum.';
       });
       return;
     }
@@ -114,7 +116,10 @@ class _UpdateDialogState extends State<UpdateDialog>
 
     try {
       _updateService
-          .downloadAndInstallUpdate(widget.release.apkDownloadUrl!)
+          .downloadAndInstallUpdate(
+        widget.release.apkDownloadUrl!,
+        sha256: widget.release.apkSha256,
+      )
           .listen(
         (event) {
           setState(() {
@@ -248,12 +253,14 @@ class _UpdateDialogState extends State<UpdateDialog>
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: theme.colorScheme.onPrimary.withValues(
+                          alpha: 0.2,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.system_update,
-                        color: Colors.white,
+                        color: theme.colorScheme.onPrimary,
                         size: 28,
                       ),
                     ),
@@ -266,7 +273,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                         Text(
                           'Update Available!',
                           style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
+                            color: theme.colorScheme.onPrimary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -277,13 +284,15 @@ class _UpdateDialogState extends State<UpdateDialog>
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
+                            color: theme.colorScheme.onPrimary.withValues(
+                              alpha: 0.2,
+                            ),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             'v${widget.release.version}',
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: theme.colorScheme.onPrimary,
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
                             ),
@@ -295,7 +304,12 @@ class _UpdateDialogState extends State<UpdateDialog>
                   if (!_isDownloading)
                     IconButton(
                       onPressed: _dismissUpdate,
-                      icon: const Icon(Icons.close, color: Colors.white70),
+                      icon: Icon(
+                        Icons.close,
+                        color: theme.colorScheme.onPrimary.withValues(
+                          alpha: 0.7,
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -444,27 +458,32 @@ class _UpdateDialogState extends State<UpdateDialog>
                           ),
                         ),
                       ],
-                      if (widget.release.apkDownloadUrl == null) ...[
+                      if (widget.release.apkDownloadUrl == null ||
+                          widget.release.apkSha256 == null) ...[
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
+                            color: theme.colorScheme.tertiaryContainer
+                                .withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.info_outline,
-                                color: Colors.orange,
+                                color: theme.colorScheme.onTertiaryContainer,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'No APK available for direct download. You can download from GitHub releases.',
+                                  widget.release.apkDownloadUrl == null
+                                      ? 'No APK is attached. Open GitHub Releases for available assets.'
+                                      : 'The release has no matching SHA-256 asset, so direct installation is disabled.',
                                   style: TextStyle(
-                                    color: Colors.orange[800],
+                                    color:
+                                        theme.colorScheme.onTertiaryContainer,
                                     fontSize: 13,
                                   ),
                                 ),
@@ -523,7 +542,8 @@ class _UpdateDialogState extends State<UpdateDialog>
                   children: [
                     Row(
                       children: [
-                        if (widget.release.apkDownloadUrl != null)
+                        if (widget.release.apkDownloadUrl != null &&
+                            widget.release.apkSha256 != null)
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: _startDownload,

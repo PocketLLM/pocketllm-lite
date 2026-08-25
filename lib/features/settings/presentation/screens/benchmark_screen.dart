@@ -11,6 +11,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../../core/widgets/m3_empty_state.dart';
 import '../../../../services/inference_service.dart';
+import '../../../../services/device_spec_service.dart';
 import '../../../chat/presentation/providers/models_provider.dart';
 
 class BenchmarkRun {
@@ -22,6 +23,10 @@ class BenchmarkRun {
   final int totalTokens;
   final int totalTimeMs;
   final String promptType;
+  final String backend;
+  final String deviceArchitecture;
+  final String? thermalState;
+  final bool tokenCountsEstimated;
 
   BenchmarkRun({
     required this.id,
@@ -32,6 +37,10 @@ class BenchmarkRun {
     required this.totalTokens,
     required this.totalTimeMs,
     required this.promptType,
+    required this.backend,
+    required this.deviceArchitecture,
+    required this.thermalState,
+    required this.tokenCountsEstimated,
   });
 
   Map<String, dynamic> toJson() => {
@@ -43,6 +52,10 @@ class BenchmarkRun {
         'totalTokens': totalTokens,
         'totalTimeMs': totalTimeMs,
         'promptType': promptType,
+        'backend': backend,
+        'deviceArchitecture': deviceArchitecture,
+        'thermalState': thermalState,
+        'tokenCountsEstimated': tokenCountsEstimated,
       };
 
   factory BenchmarkRun.fromJson(Map<String, dynamic> json) => BenchmarkRun(
@@ -54,6 +67,11 @@ class BenchmarkRun {
         totalTokens: (json['totalTokens'] as num).toInt(),
         totalTimeMs: (json['totalTimeMs'] as num).toInt(),
         promptType: json['promptType'] as String? ?? 'Quick Test',
+        backend: json['backend'] as String? ?? 'unknown',
+        deviceArchitecture:
+            json['deviceArchitecture'] as String? ?? 'not recorded',
+        thermalState: json['thermalState'] as String?,
+        tokenCountsEstimated: json['tokenCountsEstimated'] as bool? ?? true,
       );
 }
 
@@ -126,6 +144,7 @@ class BenchmarkNotifier extends Notifier<BenchmarkState> {
     required String prompt,
     required String promptType,
     required String modelId,
+    required String backend,
   }) async {
     if (state.isRunning) return;
 
@@ -191,11 +210,19 @@ class BenchmarkNotifier extends Notifier<BenchmarkState> {
       stopwatch.stop();
       final totalTimeMs = stopwatch.elapsedMilliseconds;
       final words = RegExp(r'\S+').allMatches(buffer.toString()).length;
-      final totalTokens = (words * 1.3).ceil();
+      final fallbackTokens = (words * 1.3).ceil();
+      final metrics = await service.getMetrics();
+      final totalTokens = metrics.completionTokens > 0
+          ? metrics.completionTokens
+          : fallbackTokens;
 
       final genTimeMs = totalTimeMs - (timeToFirstTokenMs ?? 0);
-      final finalTps =
-          genTimeMs > 0 ? (totalTokens / (genTimeMs / 1000.0)) : 0.0;
+      final finalTps = metrics.tokensPerSecond > 0
+          ? metrics.tokensPerSecond
+          : genTimeMs > 0
+              ? (totalTokens / (genTimeMs / 1000.0))
+              : 0.0;
+      final device = await DeviceSpecService().getHardwareProfile();
 
       final result = BenchmarkRun(
         id: const Uuid().v4(),
@@ -206,6 +233,11 @@ class BenchmarkNotifier extends Notifier<BenchmarkState> {
         totalTokens: totalTokens,
         totalTimeMs: totalTimeMs,
         promptType: promptType,
+        backend: backend,
+        deviceArchitecture: device.cpuArchitecture,
+        thermalState: device.thermalState,
+        tokenCountsEstimated:
+            metrics.completionTokens <= 0 || metrics.tokenCountsEstimated,
       );
 
       final updatedHistory = [result, ...state.history];
@@ -461,9 +493,7 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          selectedModel.isLocal
-                              ? 'Running local offline inference test using Cactus.'
-                              : 'Running remote network inference test using Ollama.',
+                          'Runtime: ${selectedModel.backend}. Network behavior follows the configured endpoint and Strict Offline policy.',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                             fontStyle: FontStyle.italic,
@@ -576,18 +606,10 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Start Test Glowing Gradient Button
+            // Start Test Button
             if (!state.isRunning)
-              Container(
+              SizedBox(
                 width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [colorScheme.primary, colorScheme.tertiary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(28),
-                ),
                 child: FilledButton(
                   onPressed: () {
                     HapticFeedback.heavyImpact();
@@ -606,11 +628,14 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
                           prompt: p,
                           promptType: _selectedPromptType,
                           modelId: _selectedModelId!,
+                          backend: availableModels
+                              .firstWhere(
+                                (model) => model.id == _selectedModelId,
+                              )
+                              .backend,
                         );
                   },
                   style: FilledButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: Row(
@@ -621,7 +646,7 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
                       Text(
                         'Start Performance Test',
                         style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
+                          color: colorScheme.onPrimary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -673,8 +698,8 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
                           ),
                           _buildLiveStatColumn(
                             theme,
-                            '${state.liveTokens} tokens',
-                            'Tokens Generated',
+                            '~${state.liveTokens} tokens',
+                            'Approx. live tokens',
                           ),
                           _buildLiveStatColumn(
                             theme,
@@ -739,7 +764,9 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
                       colorScheme,
                       Icons.format_align_left,
                       '${state.latestResult!.totalTokens} tokens',
-                      'Total Output Size',
+                      state.latestResult!.tokenCountsEstimated
+                          ? 'Estimated output size'
+                          : 'Measured output size',
                       colorScheme.surfaceContainerHighest,
                       colorScheme.onSurfaceVariant,
                     ),
@@ -833,6 +860,11 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
                               Text(
                                 'Date: ${run.timestamp.toLocal().toString().split('.')[0]}',
                               ),
+                              Text(
+                                'Backend: ${run.backend} · Device: ${run.deviceArchitecture}${run.thermalState == null ? '' : ' · Thermal: ${run.thermalState}'}',
+                              ),
+                              if (run.tokenCountsEstimated)
+                                const Text('Token count is estimated.'),
                             ],
                           ),
                           trailing: averageTps > 0 && percentDiff > 1.0
@@ -842,17 +874,18 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: isFaster
-                                        ? Colors.green.withValues(alpha: 0.1)
-                                        : Colors.red.withValues(alpha: 0.1),
+                                    color: (isFaster
+                                            ? colorScheme.tertiaryContainer
+                                            : colorScheme.errorContainer)
+                                        .withValues(alpha: 0.55),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
                                     '${isFaster ? '+' : '-'}${percentDiff.toStringAsFixed(0)}%',
                                     style: TextStyle(
                                       color: isFaster
-                                          ? Colors.green.shade800
-                                          : Colors.red.shade800,
+                                          ? colorScheme.onTertiaryContainer
+                                          : colorScheme.onErrorContainer,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),

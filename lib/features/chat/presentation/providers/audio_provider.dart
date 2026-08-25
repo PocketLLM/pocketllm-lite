@@ -97,7 +97,6 @@ class SttNotifier extends Notifier<SttState> {
 
   @override
   SttState build() {
-    _initSpeech();
     ref.onDispose(() {
       _amplitudeController?.close();
     });

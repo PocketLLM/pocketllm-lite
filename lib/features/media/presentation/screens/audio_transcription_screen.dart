@@ -78,7 +78,9 @@ class _AudioTranscriptionScreenState
                       ? 'No audio selected'
                       : 'Transcription failed',
                   description: _error ??
-                      'Choose an audio file. The first run downloads a Whisper model unless Strict Offline blocks it; audio stays on device.',
+                      'Choose an audio file. Transcription stays on device and '
+                          'requires an already installed Whisper model; automatic '
+                          'model downloads are disabled.',
                   action: FilledButton.icon(
                     icon: const Icon(Icons.audio_file_rounded),
                     label: Text(

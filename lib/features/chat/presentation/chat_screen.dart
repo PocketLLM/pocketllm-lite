@@ -44,11 +44,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       ref.read(modelManagerProvider.notifier).unloadActiveModel();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.white),
-              SizedBox(width: 8),
-              Expanded(
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.onError,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
                 child: Text(
                   'Memory Pressure Alert: Local model unloaded from RAM to prevent application crash.',
                 ),
@@ -267,15 +270,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: Tooltip(
-                    message: 'Live inference speed',
+                    message:
+                        'Approximate live output rate based on rendered text',
                     child: RawChip(
-                      avatar: const Icon(
+                      avatar: Icon(
                         Icons.offline_bolt_rounded,
                         size: 14,
-                        color: Colors.green,
+                        color: colorScheme.primary,
                       ),
                       label: Text(
-                        '${lastTps.toStringAsFixed(1)} t/s${lastTtftMs != null ? ' • ${lastTtftMs}ms' : ''}',
+                        '≈${lastTps.toStringAsFixed(1)} t/s${lastTtftMs != null ? ' • ${lastTtftMs}ms' : ''}',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.bold,

@@ -16,6 +16,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:cactus/cactus.dart' as cactus;
 import 'services/network_policy_service.dart';
 import 'services/local_memory_service.dart';
+import 'services/app_secret_service.dart';
 
 // Global navigator key for showing dialogs from anywhere
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -28,6 +29,7 @@ void main() async {
 
   final storageService = StorageService();
   await storageService.init();
+  await const AppSecretService().migrateLegacySecrets(storageService);
   await LocalMemoryService().init(storageService);
 
   NetworkPolicyService().init(storageService);

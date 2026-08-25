@@ -85,7 +85,7 @@ class _ModelBrowserScreenState extends ConsumerState<ModelBrowserScreen> {
           const SizedBox(height: 8),
           Expanded(
             child: state.isLoading
-                ? _buildLoadingState()
+                ? _buildLoadingState(theme)
                 : state.error != null
                     ? Center(
                         child: Text(
@@ -125,19 +125,19 @@ class _ModelBrowserScreenState extends ConsumerState<ModelBrowserScreen> {
     );
   }
 
-  Widget _buildLoadingState() {
+  Widget _buildLoadingState(ThemeData theme) {
     return ListView.builder(
       itemCount: 5,
       itemBuilder: (context, index) {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Shimmer.fromColors(
-            baseColor: Colors.grey[300]!,
-            highlightColor: Colors.grey[100]!,
+            baseColor: theme.colorScheme.surfaceContainerHighest,
+            highlightColor: theme.colorScheme.surfaceContainerLow,
             child: Container(
               height: 120,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
               ),
             ),

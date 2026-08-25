@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../core/widgets/m3_app_bar.dart';
+import '../../../core/widgets/m3_empty_state.dart';
 import '../providers/rag_provider.dart';
 
 class DocumentManagerScreen extends ConsumerWidget {
@@ -35,34 +36,11 @@ class DocumentManagerScreen extends ConsumerWidget {
                   ),
                 )
               : state.documents.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.library_books,
-                            size: 64,
-                            color:
-                                theme.colorScheme.onSurfaceVariant.withValues(
-                              alpha: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No documents added yet.',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Add PDF, TXT, MD, or CSV files to build your knowledge base.',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
+                  ? const M3EmptyState(
+                      icon: Icons.library_books,
+                      title: 'No documents added yet',
+                      description:
+                          'Add PDF, TXT, Markdown, or CSV files to build your local knowledge base.',
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16.0),
@@ -135,6 +113,8 @@ class DocumentManagerScreen extends ConsumerWidget {
                                         style: FilledButton.styleFrom(
                                           backgroundColor:
                                               theme.colorScheme.error,
+                                          foregroundColor:
+                                              theme.colorScheme.onError,
                                         ),
                                         child: const Text('Delete'),
                                       ),
@@ -168,7 +148,7 @@ class DocumentManagerScreen extends ConsumerWidget {
                   // Show loading snackbar
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Row(
                           children: [
                             SizedBox(
@@ -176,16 +156,16 @@ class DocumentManagerScreen extends ConsumerWidget {
                               height: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: theme.colorScheme.inversePrimary,
                               ),
                             ),
-                            SizedBox(width: 12),
-                            Text(
+                            const SizedBox(width: 12),
+                            const Text(
                               'Ingesting document... this may take a moment.',
                             ),
                           ],
                         ),
-                        duration: Duration(
+                        duration: const Duration(
                           seconds: 10,
                         ), // Will be hidden manually or replaced
                       ),
@@ -208,8 +188,13 @@ class DocumentManagerScreen extends ConsumerWidget {
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Failed to add: $error'),
-                          backgroundColor: Colors.red,
+                          content: Text(
+                            'Failed to add: $error',
+                            style: TextStyle(
+                              color: theme.colorScheme.onError,
+                            ),
+                          ),
+                          backgroundColor: theme.colorScheme.error,
                         ),
                       );
                     }

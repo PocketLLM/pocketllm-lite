@@ -6,9 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../../../../core/providers.dart';
-import '../../../../features/chat/domain/models/chat_persona.dart';
 import '../../../../services/backup_migration_service.dart';
 import '../../../../services/local_memory_service.dart';
+import '../../../../services/rag_service.dart';
 
 class ImportDialog extends ConsumerStatefulWidget {
   const ImportDialog({super.key});
@@ -64,6 +64,9 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                 'chats': payload.chats,
                 'prompts': payload.prompts,
                 'settings': payload.settings,
+                'personas': payload.personas,
+                'memories': payload.memories,
+                'skills': payload.skills,
               };
 
         // Simple validation
@@ -102,30 +105,25 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
 
     try {
       final storage = ref.read(storageServiceProvider);
-      final result = await storage.importData(_previewData!);
-      var personasImported = 0;
-      var memoriesImported = 0;
-      for (final item in _encryptedPayload?.personas ?? const []) {
-        final data = Map<String, dynamic>.from(item as Map);
-        await storage.savePersona(
-          ChatPersona(
-            id: data['id'] as String,
-            name: data['name'] as String,
-            systemPrompt: data['systemPrompt'] as String,
-            temperature: (data['temperature'] as num?)?.toDouble() ?? 0.7,
-            avatarIcon: data['avatarIcon'] as String? ?? '🤖',
-            modelId: data['modelId'] as String?,
-          ),
+      late final Map<String, int> result;
+      final payload = _encryptedPayload;
+      if (payload == null) {
+        result = await storage.importData(_previewData!);
+      } else {
+        result = await storage.restoreBackupDataAtomically(
+          {
+            'chats': payload.chats,
+            'prompts': payload.prompts,
+            'settings': payload.settings,
+            'personas': payload.personas,
+            'memories': payload.memories,
+            'skills': payload.skills,
+          },
+          afterStorageWrite: () => ref
+              .read(vectorStoreServiceProvider)
+              .restoreArchiveAtomically(payload.documentIndex),
         );
-        personasImported++;
-      }
-      for (final item in _encryptedPayload?.memories ?? const []) {
-        final memory = UserMemoryEntry.fromJson(
-          Map<String, dynamic>.from(item as Map),
-        );
-        if (await LocalMemoryService().saveMemory(memory)) {
-          memoriesImported++;
-        }
+        await LocalMemoryService().init(storage);
       }
 
       if (mounted) {
@@ -133,7 +131,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Imported ${result['chats']} chats, ${result['prompts']} prompts, ${result['settings']} settings, $personasImported personas, and $memoriesImported memories.',
+              'Imported ${result['chats'] ?? 0} chats, ${result['prompts'] ?? 0} prompts, ${result['settings'] ?? 0} settings, ${result['personas'] ?? 0} personas, ${result['skills'] ?? 0} skills, and ${result['memories'] ?? 0} memories.',
             ),
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),

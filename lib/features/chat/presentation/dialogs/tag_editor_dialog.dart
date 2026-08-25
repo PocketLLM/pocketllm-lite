@@ -60,6 +60,7 @@ class _TagEditorDialogState extends State<TagEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AlertDialog(
       title: const Text('Manage Tags'),
       content: SizedBox(
@@ -70,9 +71,12 @@ class _TagEditorDialogState extends State<TagEditorDialog> {
           children: [
             // Current Tags
             if (_currentTags.isNotEmpty) ...[
-              const Text(
+              Text(
                 'Current Tags:',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -111,9 +115,12 @@ class _TagEditorDialogState extends State<TagEditorDialog> {
             // Suggestions
             if (_availableTags.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Suggestions:',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 8),
               ConstrainedBox(
