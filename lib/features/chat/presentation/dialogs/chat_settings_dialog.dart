@@ -26,10 +26,7 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
     _topP = state.topP;
     _useRag = state.useRag;
     _useTools = state.useTools;
-
-    // We don't store prompt ID in chat state, just string content.
-    // So we can't easily pre-select the dropbox unless we search content match.
-    // For now, let's just allow selecting "None" or one from list to Apply content.
+    _selectedSystemPromptId = state.systemPromptId;
   }
 
   @override
@@ -310,6 +307,7 @@ class _ChatSettingsDialogState extends ConsumerState<ChatSettingsDialog> {
                   temperature: _temp,
                   topP: _topP,
                   systemPrompt: promptContent,
+                  systemPromptId: _selectedSystemPromptId,
                 );
 
             Navigator.pop(context);

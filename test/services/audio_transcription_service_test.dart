@@ -8,7 +8,10 @@ class _FakeTranscriber implements AudioTranscriber {
   String? receivedPath;
 
   @override
-  Future<CactusTranscriptionResult> transcribe(String filePath) async {
+  Future<CactusTranscriptionResult> transcribe(
+    String filePath, {
+    String language = 'auto',
+  }) async {
     receivedPath = filePath;
     return CactusTranscriptionResult(
       success: true,

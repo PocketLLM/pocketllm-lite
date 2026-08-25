@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description"
-    content="PocketLLM Lite - Your pocket-sized AI companion. Run AI models locally on your device with complete privacy and offline capability.">
+    content="PocketLLM Lite is a local-first Android AI workspace with transparent network controls, compatible on-device models, Ollama, document RAG, memory, and confirmed tools.">
   <meta name="keywords" content="AI, LLM, Offline AI, Privacy, Mobile AI, PocketLLM">
   <meta name="author" content="Prashant C">
   <meta name="robots" content="index, follow">
@@ -13,7 +13,7 @@
   <!-- Open Graph -->
   <meta property="og:title" content="PocketLLM Lite - AI in Your Pocket">
   <meta property="og:description"
-    content="Run AI models locally on your device with complete privacy and offline capability.">
+    content="Run compatible models locally or connect an endpoint you control, with visible network policy and honest capability gates.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="pocketllm-website/assets/logo.png">
 
@@ -68,15 +68,15 @@
   <!-- Hero Section -->
   <section class="hero">
     <div class="container">
-      <span class="hero__badge" id="latestReleaseBadge">✨ Version 1.0.13 Available</span>
-      <p class="hero__subtitle">Your AI, in Perfect Privacy.</p>
+      <span class="hero__badge" id="latestReleaseBadge">Latest published release on GitHub</span>
+      <p class="hero__subtitle">Local-first AI with visible boundaries.</p>
       <h1 class="hero__title">AI That Works<br>Where You Do</h1>
       <p class="hero__description">
-        Experience the power of AI right on your device. PocketLLM Lite brings intelligent conversations,
-        complete privacy, offline capability, and recursive agentic tools to your fingertips. Now with Material 3 Design, Custom Personas, and Multi-language Localization.
+        Use a compatible model on your Android device or connect an Ollama/OpenAI-compatible endpoint you choose.
+        PocketLLM Lite combines chat, memory, document retrieval, and confirmation-gated tools with a clear network audit.
       </p>
       <a href="https://github.com/PocketLLM/pocketllm-lite/releases" class="hero__cta" id="heroDownloadBtn">
-        Download v1.0.13
+        View Android releases
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
         </svg>
@@ -111,10 +111,10 @@
                 d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <h3 class="feature-card__title">Complete Privacy</h3>
+          <h3 class="feature-card__title">Transparent Privacy</h3>
           <p class="feature-card__description">
-            Your conversations stay on your device. No data is sent to external servers, ensuring complete privacy for
-            all your interactions.
+            Local chats stay in the app sandbox. When you choose a remote provider, download, search, or link,
+            PocketLLM records the destination and purpose and applies your network policy.
           </p>
         </div>
 
@@ -127,8 +127,8 @@
           </div>
           <h3 class="feature-card__title">Offline Capable</h3>
           <p class="feature-card__description">
-            Use AI anywhere, anytime. PocketLLM Lite works without an internet connection, making it perfect for travel
-            or areas with limited connectivity.
+            Compatible installed models, local memory, lexical retrieval, and app data can work without Internet access.
+            Remote endpoints, downloads, web search, and some platform voice engines still require a connection.
           </p>
         </div>
 
@@ -138,9 +138,9 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
           </div>
-          <h3 class="feature-card__title">Neural TTS & STT</h3>
+          <h3 class="feature-card__title">Voice & Audio</h3>
           <p class="feature-card__description">
-            Hands-free interactions. Dictate prompts natively with local speech-to-text, and listen to AI answers using high-fidelity offline text-to-speech.
+            Dictate and listen through installed platform engines, or transcribe a selected audio file locally when a compatible Cactus Whisper model is installed. Platform engine network behavior varies.
           </p>
         </div>
 
@@ -181,7 +181,7 @@
           </div>
           <h3 class="feature-card__title">Agentic Tools Calling</h3>
           <p class="feature-card__description">
-            Supports local recursive function calling, arithmetic calculations, system parameters analysis, and offline knowledge searches.
+            Executes strict, visible tool calls for arithmetic and measured system information. Clipboard, notes, reminders, email drafts, links, and web search require permission or confirmation as appropriate.
           </p>
         </div>
       </div>
@@ -211,19 +211,19 @@
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              No internet required (Offline Mode)
+              Strict Offline blocks non-loopback app-managed connections
             </li>
             <li class="about__list-item">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              Your data never leaves your device
+              Remote data flow is explicit and appears in the network audit
             </li>
             <li class="about__list-item">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              Manage Ollama & Cactus models effortlessly
+              Use runtime-discovered Ollama models and manifest-backed local files
             </li>
             <li class="about__list-item">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -258,13 +258,13 @@
 
       <div id="changelogBox"
         style="background: var(--surface-card); padding: 2rem; border-radius: 1rem; border: 1px solid var(--border-color);">
-        <h3 id="changelogVersionHeader" style="color: var(--primary-color); margin-bottom: 1rem;">Version 1.0.13 (Latest)</h3>
+        <h3 id="changelogVersionHeader" style="color: var(--primary-color); margin-bottom: 1rem;">v1.0.36 engineering candidate</h3>
         <ul id="changelogList" style="list-style-type: disc; padding-left: 1.5rem; color: var(--text-secondary); line-height: 1.6;">
-          <li><strong>Premium UI & Visual Polish (v1.0.13):</strong> Floating rounded capsule chat input container, large dark contrast send button, embedded active persona quick-picker displaying active emoji avatar, interactive disclaimer Tag, and scroll-aware Floating Action Buttons for chat history.</li>
-          <li><strong>Dynamic AI Persona System:</strong> Seeded templates (Coder, Storyteller, Tutor) and custom profile builders featuring Hex colors, emoji avatar selections, and parameter overrides.</li>
-          <li><strong>Native Function Calling Pipeline:</strong> Empowers local models to parse XML tokens and execute calculators, hardware telemetry info requests, and Wikipedia searches recursively up to 5 times deep.</li>
-          <li><strong>collapsible DeepSeek R1 accordions:</strong> Seamlessly matches `<think>` blocks into stylish expandable details sections.</li>
-          <li><strong>TTS & STT Voice Services:</strong> Fully integrated offline Speech-to-Text inputs and Text-to-Speech playback buttons on every bubble.</li>
+          <li><strong>One generation pipeline:</strong> Chat, Prompt Lab, comparison, enhancer, and embedded API now share context, memory, document retrieval, tools, cancellation, and backend selection.</li>
+          <li><strong>Real retrieval and recovery:</strong> Persistent hybrid RAG, stable page citations, structured memory, and authenticated encrypted backups with rollback.</li>
+          <li><strong>Truthful capability gates:</strong> Removed fixed OCR/transcript/benchmark results, hardcoded model claims, and unsupported vision/audio outputs.</li>
+          <li><strong>Network control:</strong> Strict Offline and audit decisions cover application-owned HTTP/Dio paths and policy-aware HTTP(S) link handoffs.</li>
+          <li><strong>Release boundary:</strong> v1.0.36 remains an engineering candidate until an authorized production signing identity is supplied and verified.</li>
         </ul>
       </div>
     </div>
@@ -276,7 +276,7 @@
       <div class="download__content">
         <h2 class="download__title">Ready to Get Started?</h2>
         <p class="download__description">
-          Download PocketLLM Lite today and experience the freedom of private, offline AI assistance.
+          Review the published Android releases, checksums, known limitations, and source before installing.
         </p>
         <div class="download__buttons">
           <a href="https://github.com/PocketLLM/pocketllm-lite/releases" class="download__btn" id="mainDownloadBtn">
@@ -284,7 +284,7 @@
               <path
                 d="M17.523 2c1.636 0 2.306.158 2.981.478a3.604 3.604 0 011.518 1.518c.32.675.478 1.345.478 2.981v10.046c0 1.636-.158 2.306-.478 2.981a3.604 3.604 0 01-1.518 1.518c-.675.32-1.345.478-2.981.478H6.477c-1.636 0-2.306-.158-2.981-.478a3.604 3.604 0 01-1.518-1.518C1.658 19.329 1.5 18.659 1.5 17.023V6.977c0-1.636.158-2.306.478-2.981A3.604 3.604 0 013.496 2.478C4.171 2.158 4.841 2 6.477 2h11.046zm-4.478 4.5l-6.045 7h3.545v5l6.045-7h-3.545v-5z" />
             </svg>
-            Download v1.0.13
+            View Android releases
           </a>
         </div>
         <p class="download__note">Available now on Android devices</p>
@@ -454,7 +454,7 @@
           }
         }
       } catch (error) {
-        console.warn('Could not fetch latest release info dynamically, using built-in v1.0.13 fallback.');
+        console.warn('Could not fetch latest release info; keeping the built-in engineering summary and releases link.');
       }
     }
 

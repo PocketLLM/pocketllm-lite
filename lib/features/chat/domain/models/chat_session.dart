@@ -32,6 +32,9 @@ class ChatSession {
   @HiveField(8)
   final int? topK;
 
+  @HiveField(9)
+  final String? systemPromptId;
+
   ChatSession({
     required this.id,
     required this.title,
@@ -42,6 +45,7 @@ class ChatSession {
     this.temperature,
     this.topP,
     this.topK,
+    this.systemPromptId,
   });
 
   ChatSession copyWith({
@@ -50,10 +54,11 @@ class ChatSession {
     String? model,
     List<ChatMessage>? messages,
     DateTime? createdAt,
-    String? systemPrompt,
+    Object? systemPrompt = _chatSessionUnset,
     double? temperature,
     double? topP,
     int? topK,
+    Object? systemPromptId = _chatSessionUnset,
   }) {
     return ChatSession(
       id: id ?? this.id,
@@ -61,10 +66,17 @@ class ChatSession {
       model: model ?? this.model,
       messages: messages ?? this.messages,
       createdAt: createdAt ?? this.createdAt,
-      systemPrompt: systemPrompt ?? this.systemPrompt,
+      systemPrompt: identical(systemPrompt, _chatSessionUnset)
+          ? this.systemPrompt
+          : systemPrompt as String?,
       temperature: temperature ?? this.temperature,
       topP: topP ?? this.topP,
       topK: topK ?? this.topK,
+      systemPromptId: identical(systemPromptId, _chatSessionUnset)
+          ? this.systemPromptId
+          : systemPromptId as String?,
     );
   }
 }
+
+const Object _chatSessionUnset = Object();

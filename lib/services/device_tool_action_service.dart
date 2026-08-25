@@ -6,6 +6,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:url_launcher/url_launcher.dart';
 
+import 'external_navigation_service.dart';
 import 'network_policy_service.dart';
 import 'storage_service.dart';
 
@@ -23,7 +24,7 @@ abstract class DeviceToolActionService {
 
 class PlatformDeviceToolActionService implements DeviceToolActionService {
   final StorageService? _storage;
-  final NetworkPolicyService _networkPolicy;
+  final ExternalNavigationService _externalNavigation;
   final FlutterLocalNotificationsPlugin _notifications;
   bool _notificationsInitialized = false;
 
@@ -32,7 +33,9 @@ class PlatformDeviceToolActionService implements DeviceToolActionService {
     NetworkPolicyService? networkPolicy,
     FlutterLocalNotificationsPlugin? notifications,
   })  : _storage = storage,
-        _networkPolicy = networkPolicy ?? NetworkPolicyService(),
+        _externalNavigation = ExternalNavigationService(
+          policy: networkPolicy ?? NetworkPolicyService(),
+        ),
         _notifications = notifications ?? FlutterLocalNotificationsPlugin();
 
   @override
@@ -127,21 +130,11 @@ class PlatformDeviceToolActionService implements DeviceToolActionService {
 
   @override
   Future<void> openWebUrl(Uri uri) async {
-    if (uri.scheme != 'https' && uri.scheme != 'http') {
-      throw ArgumentError('Only HTTP and HTTPS URLs are supported.');
-    }
-    final policy = _networkPolicy.evaluateConnection(
-      uri: uri,
-      purpose: ConnectionPurpose.externalNavigation,
+    await _externalNavigation.openHttpUrl(
+      uri,
       trigger: 'tool_open_url',
       infoSent: 'No app data; URL opened in the system browser',
     );
-    if (!policy.allowed) {
-      throw StateError(policy.reason ?? 'External navigation was blocked.');
-    }
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw StateError('No application could open the URL.');
-    }
   }
 
   @override

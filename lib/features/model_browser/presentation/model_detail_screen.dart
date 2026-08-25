@@ -6,7 +6,6 @@ import 'package:path/path.dart' as p;
 import '../../../core/widgets/m3_app_bar.dart';
 import '../providers/model_browser_provider.dart';
 import '../domain/hf_model.dart';
-import '../../../services/model_download_service.dart';
 import '../../../core/providers.dart';
 import '../../../models/model_manifest.dart';
 import '../../../providers/model_manager_provider.dart';
@@ -194,14 +193,14 @@ class ModelDetailScreen extends ConsumerWidget {
         ),
         subtitle: Text(
           'Size: ${sizeGB.toStringAsFixed(2)} GB • Quantization: ${file.type}\n'
-          'Estimated RAM: ${(sizeGB * 1.25).toStringAsFixed(2)} GB + context cache',
+          'Runtime RAM: unknown until this exact model, context, and backend are tested',
           style: const TextStyle(fontSize: 12),
         ),
         trailing: FilledButton.icon(
           onPressed: model.license == null
               ? null
               : () async {
-                  final service = ModelDownloadService();
+                  final service = ref.read(modelDownloadServiceProvider);
                   final token =
                       await ref.read(huggingFaceServiceProvider).getToken();
                   if (!context.mounted) return;

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/constants/app_constants.dart';
@@ -333,6 +332,7 @@ class _ModelsInferenceSettingsScreenState
 
   Future<void> _refreshModels() async {
     setState(() => _isRefreshing = true);
+    ref.invalidate(ollamaConnectionProvider);
     ref.invalidate(modelsProvider);
     await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) setState(() => _isRefreshing = false);
@@ -341,7 +341,7 @@ class _ModelsInferenceSettingsScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final modelsAsync = ref.watch(modelsProvider);
+    final connectionAsync = ref.watch(ollamaConnectionProvider);
     final storage = ref.watch(storageServiceProvider);
     final defaultModel = storage.getSetting(AppConstants.defaultModelKey) ?? '';
 
@@ -355,9 +355,9 @@ class _ModelsInferenceSettingsScreenState
         padding: const EdgeInsets.all(16),
         children: [
           ListTile(
-            title: const Text('Installed Local GGUF Models'),
+            title: const Text('Model Store'),
             subtitle: const Text(
-                'Import verified files, inspect status, and load to RAM'),
+                'Discover, download, import, and inspect on-device models'),
             leading:
                 Icon(Icons.memory_rounded, color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
@@ -411,14 +411,56 @@ class _ModelsInferenceSettingsScreenState
             ],
           ),
           const SizedBox(height: 12),
-          modelsAsync.when(
-            data: (models) {
+          connectionAsync.when(
+            data: (connection) {
+              if (!connection.isConnected) {
+                return Card.filled(
+                  color: theme.colorScheme.errorContainer,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ollama disconnected',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.onErrorContainer,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          connection.message ?? 'The endpoint is unreachable.',
+                          style: TextStyle(
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        SelectableText(
+                          connection.endpoint,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.tonalIcon(
+                          onPressed: _refreshModels,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry connection'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              final models = connection.models;
               if (models.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
                   child: Center(
-                      child: Text(
-                          'No Ollama models found at the configured endpoint.')),
+                    child:
+                        Text('Ollama is connected with no installed models.'),
+                  ),
                 );
               }
               return Column(
@@ -1046,8 +1088,15 @@ class _SystemToolsSettingsScreenState
             onTap: () async {
               HapticFeedback.lightImpact();
               final url = Uri.parse(_updateService.getReleasesPageUrl());
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url, mode: LaunchMode.externalApplication);
+              try {
+                await ref
+                    .read(externalNavigationServiceProvider)
+                    .openHttpUrl(url, trigger: 'settings_releases_page');
+              } catch (error) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(error.toString())),
+                );
               }
             },
           ),

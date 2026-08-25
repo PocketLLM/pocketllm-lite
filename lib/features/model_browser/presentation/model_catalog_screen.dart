@@ -12,6 +12,7 @@ import '../../../providers/model_manager_provider.dart';
 import '../../../core/providers.dart';
 import '../../../services/inference_service.dart';
 import '../../../services/model_storage_service.dart';
+import '../../../services/model_recommendation_engine.dart';
 
 class ModelCatalogScreen extends ConsumerStatefulWidget {
   const ModelCatalogScreen({super.key});
@@ -161,8 +162,8 @@ class _ModelCatalogScreenState extends ConsumerState<ModelCatalogScreen>
 
     return Scaffold(
       appBar: M3AppBar(
-        title: 'Local GGUF Models',
-        subtitle: 'Manage locally installed GGUF model files',
+        title: 'Installed Local Models',
+        subtitle: 'Manage GGUF files stored on this device',
         onBack: () => context.pop(),
         actions: [
           IconButton(
@@ -991,6 +992,9 @@ class _ModelDetailsSheetContent extends ConsumerWidget {
                 ),
                 const Divider(height: 32),
 
+                _buildCompatibilityEvidence(context, ref, model),
+                const SizedBox(height: 24),
+
                 // Description
                 Text(
                   'About Model',
@@ -1145,6 +1149,82 @@ class _ModelDetailsSheetContent extends ConsumerWidget {
           ),
         );
     }
+  }
+
+  Widget _buildCompatibilityEvidence(
+    BuildContext context,
+    WidgetRef ref,
+    LocalModel model,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final manifest = model.manifest;
+    if (manifest == null) {
+      return const Text('Compatibility evidence is unavailable.');
+    }
+    final profile = ref.watch(deviceHardwareProfileProvider);
+    return profile.when(
+      loading: () => const Card.filled(
+        child: ListTile(
+          leading: SizedBox.square(
+            dimension: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          title: Text('Measuring device compatibility…'),
+        ),
+      ),
+      error: (error, stackTrace) => Card.outlined(
+        child: const ListTile(
+          leading: Icon(Icons.help_outline_rounded),
+          title: Text('Experimental'),
+          subtitle: Text('Device memory evidence could not be measured.'),
+        ),
+      ),
+      data: (hardware) {
+        final result = const ModelRecommendationEngine().evaluate(
+          profile: hardware,
+          manifest: manifest,
+        );
+        return Card.outlined(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.memory_rounded, color: colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        result.badge.label,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Evidence-based device check — not a speed or quality benchmark.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...result.evidence.map(
+                  (line) => Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text('• $line', style: theme.textTheme.bodySmall),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildFooterAction(BuildContext context, WidgetRef ref,

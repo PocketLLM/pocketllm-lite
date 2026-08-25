@@ -3,9 +3,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:crypto/crypto.dart';
+import 'package:archive/archive_io.dart';
+import 'package:path/path.dart' as p;
 import 'network_policy_service.dart';
 import 'network_gateway.dart';
 import 'model_storage_service.dart';
+import '../core/domain/background_task.dart';
+import 'background_task_service.dart';
 
 class ModelDownloadProgress {
   final double progress;
@@ -26,9 +30,15 @@ class ModelDownloadProgress {
 class ModelDownloadService {
   final Dio _dio;
   final NetworkPolicyService _networkPolicy;
+  final BackgroundTaskService? _tasks;
+  final Map<String, CancelToken> _managedTokens = {};
 
-  ModelDownloadService({Dio? dio, NetworkPolicyService? networkPolicy})
-      : _dio = dio ??
+  ModelDownloadService({
+    Dio? dio,
+    NetworkPolicyService? networkPolicy,
+    BackgroundTaskService? tasks,
+  })  : _tasks = tasks,
+        _dio = dio ??
             Dio(
               BaseOptions(
                 connectTimeout: const Duration(seconds: 100),
@@ -65,6 +75,229 @@ class ModelDownloadService {
 
   Future<String> getModelsDirectory() async {
     return (await ModelStorageService.instance.getModelDirectory()).path;
+  }
+
+  Future<String> downloadManagedBundle({
+    required String modelId,
+    required String modelName,
+    required String url,
+    required String archiveFilename,
+    required int catalogSizeMb,
+  }) async {
+    final modelsRoot = await ModelStorageService.instance.getModelDirectory();
+    final finalDirectory = Directory(p.join(modelsRoot.path, modelId));
+    if (await finalDirectory.exists() && !await finalDirectory.list().isEmpty) {
+      return finalDirectory.path;
+    }
+    final task = await _tasks?.create(
+      type: BackgroundTaskType.modelDownload,
+      title: 'Download $modelName',
+      phase: 'Checking storage and server',
+      source: url,
+      destination: finalDirectory.path,
+      metadata: {
+        'modelId': modelId,
+        'archiveFilename': archiveFilename,
+        'catalogSizeMb': catalogSizeMb,
+        'managedBundle': true,
+      },
+    );
+    final taskId = task?.id ?? 'managed-$modelId';
+    final cancelToken = CancelToken();
+    _managedTokens[taskId] = cancelToken;
+    final downloadDirectory = Directory(p.join(modelsRoot.path, '.downloads'));
+    final stagingDirectory =
+        Directory(p.join(modelsRoot.path, '.stage-$modelId'));
+    final partialFile =
+        File(p.join(downloadDirectory.path, '$modelId.zip.part'));
+    try {
+      await downloadDirectory.create(recursive: true);
+      if (task != null) {
+        await _tasks!.start(task.id, phase: 'Checking storage and server');
+      }
+      final estimatedBytes = catalogSizeMb * 1024 * 1024;
+      final freeBytes =
+          await ModelStorageService.instance.getAvailableDiskSpace();
+      if (freeBytes < estimatedBytes * 2) {
+        throw StateError(
+          'Not enough free storage to download and extract this model.',
+        );
+      }
+      final uri = Uri.parse(url);
+      final policy = _networkPolicy.evaluateConnection(
+        uri: uri,
+        purpose: ConnectionPurpose.modelDownload,
+        trigger: 'managed_model_bundle_download',
+        infoSent: 'Requested catalog model bundle; no user content',
+      );
+      if (!policy.allowed) {
+        throw NetworkPolicyError(policy.reason ?? 'Model download blocked.');
+      }
+      var supportsResume = false;
+      String? validator;
+      try {
+        final head = await _dio.head<void>(url);
+        validator =
+            head.headers.value('etag') ?? head.headers.value('last-modified');
+        supportsResume =
+            head.headers.value('accept-ranges')?.contains('bytes') == true &&
+                validator != null;
+      } catch (_) {}
+      var existing =
+          await partialFile.exists() ? await partialFile.length() : 0;
+      if (existing > 0 && !supportsResume) {
+        await partialFile.delete();
+        existing = 0;
+      }
+      final requestHeaders = <String, String>{};
+      if (existing > 0) {
+        requestHeaders['Range'] = 'bytes=$existing-';
+        requestHeaders['If-Range'] = validator!;
+      }
+      if (task != null) {
+        await _tasks!.report(
+          task.id,
+          phase: existing > 0 ? 'Resuming bundle' : 'Downloading bundle',
+          completedUnits: existing,
+          metadata: {
+            'partialPath': partialFile.path,
+            'resumeSupported': supportsResume,
+            if (validator != null) 'validator': validator,
+          },
+        );
+      }
+      await _dio.download(
+        url,
+        partialFile.path,
+        cancelToken: cancelToken,
+        options: Options(headers: requestHeaders),
+        fileAccessMode:
+            existing > 0 ? FileAccessMode.append : FileAccessMode.write,
+        onReceiveProgress: (received, total) {
+          if (task == null) return;
+          final downloaded = existing + received;
+          final effectiveTotal = total > 0 ? existing + total : 0;
+          unawaited(
+            _tasks!.report(
+              task.id,
+              phase: existing > 0 ? 'Resuming bundle' : 'Downloading bundle',
+              completedUnits: downloaded,
+              totalUnits: effectiveTotal > 0 ? effectiveTotal : null,
+              progress: effectiveTotal > 0 ? downloaded / effectiveTotal : null,
+            ),
+          );
+        },
+      );
+      if (task != null) {
+        await _tasks!.report(task.id, phase: 'Verifying and extracting bundle');
+      }
+      if (await stagingDirectory.exists()) {
+        await stagingDirectory.delete(recursive: true);
+      }
+      await stagingDirectory.create(recursive: true);
+      await _extractBundleSafely(partialFile, stagingDirectory);
+      final ggufFiles = await stagingDirectory
+          .list(recursive: true, followLinks: false)
+          .where(
+            (entity) =>
+                entity is File && entity.path.toLowerCase().endsWith('.gguf'),
+          )
+          .toList();
+      if (ggufFiles.isEmpty) {
+        throw StateError('The downloaded bundle contains no GGUF model file.');
+      }
+      if (await finalDirectory.exists()) {
+        await finalDirectory.delete(recursive: true);
+      }
+      await stagingDirectory.rename(finalDirectory.path);
+      await partialFile.delete();
+      if (task != null) {
+        await _tasks!.complete(
+          task.id,
+          phase: 'Downloaded, extracted, and verified',
+          destination: finalDirectory.path,
+        );
+      }
+      return finalDirectory.path;
+    } on DioException catch (error) {
+      if (CancelToken.isCancel(error)) {
+        if (task != null) await _tasks!.cancel(task.id);
+        rethrow;
+      }
+      if (task != null) {
+        await _tasks!.fail(
+          task.id,
+          message: 'The model bundle did not finish downloading.',
+          action: 'Retry to resume when the catalog server supports ranges.',
+          details: error.toString(),
+        );
+      }
+      rethrow;
+    } catch (error) {
+      if (task != null) {
+        await _tasks!.fail(
+          task.id,
+          message: 'The model bundle could not be installed.',
+          action:
+              'Check storage, network policy, and the catalog file, then retry.',
+          details: error.toString(),
+        );
+      }
+      rethrow;
+    } finally {
+      _managedTokens.remove(taskId);
+      if (await stagingDirectory.exists()) {
+        await stagingDirectory.delete(recursive: true);
+      }
+    }
+  }
+
+  Future<void> cancelManagedDownload(String taskId) async {
+    _managedTokens[taskId]?.cancel('User cancelled model download');
+    final task = _tasks?.find(taskId);
+    if (task != null && !task.isTerminal) await _tasks!.cancel(taskId);
+  }
+
+  Future<void> _extractBundleSafely(
+    File archiveFile,
+    Directory destination,
+  ) async {
+    final input = InputFileStream(archiveFile.path);
+    try {
+      final archive = ZipDecoder().decodeStream(input, verify: true);
+      final names = archive
+          .map((entry) => entry.name.replaceAll('\\', '/'))
+          .where((name) => name.isNotEmpty)
+          .toList(growable: false);
+      final firstParts = names
+          .map((name) => name.split('/').first)
+          .where((part) => part.isNotEmpty)
+          .toSet();
+      final sharedRoot = firstParts.length == 1 ? firstParts.single : null;
+      final root = p.canonicalize(destination.path);
+      for (final entry in archive) {
+        if (entry.isSymbolicLink) continue;
+        var relative = entry.name.replaceAll('\\', '/');
+        if (sharedRoot != null && relative.startsWith('$sharedRoot/')) {
+          relative = relative.substring(sharedRoot.length + 1);
+        }
+        if (relative.isEmpty) continue;
+        final target = p.normalize(p.join(destination.path, relative));
+        if (!p.isWithin(root, p.canonicalize(target))) {
+          throw const FormatException('Model bundle contains an unsafe path.');
+        }
+        if (entry.isFile) {
+          await File(target).parent.create(recursive: true);
+          final output = OutputFileStream(target);
+          entry.writeContent(output);
+          output.closeSync();
+        } else {
+          await Directory(target).create(recursive: true);
+        }
+      }
+    } finally {
+      input.closeSync();
+    }
   }
 
   /// Downloads a GGUF model and shows a UI dialog with progress.
@@ -126,6 +359,19 @@ class ModelDownloadService {
       return null;
     }
 
+    final task = await _tasks?.create(
+      type: BackgroundTaskType.modelDownload,
+      title: 'Download $modelName',
+      phase: 'Checking remote file',
+      source: url,
+      destination: targetFilePath,
+      metadata: {
+        'expectedFilename': expectedFilename,
+        'expectedSizeBytes': expectedSizeBytes,
+        if (expectedSha256 != null) 'expectedSha256': expectedSha256,
+      },
+    );
+
     final cancelToken = CancelToken();
     final progressNotifier = ValueNotifier<ModelDownloadProgress>(
       const ModelDownloadProgress(
@@ -178,6 +424,7 @@ class ModelDownloadService {
           TextButton(
             onPressed: () {
               cancelToken.cancel('User canceled download');
+              if (task != null) unawaited(_tasks!.cancel(task.id));
               Navigator.of(ctx).pop();
             },
             child: const Text('Cancel'),
@@ -187,6 +434,9 @@ class ModelDownloadService {
     );
 
     try {
+      if (task != null) {
+        await _tasks!.start(task.id, phase: 'Checking storage and server');
+      }
       final freeBytes =
           await ModelStorageService.instance.getAvailableDiskSpace();
       if (expectedSizeBytes > 0 && freeBytes < expectedSizeBytes * 1.15) {
@@ -206,22 +456,74 @@ class ModelDownloadService {
       }
       final partialPath = '$targetFilePath.partial';
       final partialFile = File(partialPath);
-      if (await partialFile.exists()) await partialFile.delete();
+      final remoteHeaders = <String, String>{...?headers};
+      var supportsResume = false;
+      String? validator;
+      try {
+        final head = await _dio.head<void>(
+          url,
+          options: Options(headers: headers),
+        );
+        final acceptRanges = head.headers.value('accept-ranges');
+        validator =
+            head.headers.value('etag') ?? head.headers.value('last-modified');
+        supportsResume =
+            acceptRanges?.toLowerCase().contains('bytes') == true &&
+                validator != null;
+      } catch (_) {
+        // A missing HEAD response means resumption cannot be promised. The
+        // normal GET may still succeed from byte zero.
+      }
+      var existingBytes =
+          await partialFile.exists() ? await partialFile.length() : 0;
+      if (existingBytes > 0 &&
+          (!supportsResume ||
+              (expectedSizeBytes > 0 && existingBytes >= expectedSizeBytes))) {
+        await partialFile.delete();
+        existingBytes = 0;
+      }
+      if (existingBytes > 0) {
+        remoteHeaders['Range'] = 'bytes=$existingBytes-';
+        remoteHeaders['If-Range'] = validator!;
+      }
+      lastUpdateBytes = existingBytes;
+      if (task != null) {
+        await _tasks!.report(
+          task.id,
+          phase: existingBytes > 0 ? 'Resuming download' : 'Downloading',
+          completedUnits: existingBytes,
+          totalUnits: expectedSizeBytes > 0 ? expectedSizeBytes : null,
+          progress:
+              expectedSizeBytes > 0 ? existingBytes / expectedSizeBytes : null,
+          metadata: {
+            'partialPath': partialPath,
+            'resumeSupported': supportsResume,
+            if (validator != null) 'validator': validator,
+          },
+        );
+      }
       final response = await _dio.download(
         url,
         partialPath,
         cancelToken: cancelToken,
-        options: Options(headers: headers),
+        options: Options(headers: remoteHeaders),
+        fileAccessMode:
+            existingBytes > 0 ? FileAccessMode.append : FileAccessMode.write,
         onReceiveProgress: (received, total) {
+          final downloaded = existingBytes + received;
+          final effectiveTotal = expectedSizeBytes > 0
+              ? expectedSizeBytes
+              : (total > 0 ? existingBytes + total : 0);
           final now = DateTime.now().millisecondsSinceEpoch;
           final elapsed = now - lastUpdateTime;
           if (elapsed > 500) {
-            final progress = total > 0 ? (received / total) : 0.0;
-            final bytesDiff = received - lastUpdateBytes;
+            final progress = effectiveTotal > 0
+                ? (downloaded / effectiveTotal).clamp(0.0, 1.0)
+                : 0.0;
+            final bytesDiff = downloaded - lastUpdateBytes;
             final speed = (bytesDiff / 1024 / 1024) / (elapsed / 1000); // MB/s
 
-            final bytesRemaining =
-                (total > 0 ? total : expectedSizeBytes) - received;
+            final bytesRemaining = effectiveTotal - downloaded;
             final timeRemainingSecs =
                 speed > 0 ? (bytesRemaining / 1024 / 1024) / speed : 0.0;
 
@@ -229,12 +531,25 @@ class ModelDownloadService {
               progress: progress,
               networkSpeed: speed,
               timeRemaining: Duration(seconds: timeRemainingSecs.round()),
-              totalBytes: total > 0 ? total : expectedSizeBytes,
-              downloadedBytes: received,
+              totalBytes: effectiveTotal,
+              downloadedBytes: downloaded,
             );
 
+            if (task != null) {
+              unawaited(
+                _tasks!.report(
+                  task.id,
+                  phase:
+                      existingBytes > 0 ? 'Resuming download' : 'Downloading',
+                  completedUnits: downloaded,
+                  totalUnits: effectiveTotal > 0 ? effectiveTotal : null,
+                  progress: effectiveTotal > 0 ? progress : null,
+                ),
+              );
+            }
+
             lastUpdateTime = now;
-            lastUpdateBytes = received;
+            lastUpdateBytes = downloaded;
           }
         },
       );
@@ -245,7 +560,7 @@ class ModelDownloadService {
         Navigator.of(context, rootNavigator: true).pop();
       }
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 206) {
         if (expectedSizeBytes > 0 &&
             await partialFile.length() != expectedSizeBytes) {
           throw StateError('Downloaded file size does not match Hub metadata.');
@@ -263,6 +578,13 @@ class ModelDownloadService {
         final target = File(targetFilePath);
         if (await target.exists()) await target.delete();
         await partialFile.rename(targetFilePath);
+        if (task != null) {
+          await _tasks!.complete(
+            task.id,
+            phase: 'Downloaded and verified',
+            destination: targetFilePath,
+          );
+        }
         return targetFilePath;
       } else {
         throw Exception('Download failed status: ${response.statusCode}');
@@ -274,10 +596,21 @@ class ModelDownloadService {
         Navigator.of(context, rootNavigator: true).pop();
       }
 
-      // Cleanup partial file
-      for (final path in [targetFilePath, '$targetFilePath.partial']) {
-        final file = File(path);
-        if (await file.exists()) await file.delete();
+      final partialFile = File('$targetFilePath.partial');
+      if (await partialFile.exists() &&
+          expectedSizeBytes > 0 &&
+          await partialFile.length() > expectedSizeBytes) {
+        await partialFile.delete();
+      }
+      if (task != null &&
+          _tasks?.find(task.id)?.state != BackgroundTaskState.cancelled) {
+        await _tasks!.fail(
+          task.id,
+          message: 'The model download did not finish.',
+          action:
+              'Retry from Model Store. Safe partial data is kept only when resumption is supported.',
+          details: e.toString(),
+        );
       }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

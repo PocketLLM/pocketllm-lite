@@ -10,6 +10,7 @@ class AppConstants {
   static const String errorLogBoxName = 'error_logs';
   static const String personasBoxName = 'chat_personas';
   static const String skillsBoxName = 'skills';
+  static const String backgroundTasksBoxName = 'background_tasks_v1';
 
   // Keys
   static const String isFirstLaunchKey = 'is_first_launch';
@@ -52,6 +53,9 @@ class AppConstants {
       'rolling_conversation_summary_v1_';
   static const String modelManifestRegistryKey = 'model_manifest_registry_v1';
   static const String localNotesKey = 'local_notes_v1';
+  static const String ragRetrievalModeKey = 'rag_retrieval_mode_v1';
+  static const String ragEmbeddingModelKey = 'rag_embedding_model_v1';
+  static const String audioLanguageKey = 'audio_language_v1';
 
   // New Appearance Keys
   static const String chatPaddingKey = 'chat_padding';

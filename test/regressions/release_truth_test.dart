@@ -3,16 +3,16 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('v1.0.36 release metadata and documentation agree', () {
+  test('v1.0.37 release metadata and documentation agree', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final readme = File('README.md').readAsStringSync();
     final releaseNotes = File('RELEASE_NOTES.md').readAsStringSync();
     final changelog = File('CHANGELOG.md').readAsStringSync();
 
-    expect(pubspec, contains('version: 1.0.36+36'));
-    expect(readme, contains('version-1.0.36'));
-    expect(releaseNotes, contains('v1.0.36'));
-    expect(changelog, contains('## [1.0.36] - 2026-08-25'));
+    expect(pubspec, contains('version: 1.0.37+37'));
+    expect(readme, contains('version-1.0.37'));
+    expect(releaseNotes, contains('v1.0.37'));
+    expect(changelog, contains('## [1.0.37] - 2026-08-26'));
 
     if (!File('LICENSE').existsSync()) {
       expect(readme, isNot(contains('MIT License')));
@@ -60,5 +60,62 @@ void main() {
     expect(
         File('lib/services/model_profile_registry.dart').existsSync(), isFalse);
     expect(File('lib/services/task_router_service.dart').existsSync(), isFalse);
+  });
+
+  test('public product copy excludes disproven privacy and support claims', () {
+    final surfaces = <File>[
+      File('index.html'),
+      File('pocketllm-website/privacy.html'),
+      File('docs/pr_submissions/PR_awesome_ollama.md'),
+      File('docs/pr_submissions/PR_awesome_local_ai.md'),
+    ];
+    final forbidden = <String>[
+      'Version 1.0.13 Available',
+      'complete privacy',
+      'your data never leaves your device',
+      'may display advertisements',
+      'offline knowledge searches',
+      'Offline STT & TTS',
+      'MIT licensed',
+    ];
+    final violations = <String>[];
+
+    for (final file in surfaces) {
+      final content = file.readAsStringSync().toLowerCase();
+      for (final phrase in forbidden) {
+        if (content.contains(phrase.toLowerCase())) {
+          violations.add('${file.path}: $phrase');
+        }
+      }
+    }
+
+    expect(violations, isEmpty);
+  });
+
+  test('HTTP links cannot bypass the external-navigation policy service', () {
+    final directLaunchFiles = <String>[];
+    for (final file in Directory('lib')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.dart'))) {
+      final normalized = file.path.replaceAll('\\', '/');
+      if (normalized.endsWith(
+            'lib/services/external_navigation_service.dart',
+          ) ||
+          normalized.endsWith('lib/services/device_tool_action_service.dart')) {
+        continue;
+      }
+      final content = file.readAsStringSync();
+      if (content.contains('launchUrl(') || content.contains('canLaunchUrl(')) {
+        directLaunchFiles.add(file.path);
+      }
+    }
+
+    final deviceActions = File(
+      'lib/services/device_tool_action_service.dart',
+    ).readAsStringSync();
+    expect(directLaunchFiles, isEmpty);
+    expect(RegExp(r'launchUrl\(').allMatches(deviceActions), hasLength(1));
+    expect(deviceActions, contains("Uri.parse('mailto:"));
   });
 }

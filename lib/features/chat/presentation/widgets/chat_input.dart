@@ -597,6 +597,73 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     ref.read(chatProvider.notifier).toggleWebSearch();
   }
 
+  Future<void> _showCompactActions({
+    required bool supportsImageInput,
+    required bool isGenerating,
+    required bool hasEnhancer,
+  }) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.image_outlined),
+              title: const Text('Add image'),
+              subtitle: Text(
+                supportsImageInput
+                    ? 'Choose a camera or gallery image'
+                    : 'Unavailable: selected model has no verified vision support',
+              ),
+              enabled: supportsImageInput && !isGenerating,
+              onTap: () => Navigator.pop(sheetContext, 'image'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.attach_file_rounded),
+              title: const Text('Attach text file'),
+              enabled: !isGenerating,
+              onTap: () => Navigator.pop(sheetContext, 'file'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.bolt_rounded),
+              title: const Text('Use prompt template'),
+              enabled: !isGenerating,
+              onTap: () => Navigator.pop(sheetContext, 'template'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.auto_awesome_rounded),
+              title: const Text('Enhance prompt'),
+              subtitle: hasEnhancer
+                  ? null
+                  : const Text('Select an enhancer model in Settings first'),
+              enabled: hasEnhancer && !isGenerating && !_isEnhancing,
+              onTap: () => Navigator.pop(sheetContext, 'enhance'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    switch (action) {
+      case 'image':
+        await _pickImage();
+        break;
+      case 'file':
+        await _pickFile();
+        break;
+      case 'template':
+        _showTemplates();
+        break;
+      case 'enhance':
+        await _enhancePrompt();
+        break;
+      default:
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Listen for draft messages (e.g. from suggestion chips)
@@ -671,6 +738,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
     final sttState = ref.watch(sttProvider);
     final isListening = sttState.isListening;
+    final mediaQuery = MediaQuery.of(context);
+    final compactComposer = mediaQuery.size.width < 420 ||
+        mediaQuery.size.height < 700 ||
+        mediaQuery.textScaler.scale(16) > 19.2;
+    final enhancerConfigured =
+        ref.watch(promptEnhancerProvider).selectedModelId != null;
 
     return Container(
       color: Colors.transparent,
@@ -981,7 +1054,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               },
                               textCapitalization: TextCapitalization.sentences,
                               keyboardType: TextInputType.multiline,
-                              maxLines: 6,
+                              maxLines: compactComposer ? 3 : 6,
                               minLines: 1,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 height: 1.5,
@@ -1070,36 +1143,48 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                  // 2. Image Picker Button (with Outline style from screenshot)
-                                  _InputActionButton(
-                                    icon: Icons.image_outlined,
-                                    tooltip: supportsImageInput
-                                        ? 'Add Image'
-                                        : 'Image input is not verified for this model',
-                                    onTap: _pickImage,
-                                    isDisabled:
-                                        isGenerating || !supportsImageInput,
-                                    colorScheme: colorScheme,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  // 3. Attach File Button
-                                  _InputActionButton(
-                                    icon: Icons.attach_file_rounded,
-                                    tooltip: 'Attach File',
-                                    onTap: _pickFile,
-                                    isDisabled: isGenerating,
-                                    colorScheme: colorScheme,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  // 4. Templates Button
-                                  _InputActionButton(
-                                    icon: Icons.bolt_rounded,
-                                    tooltip: 'Templates',
-                                    onTap: _showTemplates,
-                                    isDisabled: isGenerating,
-                                    colorScheme: colorScheme,
-                                  ),
-                                  const SizedBox(width: 4),
+                                  if (compactComposer) ...[
+                                    _InputActionButton(
+                                      icon: Icons.add_circle_outline_rounded,
+                                      tooltip: 'More message actions',
+                                      onTap: () => _showCompactActions(
+                                        supportsImageInput: supportsImageInput,
+                                        isGenerating: isGenerating,
+                                        hasEnhancer: enhancerConfigured,
+                                      ),
+                                      isDisabled: isGenerating,
+                                      colorScheme: colorScheme,
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ] else ...[
+                                    _InputActionButton(
+                                      icon: Icons.image_outlined,
+                                      tooltip: supportsImageInput
+                                          ? 'Add Image'
+                                          : 'Image input is not verified for this model',
+                                      onTap: _pickImage,
+                                      isDisabled:
+                                          isGenerating || !supportsImageInput,
+                                      colorScheme: colorScheme,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    _InputActionButton(
+                                      icon: Icons.attach_file_rounded,
+                                      tooltip: 'Attach File',
+                                      onTap: _pickFile,
+                                      isDisabled: isGenerating,
+                                      colorScheme: colorScheme,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    _InputActionButton(
+                                      icon: Icons.bolt_rounded,
+                                      tooltip: 'Templates',
+                                      onTap: _showTemplates,
+                                      isDisabled: isGenerating,
+                                      colorScheme: colorScheme,
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
                                 ],
                                 // 5. Voice Input Button (Always visible)
                                 _InputActionButton(
@@ -1160,7 +1245,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   iconColor:
                                       isListening ? colorScheme.error : null,
                                 ),
-                                if (!isListening) ...[
+                                if (!isListening && !compactComposer) ...[
                                   const SizedBox(width: 4),
                                   // 5b. Web Search Toggle Button
                                   Consumer(
@@ -1371,7 +1456,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       builder: (context) => AlertDialog(
                         title: const Text('AI Limitations Disclaimer'),
                         content: const Text(
-                          'Pocket LLM runs fully local models on your device or via secure endpoints. '
+                          'Pocket LLM can run compatible local models on your device or use configured endpoints. '
                           'Local AI can make mistakes or hallucinate. Please verify important information.',
                         ),
                         actions: [
@@ -1385,14 +1470,19 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   },
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'This is A.I. and not a real person. Treat everything it says as opinion',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurface.withValues(alpha: 0.35),
-                          fontSize: 10,
-                          fontWeight: FontWeight.normal,
+                      Flexible(
+                        child: Text(
+                          'This is A.I. and not a real person. Treat everything it says as opinion',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color:
+                                colorScheme.onSurface.withValues(alpha: 0.35),
+                            fontSize: 10,
+                            fontWeight: FontWeight.normal,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 2),

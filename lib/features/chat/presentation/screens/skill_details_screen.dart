@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
 
@@ -139,10 +138,18 @@ class SkillDetailsScreen extends ConsumerWidget {
                         InkWell(
                           onTap: () async {
                             final uri = Uri.tryParse(skill.githubUrl!);
-                            if (uri != null && await canLaunchUrl(uri)) {
-                              await launchUrl(
-                                uri,
-                                mode: LaunchMode.externalApplication,
+                            if (uri == null) return;
+                            try {
+                              await ref
+                                  .read(externalNavigationServiceProvider)
+                                  .openHttpUrl(
+                                    uri,
+                                    trigger: 'skill_source_link',
+                                  );
+                            } catch (error) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(error.toString())),
                               );
                             }
                           },

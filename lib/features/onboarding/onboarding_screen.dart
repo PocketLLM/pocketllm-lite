@@ -77,7 +77,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                       _buildPage(
                         title: 'Setup & Chat',
                         description:
-                            'Choose a downloaded on-device model, or connect to an Ollama server in Termux or on a trusted computer.\n\n'
+                            'Choose a verified on-device model, or connect to an Ollama server on a trusted computer. Android/Termux builds are experimental and not officially supported by Ollama.\n\n'
                             'Customize your experience with different models, '
                             'system prompts, and themes.',
                         icon: Icons.chat_bubble_outline_rounded,
@@ -221,70 +221,100 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     );
     final strictOffline = strictOfflineVal is bool ? strictOfflineVal : false;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.shield_outlined,
-              size: 56, color: theme.colorScheme.primary),
-          const SizedBox(height: 16),
-          Text(
-            'Privacy & Connection Controls',
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 600 ||
+            MediaQuery.textScalerOf(context).scale(16) > 19.2;
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: compact ? 8 : 16,
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Configure network permissions according to your privacy standards. All settings can be adjusted later.',
-            style: theme.textTheme.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          Card(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CheckboxListTile(
-                  title: const Text('Check GitHub for updates automatically?'),
-                  subtitle: const Text(
-                      'Connects to api.github.com for new releases. (Default: Off)'),
-                  value: autoUpdate,
-                  onChanged: (val) async {
-                    await storage.saveSetting(
-                        AppConstants.autoUpdateCheckKey, val ?? false);
-                    setState(() {});
-                  },
+                Icon(
+                  Icons.shield_outlined,
+                  size: compact ? 40 : 56,
+                  color: theme.colorScheme.primary,
                 ),
-                const Divider(height: 1),
-                CheckboxListTile(
-                  title: const Text('Allow optional online model browsing?'),
-                  subtitle: const Text(
-                      'Enables searching Hugging Face for downloadable GGUF models.'),
-                  value: onlineModels,
-                  onChanged: (val) async {
-                    await storage.saveSetting(
-                        AppConstants.onlineModelBrowsingKey, val ?? true);
-                    setState(() {});
-                  },
+                SizedBox(height: compact ? 8 : 16),
+                Text(
+                  'Privacy & Connection Controls',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  title: const Text('Enable Strict Offline Mode'),
-                  subtitle: const Text(
-                      'Blocks all non-loopback network calls at application level.'),
-                  value: strictOffline,
-                  onChanged: (val) async {
-                    await storage.saveSetting(
-                        AppConstants.strictOfflineModeKey, val);
-                    setState(() {});
-                  },
+                SizedBox(height: compact ? 4 : 8),
+                Text(
+                  'Configure network permissions according to your privacy standards. All settings can be adjusted later.',
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: compact ? 12 : 20),
+                Card(
+                  child: Column(
+                    children: [
+                      CheckboxListTile(
+                        title: const Text(
+                          'Check GitHub for updates automatically?',
+                        ),
+                        subtitle: const Text(
+                          'Connects to api.github.com for new releases. (Default: Off)',
+                        ),
+                        value: autoUpdate,
+                        onChanged: (val) async {
+                          await storage.saveSetting(
+                            AppConstants.autoUpdateCheckKey,
+                            val ?? false,
+                          );
+                          setState(() {});
+                        },
+                      ),
+                      const Divider(height: 1),
+                      CheckboxListTile(
+                        title: const Text(
+                          'Allow optional online model browsing?',
+                        ),
+                        subtitle: const Text(
+                          'Enables searching Hugging Face for downloadable GGUF models.',
+                        ),
+                        value: onlineModels,
+                        onChanged: (val) async {
+                          await storage.saveSetting(
+                            AppConstants.onlineModelBrowsingKey,
+                            val ?? true,
+                          );
+                          setState(() {});
+                        },
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        title: const Text('Enable Strict Offline Mode'),
+                        subtitle: const Text(
+                          'Blocks all non-loopback network calls at application level.',
+                        ),
+                        value: strictOffline,
+                        onChanged: (val) async {
+                          await storage.saveSetting(
+                            AppConstants.strictOfflineModeKey,
+                            val,
+                          );
+                          setState(() {});
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

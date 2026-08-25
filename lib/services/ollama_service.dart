@@ -38,6 +38,8 @@ class OllamaService {
     }
   }
 
+  String get baseUrl => _baseUrl;
+
   void updateBaseUrl(String url) {
     if (!UrlValidator.isHttpUrlString(url)) {
       throw ArgumentError(
@@ -84,7 +86,7 @@ class OllamaService {
       }
     } catch (e) {
       throw Exception(
-        'Failed to connect to Ollama. Ensure it is running in Termux.',
+        'Failed to connect to the configured Ollama endpoint. Check the host, port, bind address, firewall, and network policy.',
       );
     }
   }

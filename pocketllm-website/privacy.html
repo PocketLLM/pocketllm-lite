@@ -62,7 +62,7 @@
         <div class="container">
             <div class="legal-page__header">
                 <h1 class="legal-page__title">Privacy Policy</h1>
-                <p class="legal-page__updated">Last updated: December 10, 2024</p>
+                <p class="legal-page__updated">Last updated: August 25, 2026</p>
             </div>
 
             <div class="legal-page__content">
@@ -79,27 +79,25 @@
 
                 <h2>2. Information We Collect</h2>
                 <p>
-                    PocketLLM Lite is designed with privacy as a core principle. The App operates primarily
-                    on your device, and we minimize data collection to the greatest extent possible.
+                    PocketLLM Lite is local-first. The application contains no advertising SDK, behavioral
+                    analytics package, or remote crash reporter, but optional features can contact destinations you select.
                 </p>
                 <ul>
-                    <li><strong>Local Data:</strong> All AI conversations and chat history are stored locally
-                        on your device. This data is not transmitted to our servers.</li>
-                    <li><strong>Device Information:</strong> We may collect basic device information such as
-                        device type, operating system version, and app version for troubleshooting and improvement
-                        purposes.</li>
-                    <li><strong>Usage Analytics:</strong> We may collect anonymized usage statistics to help
-                        us understand how the App is used and to improve our services.</li>
+                    <li><strong>Local Data:</strong> Chats, settings, imported documents, indexes, memories,
+                        notes, and local diagnostic logs are stored in the application sandbox.</li>
+                    <li><strong>Local Measurements:</strong> The App can display device RAM, storage, ABI,
+                        CPU-core, battery, and thermal information locally. It does not automatically upload those measurements.</li>
+                    <li><strong>No Developer Analytics:</strong> The App does not include behavioral analytics,
+                        advertising, or remote crash-reporting SDKs.</li>
                 </ul>
 
                 <h2>3. How We Use Your Information</h2>
-                <p>The limited information we collect is used to:</p>
+                <p>Data stored by the App is used to provide the features you request:</p>
                 <ul>
                     <li>Provide and maintain the App's functionality</li>
-                    <li>Improve and optimize the user experience</li>
-                    <li>Identify and fix bugs or technical issues</li>
-                    <li>Develop new features and services</li>
-                    <li>Communicate important updates about the App</li>
+                    <li>Persist chat, memory, document, prompt, persona, skill, and preference state</li>
+                    <li>Generate local diagnostics that you may inspect or export</li>
+                    <li>Send only the request content needed by a provider or optional action you invoke</li>
                 </ul>
 
                 <h2>4. Data Storage and Security</h2>
@@ -111,17 +109,16 @@
 
                 <h2>5. Third-Party Services</h2>
                 <p>
-                    The App may contain links to third-party services or integrate with external APIs.
-                    These third-party services have their own privacy policies, and we encourage you to
-                    review them. We are not responsible for the privacy practices of third-party services.
+                    Optional connections include GitHub release checks and skill files, Hugging Face model
+                    search/download, Tavily search, configured Ollama or OpenAI-compatible providers, and links you open.
+                    A remote provider may receive model identifiers, prompts, relevant history, attachments, or embedding
+                    text needed for that request. Platform speech and text-to-speech engines may also have their own network behavior.
+                    Review each service's terms and privacy policy before use.
                 </p>
 
                 <h2>6. Advertising</h2>
                 <p>
-                    PocketLLM Lite may display advertisements through third-party ad networks. These
-                    networks may collect certain information about your device and app usage to provide
-                    personalized advertisements. You can opt out of personalized advertising through your
-                    device settings.
+                    PocketLLM Lite v1.0.36 contains no advertising SDK or ad display integration.
                 </p>
 
                 <h2>7. Children's Privacy</h2>
@@ -135,21 +132,26 @@
                 <h2>8. Your Rights</h2>
                 <p>You have the right to:</p>
                 <ul>
-                    <li>Access the personal information we hold about you</li>
-                    <li>Request correction of inaccurate information</li>
-                    <li>Request deletion of your data</li>
-                    <li>Opt out of data collection where applicable</li>
-                    <li>Withdraw consent at any time</li>
+                    <li>Inspect, edit, export, or delete local application data through available controls</li>
+                    <li>Disable optional network features or enable application-level Strict Offline Mode</li>
+                    <li>Delete application data through Android settings or by uninstalling the App</li>
                 </ul>
 
-                <h2>9. Changes to This Privacy Policy</h2>
+                <h2>9. Strict Offline boundary</h2>
+                <p>
+                    Strict Offline Mode blocks non-loopback application-owned HTTP/Dio requests and policy-aware HTTP(S)
+                    link handoffs. Loopback remains available. It is not a device firewall and cannot control another app
+                    after you intentionally hand an action to it, such as an email draft or package installation.
+                </p>
+
+                <h2>10. Changes to This Privacy Policy</h2>
                 <p>
                     We may update our Privacy Policy from time to time. We will notify you of any changes
                     by posting the new Privacy Policy on this page and updating the "Last updated" date.
                     You are advised to review this Privacy Policy periodically for any changes.
                 </p>
 
-                <h2>10. Contact Us</h2>
+                <h2>11. Contact Us</h2>
                 <p>
                     If you have any questions about this Privacy Policy or our data practices, please
                     contact us:
@@ -207,7 +209,7 @@
             </div>
 
             <div class="footer__bottom">
-                <p class="footer__copyright">© 2024 PocketLLM Lite. All rights reserved. Developed by Prashant C.</p>
+                <p class="footer__copyright">© 2026 PocketLLM Lite. All rights reserved. Developed by Prashant C.</p>
                 <div class="footer__social">
                     <a href="https://github.com/Mr-Dark-debug" target="_blank" rel="noopener noreferrer"
                         aria-label="GitHub">

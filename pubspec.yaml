@@ -2,7 +2,7 @@ name: pocketllm_lite
 description: "A local-first AI chat application with explicit network controls"
 publish_to: "none"
 
-version: 1.0.36+36
+version: 1.0.37+37
 
 environment:
   sdk: ^3.6.0
@@ -23,6 +23,7 @@ dependencies:
   path_provider: ^2.1.5
   permission_handler: ^12.0.1
   crypto: ^3.0.6
+  archive: ^4.0.7
   cryptography: ^2.9.0
   go_router: ^17.0.0
   flutter_markdown: ^0.7.7+1
@@ -35,6 +36,8 @@ dependencies:
   flutter_colorpicker: ^1.1.0
   share_plus: ^12.0.1
   file_picker: ^8.0.0
+  record: ^6.1.1
+  just_audio: ^0.10.5
   dio: ^5.7.0
   path: ^1.9.0
   pdf: ^3.10.0

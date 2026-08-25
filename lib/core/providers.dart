@@ -13,14 +13,67 @@ import '../services/openai_server_service.dart';
 import '../services/openai_compatible_inference_service.dart';
 import '../services/app_secret_service.dart';
 import '../services/device_tool_action_service.dart';
+import '../services/device_spec_service.dart';
+import '../services/external_navigation_service.dart';
+import '../services/background_task_service.dart';
+import '../services/audio_recording_service.dart';
+import '../services/audio_transcription_service.dart';
+import '../services/model_download_service.dart';
+import '../services/model_store_service.dart';
 import 'constants/app_constants.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
   throw UnimplementedError('StorageService must be initialized in main.dart');
 });
 
+final backgroundTaskServiceProvider = Provider<BackgroundTaskService>((ref) {
+  throw UnimplementedError(
+    'BackgroundTaskService must be initialized in main.dart',
+  );
+});
+
+final audioRecordingServiceProvider = Provider<AudioRecordingService>((ref) {
+  final service = AudioRecordingService();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+final audioTranscriptionServiceProvider = Provider<AudioTranscriptionService>((
+  ref,
+) {
+  return AudioTranscriptionService(
+    tasks: ref.watch(backgroundTaskServiceProvider),
+  );
+});
+
+final modelDownloadServiceProvider = Provider<ModelDownloadService>((ref) {
+  return ModelDownloadService(
+    tasks: ref.watch(backgroundTaskServiceProvider),
+  );
+});
+
+final modelStoreServiceProvider = Provider<ModelStoreService>((ref) {
+  return ModelStoreService();
+});
+
 final appSecretServiceProvider = Provider<AppSecretService>((ref) {
   return const AppSecretService();
+});
+
+final externalNavigationServiceProvider = Provider<ExternalNavigationService>((
+  ref,
+) {
+  return ExternalNavigationService();
+});
+
+final deviceSpecServiceProvider = Provider<DeviceSpecService>((ref) {
+  return DeviceSpecService();
+});
+
+final deviceHardwareProfileProvider = FutureProvider<DeviceHardwareProfile>((
+  ref,
+) {
+  return ref.watch(deviceSpecServiceProvider).getHardwareProfile();
 });
 
 final ollamaServiceProvider = Provider<OllamaService>((ref) {

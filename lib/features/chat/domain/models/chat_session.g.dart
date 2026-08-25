@@ -26,13 +26,14 @@ class ChatSessionAdapter extends TypeAdapter<ChatSession> {
       temperature: (fields[6] as num?)?.toDouble(),
       topP: (fields[7] as num?)?.toDouble(),
       topK: (fields[8] as num?)?.toInt(),
+      systemPromptId: fields[9] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ChatSession obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +51,9 @@ class ChatSessionAdapter extends TypeAdapter<ChatSession> {
       ..writeByte(7)
       ..write(obj.topP)
       ..writeByte(8)
-      ..write(obj.topK);
+      ..write(obj.topK)
+      ..writeByte(9)
+      ..write(obj.systemPromptId);
   }
 
   @override
