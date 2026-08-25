@@ -26,4 +26,16 @@ class NetworkAuditEntry {
         'allowed': allowed,
         'blockReason': blockReason,
       };
+
+  factory NetworkAuditEntry.fromJson(Map<String, dynamic> json) {
+    return NetworkAuditEntry(
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      domain: json['domain'] as String,
+      purpose: json['purpose'] as String,
+      trigger: json['trigger'] as String,
+      infoSent: json['infoSent'] as String,
+      allowed: json['allowed'] as bool,
+      blockReason: json['blockReason'] as String?,
+    );
+  }
 }

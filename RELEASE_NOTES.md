@@ -1,105 +1,73 @@
-# Release Notes - Version 1.0.35 (Agents, Audio Workspace & Ecosystem)
+# PocketLLM Lite v1.0.36 — Truth & Integration
 
-## **Highlights: Typed Tool Calling, Skill Permissions, Audio Workspace & OpenAI Local API**
-This release delivers Phase 4 of our product roadmap, introducing structured tool calling, skill permission manifests, an offline audio transcription workspace, prompt lab parameter engineering, a local OpenAI-compatible API server, and encrypted local backup migration:
-1. **Typed Tool-Calling Engine & JSON Schema Validation**: Structured tool execution parser (`TypedToolCallingService`) validating JSON payloads `{"tool": "...", "arguments": {...}}` with JSON Schema enforcement, execution timeouts, parameter rejection, and execution history tracking.
-2. **Skill Permission Manifest & Inspector**: Granular permission declaration system (`SkillPermissionManifest`) parsing SKILL.md YAML frontmatter permissions (`network`, `filesystem`, `device`, `risk`) with pre-installation risk warnings.
-3. **Agentic Mobile Action Engine**: Native device action scheduler (`MobileActionService`) supporting `scheduleReminder`, `createNote`, `draftEmail`, and `copyToClipboard` with user confirmation prompts.
-4. **Offline Audio Transcription Workspace (`/settings/audio-transcription`)**: Dedicated audio workspace (`AudioTranscriptionScreen` & `AudioTranscriptionService`) providing timestamped transcriptions, meeting summaries, task extractions, and `.txt`/`.md`/`.srt` export capabilities.
-5. **Prompt Lab Workspace (`/settings/prompt-lab`)**: Engineering environment (`PromptLabScreen`) for system prompt editing, dynamic variable replacements `{{variable}}`, sampling parameter sliders (Temperature, Top P, Top K, Repeat Penalty), and side-by-side prompt benchmarks.
-6. **Embedded OpenAI-Compatible Local Server**: Local HTTP server (`OpenAiServerService`) exposing `/v1/chat/completions`, `/v1/models`, and `/v1/embeddings` bound to `localhost` with bearer token security and live request audit logs.
-7. **Encrypted Local Backup & Data Migration**: Archive export and restore service (`BackupMigrationService`) generating password-protected `.pllm` JSON archives containing chats, settings, personas, skills, and memories with SHA-256 integrity verification.
+## Highlights
 
----
+This release connects previously separate AI paths to one generation pipeline and replaces demonstration results with real execution or an honest unavailable state. It focuses on data safety, runtime evidence, and predictable failure behavior.
 
-## **Feature List**
+## Local inference and models
 
-### **🔍 Tavily Web Search (New!)**
-*   **Real-time Web Search (`web_search` tool)**: Native integration with the Tavily Search API directly inside our `ToolCallingService` to query live web data.
-*   **Web Search Toggle**: Conveniently toggle live search on and off directly from the chat input toolbar (`Icons.language_rounded`).
-*   **API Key Verification**: Built-in verification dialog guiding the user to enter their Tavily API key in settings if they attempt to search without it.
-*   **Premium Shimmer Bubble**: Shows a beautiful, dynamic `🔍 Searching the web...` shimmering bubble while fetching internet resources, keeping the UI alive and responsive.
-*   **Inline Source Citations**: Conditions local LLMs to cite sources via standard, clickable inline markdown links `[Source Name](URL)` that launch automatically in external browsers.
-*   **Secure API Configuration**: Dedicated settings field under "Web Search (Tavily)" to easily and safely enter, preview, and persist Tavily API credentials.
+- Chat, Prompt Enhancer, Prompt Lab, model comparison, and the developer API now share context, memory, retrieval, tools, cancellation, and backend selection.
+- Installed local models are real GGUF files with structured manifests. Hugging Face discovery uses published LFS size/SHA metadata when present; downloads check space, checksum, and the GGUF header.
+- Ollama supports chat, embeddings, pull progress, and runtime token statistics through its documented APIs.
+- Generic OpenAI-compatible providers can be configured and stored securely. Endpoint model discovery must succeed before a remote model becomes selectable.
+- Hardcoded model benchmarks, filename-derived capabilities, automatic task routing, and unverified model profiles were removed.
 
-### **🧩 Agent Skills System (New!)**
-*   **SKILL.md Standard Format**: Follows the standard YAML frontmatter and Markdown body architecture for clean, organized, and powerful domain-specific skills.
-*   **GitHub Skill Installer**: Easily download, preview, and install custom skills from any standard or raw GitHub repository URL, with automatic blob link conversion.
-*   **Full CRUD & Status Toggles**: Create, read, update, and delete agent skills manually with sleek modal sheets. Easily toggle individual skills on or off using M3 switches.
-*   **Smart Autocomplete Suggester**: As you type `/` in the chat input, a horizontal M3 selection panel dynamically populates matching active skills.
-*   **In-Input Rich Highlights & Tap-Redirects**: Skill triggers inside the input field are highlighted in bold primary blue. Tapping on a highlighted skill word instantly redirects you to the detailed skill instructions page.
-*   **Inter-Bubble Clickable Badges**: preprocessed message content converts skill triggers into interactive markdown links in both user and assistant conversation bubbles. Tapping a badge takes you directly to the skill's instructions.
-*   **Dynamic LLM Skill Conditioning**: Complete automatic scanning of active skill triggers inside user queries. When a skill is detected, its markdown body is dynamically injected into the system instructions for that turn.
+## Memory and documents
 
-### **🤖 AI Chat & Interaction**
-*   **Dynamic AI Personas**: Design custom AI experts with specific emoji avatars, custom system prompts, temperature overrides, and associated default local models.
-*   **Horizontal Persona Picker HUD**: Choose your helper instantly when starting a chat using a gorgeous horizontally scrollable card deck with native haptic selections.
-*   **Native Agentic Tools**: Toggle "Native Agentic Tools" in Chat Settings to let local models execute native code tools:
-    *   **Calculator**: Solves complex and basic mathematical equations.
-    *   **System Info**: Queries native platform parameter details, local dates, and local times.
-    *   **Knowledge Search**: Simulates general knowledge Wikipedia-style summaries offline.
-*   **Adaptive Tool UI Cards**: Beautiful custom cards rendered in the chat timeline to highlight tool calls, parameter arguments, and returning response data dynamically.
-*   **DeepSeek R1 Thinking**: Streaming support for `<think>` tags, rendered in a beautifully animated Material 3 collapsible accordion.
-*   **Knowledge Base RAG**: Toggle Retrieval-Augmented Generation (RAG) directly in the Chat Settings dialog to automatically query offline vector databases and augment prompts with local context.
-*   **Ollama Integration**: Seamlessly connect to local Ollama instances.
-*   **Model Management**: View, pull, and delete local LLM models directly from the app.
-*   **Real-time Streaming**: Enjoy fast, token-by-token response streaming.
-*   **Multimodal Support**: Attach images to your chats (Vision model compatible).
-*   **File Attachments**: Upload text files for the AI to analyze and discuss.
-*   **Chat History**: Auto-saves all your conversations locally.
-*   **Markdown Support**: Full rendering of code blocks, tables, and formatted text.
-*   **Prompt Enhancer**: Automatically optimize simple prompts into detailed instructions.
+- Structured memories persist across restarts, reject common secret patterns, merge duplicates, supersede contradictory facts, and enter chat context only when enabled and relevant.
+- PDF, TXT, Markdown, and CSV files produce persistent structure-aware chunks with stable document/page metadata.
+- Retrieval uses numeric cosine similarity, Okapi BM25, normalized fusion, and MMR. A generated two-page PDF integration test verifies the correct page citation.
+- Image-only/scanned PDFs report that no extractable text was found; scanned-page OCR is not claimed.
 
-### **🎙️ Audio & Voice Capabilities**
-*   **Offline Speech-to-Text (STT)**: Voice-type your prompts offline by holding the microphone toolbar button, sending speech directly to the text field with native pulsing animations.
-*   **Offline Text-to-Speech (TTS)**: Read any AI message aloud with a single tap of the "Speak" action chip in the focused long-press menu.
+## Tools and agent execution
 
-### **📊 Performance Benchmarking**
-*   **Speed Profiler**: Run standard scenarios (Quick Test, Complex Reasoning, Custom) to measure Time to First Token (TTFT) latency and Generation Speed (tokens/sec).
-*   **Historical Logs**: Tracks past runs and shows percentage speed gains/losses compared to your device's average benchmarks.
+- Canonical JSON tool calls use strict schemas, structured errors, timeouts, multiple calls, a five-round limit, cancellation, and visible call/result cards.
+- Calculator and measured system information run locally.
+- Clipboard writes, persistent local notes, local notification reminders, email drafts, and HTTP(S) browser launches require one-shot confirmation.
+- Reminder scheduling requests OS notification permission, survives reboot through registered receivers, and does not request exact-alarm privileges.
+- Tavily web search is explicit, secure-key backed, and blocked by Strict Offline before transport. Canned offline knowledge responses were removed.
 
-### **🎨 Customization & Appearance**
-*   **Live Preview**: See your changes instantly with a new interactive preview card.
-*   **Theme Presets**: One-tap application of curated themes (Ocean Breeze, Midnight Glow, Obsidian, etc.).
-*   **Granular Control**:
-    *   **Colors**: Pick custom colors for User and AI bubbles using a new advanced color picker.
-    *   **Typography**: Adjust font size with precise stepper controls.
-    *   **Layout**: Fine-tune chat padding and bubble corner radius (Sharp, Rounded, Pill).
-*   **Advanced Options**: Toggle sender avatars and set custom background colors.
-*   **Haptic Feedback**: Meaningful vibrations for interactions (can be toggled).
+## Privacy, security, and recovery
 
-### **🧠 System Prompt Library**
-*   **Dedicated Management Page**: A screen to organize all your system prompts.
-*   **CRUD Operations**: Create, Read, Update, and Delete system prompts with ease.
-*   **Usage**: Select saved prompts quickly when starting new chats to define AI behavior (e.g., "Python Expert", "Creative Writer").
+- Cactus telemetry is disabled. Its unmanaged public discovery and model-download paths are not used.
+- Tavily and remote-provider secrets use platform secure storage; a legacy plaintext Tavily value is migrated and deleted.
+- `.pllm` backup schema 3 uses PBKDF2-HMAC-SHA256 (600,000 iterations) and AES-256-GCM with random salt/nonce. Wrong passwords, tampering, and malformed archives fail before restore.
+- Restore covers chats, settings, prompts, personas, skills, memories, local notes, and the document/vector archive, with rollback after injected failure.
+- Strict Offline covers app-owned HTTP, Dio downloads, and external URL launches. Loopback remains available for same-device Ollama and the embedded API.
+- Direct OTA installation now requires a release APK paired with a valid published SHA-256 checksum. Legacy storage and privileged install permissions were removed.
 
-### **📚 Knowledge & Organization**
-*   **Document Manager**: Manage ingested text, PDF, and markdown files in the local vector DB for RAG.
-*   **Chat Archives**: Clean up your main list by archiving old conversations.
-*   **Starred Messages**: Bookmark important messages for quick access later.
-*   **Media Gallery**: Browse all images sent/received across all chats in one place.
-*   **Tags**: Organize chats with custom tags for easy filtering.
-*   **Full Text Search**: Search through your chat history to find specific information.
+## Voice and vision
 
-### **⚙️ Core Features**
-*   **Privacy First & Ad-Free**: All monetization, Google Mobile Ads dependencies, banner widgets, and token limits are permanently removed.
-*   **Offline Capable**: Works completely offline.
-*   **Dark/Light Mode**: Full support for system, light, and dark themes.
-*   **Export/Import**: Backup your entire chat history and settings to a JSON file.
-*   **Onboarding**: Smooth introduction flow for new users.
+- Android OCR processes the supplied image through bundled ML Kit Latin recognition. The emulator integration fixture verifies expected text.
+- Audio transcription passes the selected file to an already-installed Cactus Whisper model. Automatic model download is disabled because the SDK path bypasses central network policy.
+- PocketLLM no longer invents OCR confidence, invoice fields, transcript timestamps, speakers, summaries, tasks, or SRT cues.
+- Chat image input is disabled unless the selected manifest/provider explicitly confirms vision capability.
 
----
+## Developer API
 
-## **Technical Improvements**
-*   **Agentic Pipelines**: Built-in regex stream splitter and recursive follow-up loop that invokes native code handlers and re-injects tool response parameters.
-*   **Performance**: Optimized stream parsing of custom tags and faster Hive read/write operations.
-*   **Code Quality**: Fixed build_runner generated types, removed redundant imports, and fixed BuildContext async usage.
-*   **Zero-Ad Cleanse**: Cleaned up the app settings and layout file footprints.
+The Privacy & Network screen controls the authenticated embedded service: host, port, generated key, start/stop, and logs. `/v1/models`, `/v1/chat/completions` (JSON and SSE), and `/v1/embeddings` invoke real configured PocketLLM runtimes. Loopback is the default; LAN mode shows a warning.
 
----
+## Upgrade notes
 
-## **Release Build Command**
-To build the signed, optimized release APK:
+- Version: `1.0.36+36`.
+- Existing chats/settings are preserved. Legacy plaintext JSON remains import-only; new portable backups are encrypted `.pllm` schema 3 archives and require at least eight password characters.
+- Models without confirmed vision metadata no longer show an image-input control.
+- The previous automatic router/profile UI and simulated mobile-action state were removed. Real supported actions now execute through confirmation-gated tools.
+- Audio transcription requires an existing `whisper-tiny` model directory; there is no first-use automatic download.
+
+## Known limitations
+
+- Production Android publication is blocked until the project supplies its existing production signing identity and completes physical-device upgrade validation.
+- Android OCR is Latin-script only; iOS OCR and scanned-PDF OCR are not enabled.
+- Physical-device local-model inference, Whisper accuracy/performance, and notification delivery were not verified in this environment.
+- The archived Cactus Flutter dependency is a maintenance risk.
+- The embedded server has no trusted-host or configurable CORS allowlist.
+- Model-family-native Qwen/LFM tool templates are not enabled without authoritative installed-model metadata.
+
+## Release build
+
 ```bash
 flutter build apk --split-per-abi --release
 ```
+
+Exact artifact, checksum, signer, test, emulator, and publication status are recorded in `docs/V1_0_36_VERIFICATION.md`.

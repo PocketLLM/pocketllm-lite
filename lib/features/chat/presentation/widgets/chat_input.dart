@@ -14,6 +14,7 @@ import '../providers/prompt_enhancer_provider.dart';
 import '../providers/connection_status_provider.dart';
 import '../providers/draft_message_provider.dart';
 import '../providers/editing_message_provider.dart';
+import '../providers/models_provider.dart';
 import '../../domain/models/text_file_attachment.dart';
 import '../../domain/models/chat_message.dart';
 import '../../domain/models/chat_persona.dart';
@@ -22,6 +23,7 @@ import 'templates_sheet.dart';
 import '../providers/audio_provider.dart';
 import '../../../../providers/model_manager_provider.dart';
 import '../../../../models/local_model.dart';
+import '../../../../services/remote_provider_registry.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -293,11 +295,26 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
 
     final selectedModel = ref.read(chatProvider).selectedModel;
+    if (_selectedImages.isNotEmpty &&
+        !await _selectedModelSupportsVision(selectedModel)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'The selected model has no verified image-input capability.',
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
     final localState = ref.read(modelManagerProvider);
     final isLocalModel = localState.models.containsKey(selectedModel) &&
         localState.models[selectedModel]?.status == DownloadStatus.downloaded;
+    final isRemoteModel =
+        RemoteProviderConfig.decodeSelection(selectedModel) != null;
 
-    if (!isLocalModel) {
+    if (!isLocalModel && !isRemoteModel) {
       final connectionChecker = ref.read(autoConnectionStatusProvider.notifier);
       await connectionChecker.refresh();
       final connectionState =
@@ -380,6 +397,17 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       _selectedImages.clear();
       _selectedFiles.clear();
     });
+  }
+
+  Future<bool> _selectedModelSupportsVision(String selectedModel) async {
+    final local = ref.read(modelManagerProvider).models[selectedModel];
+    if (local != null) return local.manifest?.supportsVision == true;
+
+    final remote = RemoteProviderConfig.decodeSelection(selectedModel);
+    if (remote == null) return false;
+    final config =
+        await ref.read(remoteProviderRegistryProvider).find(remote.providerId);
+    return config?.supportsVision == true && config?.modelId == remote.modelId;
   }
 
   bool _isEnhancing = false;
@@ -514,7 +542,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Enhancement failed—check Ollama.'),
+            content: const Text(
+              'Enhancement failed—check the selected model and runtime.',
+            ),
             duration: const Duration(seconds: 3),
             backgroundColor: Theme.of(context).colorScheme.error,
             action: SnackBarAction(
@@ -528,9 +558,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
   }
 
-  void _toggleWebSearch() {
-    final storage = ref.read(storageServiceProvider);
-    final apiKey = storage.getSetting('tavily_api_key') as String? ?? '';
+  Future<void> _toggleWebSearch() async {
+    final apiKey =
+        await ref.read(appSecretServiceProvider).getTavilyApiKey() ?? '';
+    if (!mounted) return;
     final useWebSearch = ref.read(chatProvider).useWebSearch;
 
     if (apiKey.isEmpty && !useWebSearch) {
@@ -610,6 +641,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isGenerating = ref.watch(chatProvider.select((s) => s.isGenerating));
+    final selectedModelId = ref.watch(
+      chatProvider.select((state) => state.selectedModel),
+    );
+    final supportsImageInput =
+        ref.watch(unifiedModelsProvider).asData?.value.any(
+                  (model) =>
+                      model.id == selectedModelId && model.supportsVision,
+                ) ==
+            true;
     final editingMessage = ref.watch(editingMessageProvider);
     final activePersonaId = ref.watch(
       chatProvider.select((s) => s.activePersonaId),
@@ -1033,9 +1073,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   // 2. Image Picker Button (with Outline style from screenshot)
                                   _InputActionButton(
                                     icon: Icons.image_outlined,
-                                    tooltip: 'Add Image',
+                                    tooltip: supportsImageInput
+                                        ? 'Add Image'
+                                        : 'Image input is not verified for this model',
                                     onTap: _pickImage,
-                                    isDisabled: isGenerating,
+                                    isDisabled:
+                                        isGenerating || !supportsImageInput,
                                     colorScheme: colorScheme,
                                   ),
                                   const SizedBox(width: 4),
@@ -1247,18 +1290,23 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                         milliseconds: 200,
                                       ),
                                       curve: Curves.easeOutCubic,
-                                      width: 40,
-                                      height: 40,
+                                      width: 48,
+                                      height: 48,
                                       decoration: BoxDecoration(
-                                        color: canSend
-                                            ? colorScheme.onSurface
-                                            : colorScheme.onSurface.withValues(
-                                                alpha: 0.05,
-                                              ),
+                                        color: isGenerating
+                                            ? colorScheme.errorContainer
+                                            : canSend
+                                                ? colorScheme.onSurface
+                                                : colorScheme.onSurface
+                                                    .withValues(alpha: 0.05),
                                         shape: BoxShape.circle,
                                       ),
                                       child: IconButton(
-                                        onPressed: canSend ? _send : null,
+                                        onPressed: isGenerating
+                                            ? () => ref
+                                                .read(chatProvider.notifier)
+                                                .cancelGeneration()
+                                            : (canSend ? _send : null),
                                         icon: AnimatedSwitcher(
                                           duration: const Duration(
                                             milliseconds: 200,
@@ -1270,21 +1318,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                             child: child,
                                           ),
                                           child: isGenerating
-                                              ? SizedBox(
+                                              ? Icon(
+                                                  Icons.stop_rounded,
                                                   key: const ValueKey(
-                                                    'spinner',
+                                                    'stop_icon',
                                                   ),
-                                                  width: 16,
-                                                  height: 16,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation(
-                                                      colorScheme
-                                                          .surfaceContainer,
-                                                    ),
-                                                  ),
+                                                  color: colorScheme
+                                                      .onErrorContainer,
+                                                  size: 20,
                                                 )
                                               : Icon(
                                                   Icons.send_rounded,
@@ -1302,11 +1343,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                         ),
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(
-                                          minWidth: 40,
-                                          minHeight: 40,
+                                          minWidth: 48,
+                                          minHeight: 48,
                                         ),
                                         tooltip: isGenerating
-                                            ? 'Generating...'
+                                            ? 'Stop generating'
                                             : 'Send (Ctrl/⌘ + Enter)',
                                       ),
                                     );

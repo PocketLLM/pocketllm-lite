@@ -28,7 +28,7 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final modelsAsync = ref.watch(modelsProvider);
+    final modelsAsync = ref.watch(unifiedModelsProvider);
     final enhancerState = ref.watch(promptEnhancerProvider);
     final selectedModel = enhancerState.selectedModelId;
 
@@ -100,7 +100,9 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
             ),
           ),
           Theme(
-            data: theme.copyWith(dividerColor: Colors.transparent),
+            data: theme.copyWith(
+              dividerColor: theme.colorScheme.surface.withValues(alpha: 0),
+            ),
             child: ExpansionTile(
               initiallyExpanded: false,
               title: const Text(
@@ -169,8 +171,9 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
                     if (models.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.all(16),
-                        child:
-                            Text('No models available. Pull one via Termux.'),
+                        child: Text(
+                          'No verified local, Ollama, or configured remote models are available.',
+                        ),
                       );
                     }
                     return Column(
@@ -204,25 +207,9 @@ class PromptsTemplatesSettingsScreen extends ConsumerWidget {
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
                                 ),
-                                if (m.name.toLowerCase().contains('vision') ||
-                                    m.name.toLowerCase().contains('llava'))
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 8),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.tertiary
-                                            .withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text('Vision',
-                                          style: TextStyle(fontSize: 10)),
-                                    ),
-                                  ),
                               ],
                             ),
-                            value: m.name,
+                            value: m.id,
                             groupValue: selectedModel,
                             onChanged: (val) {
                               HapticFeedback.selectionClick();
@@ -361,16 +348,16 @@ class _ModelsInferenceSettingsScreenState
     return Scaffold(
       appBar: M3AppBar(
         title: 'Models & Inference',
-        subtitle: 'Configure local llama.cpp and Ollama models',
+        subtitle: 'Configure local GGUF and Ollama runtimes',
         onBack: () => Navigator.pop(context),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           ListTile(
-            title: const Text('Local GGUF Models & Catalog'),
+            title: const Text('Installed Local GGUF Models'),
             subtitle: const Text(
-                'Browse GGUF catalog profiles, import files, and load to RAM'),
+                'Import verified files, inspect status, and load to RAM'),
             leading:
                 Icon(Icons.memory_rounded, color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
@@ -384,7 +371,7 @@ class _ModelsInferenceSettingsScreenState
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Ollama Host Models',
+                'Configured Ollama Models',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
@@ -395,7 +382,7 @@ class _ModelsInferenceSettingsScreenState
                 children: [
                   IconButton(
                     icon: const Icon(Icons.add, size: 20),
-                    tooltip: 'Download Model',
+                    tooltip: 'Explore Hugging Face GGUF files',
                     onPressed: () {
                       HapticFeedback.lightImpact();
                       context.push('/model-browser');
@@ -431,7 +418,7 @@ class _ModelsInferenceSettingsScreenState
                   padding: EdgeInsets.symmetric(vertical: 24),
                   child: Center(
                       child: Text(
-                          'No models found. Pull one using the + button.')),
+                          'No Ollama models found at the configured endpoint.')),
                 );
               }
               return Column(
@@ -446,30 +433,6 @@ class _ModelsInferenceSettingsScreenState
                               '${(model.size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB',
                               style: const TextStyle(fontSize: 12)),
                           const SizedBox(width: 8),
-                          if (model.name.toLowerCase().contains('vision') ||
-                              model.name.toLowerCase().contains('llava'))
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.tertiary
-                                    .withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.visibility,
-                                      size: 12,
-                                      color: theme.colorScheme.tertiary),
-                                  const SizedBox(width: 4),
-                                  Text("Vision",
-                                      style: TextStyle(
-                                          fontSize: 10,
-                                          color: theme.colorScheme.tertiary)),
-                                ],
-                              ),
-                            ),
                         ],
                       ),
                       trailing: Row(
@@ -551,10 +514,23 @@ class _KnowledgeSearchSettingsScreenState
   @override
   void initState() {
     super.initState();
-    final storage = ref.read(storageServiceProvider);
-    final key =
-        storage.getSetting('tavily_api_key', defaultValue: '') as String? ?? '';
-    _tavilyKeyController = TextEditingController(text: key);
+    _tavilyKeyController = TextEditingController();
+    _loadTavilyKey();
+  }
+
+  Future<void> _loadTavilyKey() async {
+    final key = await ref.read(appSecretServiceProvider).getTavilyApiKey();
+    if (mounted) _tavilyKeyController.text = key ?? '';
+  }
+
+  Future<void> _saveTavilyKey() async {
+    await ref
+        .read(appSecretServiceProvider)
+        .setTavilyApiKey(_tavilyKeyController.text);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Tavily API key saved securely.')),
+    );
   }
 
   @override
@@ -610,16 +586,18 @@ class _KnowledgeSearchSettingsScreenState
               hintText: 'Enter your Tavily API Key (tvly-...)',
               labelText: 'Tavily API Key',
               prefixIcon: const Icon(Icons.vpn_key_outlined),
+              suffixIcon: IconButton(
+                tooltip: 'Save API key',
+                onPressed: _saveTavilyKey,
+                icon: const Icon(Icons.save_outlined),
+              ),
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               filled: true,
               fillColor: theme.colorScheme.surfaceContainerHighest
                   .withValues(alpha: 0.15),
             ),
-            onChanged: (val) async {
-              final storage = ref.read(storageServiceProvider);
-              await storage.saveSetting('tavily_api_key', val.trim());
-            },
+            onSubmitted: (_) => _saveTavilyKey(),
           ),
         ],
       ),
@@ -669,7 +647,8 @@ class _ChatsDataSettingsScreenState
           const Divider(height: 1),
           ListTile(
             title: const Text('Export Data'),
-            subtitle: const Text('Export chats and custom prompts to JSON'),
+            subtitle: const Text(
+                'Create an encrypted archive of chats, settings, memory, prompts, skills, and document indexes'),
             leading: Icon(Icons.download, color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
@@ -683,7 +662,8 @@ class _ChatsDataSettingsScreenState
           const Divider(height: 1),
           ListTile(
             title: const Text('Import Data'),
-            subtitle: const Text('Restore chats and prompts from JSON backups'),
+            subtitle:
+                const Text('Restore a validated encrypted PocketLLM archive'),
             leading: Icon(Icons.upload, color: theme.colorScheme.primary),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
@@ -884,7 +864,7 @@ class SystemToolsSettingsScreen extends ConsumerStatefulWidget {
 class _SystemToolsSettingsScreenState
     extends ConsumerState<SystemToolsSettingsScreen> {
   final UpdateService _updateService = UpdateService();
-  bool _autoUpdateEnabled = true;
+  bool _autoUpdateEnabled = false;
   bool _isCheckingForUpdates = false;
   String _version = 'Loading...';
 
@@ -1038,8 +1018,9 @@ class _SystemToolsSettingsScreenState
             onChanged: _toggleAutoUpdate,
             secondary: Icon(
               Icons.update,
-              color:
-                  _autoUpdateEnabled ? theme.colorScheme.primary : Colors.grey,
+              color: _autoUpdateEnabled
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const Divider(height: 1),
@@ -1074,17 +1055,24 @@ class _SystemToolsSettingsScreenState
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, size: 18, color: Colors.blue),
+                Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Releases are loaded directly from GitHub. PocketLLM is currently running version $_version.',
-                    style: TextStyle(fontSize: 12, color: Colors.blue[800]),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
                   ),
                 ),
               ],

@@ -9,7 +9,9 @@ void main() {
     retrievalService = HybridRetrievalService();
   });
 
-  test('hybrid retrieval scores query against memory candidates with MMR deduplication', () {
+  test(
+      'hybrid retrieval scores query against memory candidates with MMR deduplication',
+      () {
     final candidateMemories = [
       UserMemoryEntry(
         id: 'mem_1',
@@ -18,6 +20,7 @@ void main() {
         fact: 'Prefers Flutter and Riverpod state management',
         confidence: 0.95,
         createdAt: DateTime.now(),
+        embedding: const [1, 0, 0],
       ),
       UserMemoryEntry(
         id: 'mem_2',
@@ -26,6 +29,7 @@ void main() {
         fact: 'Prefers Flutter and Riverpod state management', // Duplicate
         confidence: 0.90,
         createdAt: DateTime.now(),
+        embedding: const [0.99, 0.01, 0],
       ),
       UserMemoryEntry(
         id: 'mem_3',
@@ -34,17 +38,20 @@ void main() {
         fact: 'Studying machine learning algorithms in Python',
         confidence: 0.85,
         createdAt: DateTime.now(),
+        embedding: const [0, 1, 0],
       ),
     ];
 
     final results = retrievalService.retrieveMemories(
       userQuery: 'How should I structure my Flutter Riverpod project?',
       candidateMemories: candidateMemories,
+      queryEmbedding: const [1, 0, 0],
       topK: 2,
     );
 
     expect(results.length, lessThanOrEqualTo(2));
     expect(results.first.memory.id, equals('mem_1'));
-    expect(results.first.score, greaterThan(0.50));
+    expect(results.first.embeddingSimilarity, closeTo(1, 0.0001));
+    expect(results.first.debugReason, isNot(contains('Simulated')));
   });
 }

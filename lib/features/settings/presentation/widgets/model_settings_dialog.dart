@@ -126,6 +126,7 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     if (_isLoading) {
       return const AlertDialog(
         content: SizedBox(
@@ -188,9 +189,12 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
                   label: _temperature.toStringAsFixed(1),
                   onChanged: (val) => setState(() => _temperature = val),
                 ),
-                const Text(
+                Text(
                   'Higher values make output more random/creative.',
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -210,9 +214,12 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
                   label: _topP.toStringAsFixed(1),
                   onChanged: (val) => setState(() => _topP = val),
                 ),
-                const Text(
+                Text(
                   'Controls diversity via nucleus sampling.',
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -232,9 +239,12 @@ class _ModelSettingsDialogState extends ConsumerState<ModelSettingsDialog> {
                   label: _topK.toString(),
                   onChanged: (val) => setState(() => _topK = val.toInt()),
                 ),
-                const Text(
+                Text(
                   'Limits the next token selection to K most likely tokens.',
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

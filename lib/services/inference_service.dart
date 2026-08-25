@@ -1,6 +1,6 @@
 typedef ProgressCallback = void Function(InferenceProgress progress);
 
-enum InferenceBackend { local, ollama }
+enum InferenceBackend { local, ollama, remote }
 
 class InferenceProgress {
   final double? progress;
@@ -89,6 +89,7 @@ class InferenceMetrics {
   final Duration totalTime;
   final int promptTokens;
   final int completionTokens;
+  final bool tokenCountsEstimated;
 
   const InferenceMetrics({
     this.tokensPerSecond = 0,
@@ -96,6 +97,7 @@ class InferenceMetrics {
     this.totalTime = Duration.zero,
     this.promptTokens = 0,
     this.completionTokens = 0,
+    this.tokenCountsEstimated = false,
   });
 }
 

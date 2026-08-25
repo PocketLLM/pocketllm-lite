@@ -45,6 +45,13 @@ class AppConstants {
   static const String strictOfflineModeKey = 'strict_offline_mode';
   static const String tavilySearchEnabledKey = 'tavily_search_enabled';
   static const String githubSkillsEnabledKey = 'github_skills_enabled';
+  static const String autoMemoryExtractionKey = 'auto_memory_extraction';
+  static const String networkAuditLogKey = 'network_audit_log_v1';
+  static const String localMemoryRecordsKey = 'local_memory_records_v2';
+  static const String rollingSummaryPrefixKey =
+      'rolling_conversation_summary_v1_';
+  static const String modelManifestRegistryKey = 'model_manifest_registry_v1';
+  static const String localNotesKey = 'local_notes_v1';
 
   // New Appearance Keys
   static const String chatPaddingKey = 'chat_padding';
@@ -59,7 +66,7 @@ class AppConstants {
 
   // Fixed System Prompt for Enhancer
   static const String promptEnhancerSystemPrompt =
-      '''You are an expert prompt engineer. Your task is to take the user's input text, which is a prompt intended for an AI model, and enhance it by applying best practices: Make it more specific, descriptive, and structured; add context if implied; use delimiters like ### or """ for sections; encourage step-by-step reasoning if appropriate; preserve the original intent. Output ONLY the enhanced prompt text—no introductions, explanations, conclusions, or additional text.''';
+      '''You are an expert prompt engineer. Improve the user's prompt while preserving its intent. Make requirements specific, structured, and testable; add only context that is clearly implied; use delimiters such as headings where useful; and request concise verification rationale when appropriate without asking for hidden chain-of-thought. Output only the enhanced prompt, with no introduction or commentary.''';
 
   // Security Limits
   static const int maxInputLength = 50000;

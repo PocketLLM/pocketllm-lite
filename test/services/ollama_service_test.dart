@@ -143,5 +143,60 @@ void main() {
       final stream = service.generateChatStream('llama3', history);
       await stream.join();
     });
+
+    test('embedding uses the official embed endpoint and parses a vector',
+        () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, '/api/embed');
+        final body = jsonDecode((request as http.Request).body);
+        expect(body['model'], 'nomic-embed-text');
+        expect(body['input'], 'local retrieval');
+        expect(body['truncate'], isFalse);
+        return http.StreamedResponse(
+          Stream.value(utf8.encode('{"embeddings":[[0.1,0.2,0.3]]}')),
+          200,
+        );
+      });
+
+      final service = OllamaService(client: mockClient);
+      final vector = await service.generateEmbedding(
+        model: 'nomic-embed-text',
+        input: 'local retrieval',
+      );
+
+      expect(vector, [0.1, 0.2, 0.3]);
+    });
+
+    test('stream exposes measured Ollama token counts on the final event',
+        () async {
+      final mockClient = MockClient((request) async {
+        return http.StreamedResponse(
+          Stream.value(
+            utf8.encode(
+              '{"message":{"content":"Hi"},"done":false}\n'
+              '{"done":true,"prompt_eval_count":11,"eval_count":3,'
+              '"total_duration":250000000}',
+            ),
+          ),
+          200,
+        );
+      });
+      OllamaGenerationStats? stats;
+      final service = OllamaService(client: mockClient);
+
+      expect(
+        await service
+            .generateChatStream(
+              'model',
+              const [],
+              onComplete: (value) => stats = value,
+            )
+            .join(),
+        'Hi',
+      );
+      expect(stats?.promptTokens, 11);
+      expect(stats?.completionTokens, 3);
+      expect(stats?.totalDuration, const Duration(milliseconds: 250));
+    });
   });
 }

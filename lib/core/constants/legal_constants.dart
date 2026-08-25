@@ -43,7 +43,7 @@ In **Settings > Privacy & Network Centre**, you can toggle **Strict Offline Mode
   static const String aboutApp = '''
 ### About Pocket LLM Lite
 
-**App Version: 1.0.32**  
+**App Version: 1.0.36**
 **Developed By: Prashant Choudhary (Mr-Dark-debug on GitHub)**  
 **Developer Profile: https://github.com/Mr-Dark-debug**  
 
@@ -54,7 +54,6 @@ PocketLLM Lite is an open-source, auditable local AI workspace featuring transpa
 - **Transparent Privacy:** Detailed audit logging of every external request, Strict Offline Mode, and granular feature toggles.
 - **No Trackers:** Zero advertising SDKs, analytics tracking packages, or remote crash reporting services.
 ''';
-
 
   static const String license = '''
 ### License for Pocket LLM Lite

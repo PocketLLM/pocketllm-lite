@@ -53,4 +53,26 @@ void main() {
     expect(result.badge, equals(RecommendationBadge.tooLarge));
     expect(result.compatibilityScore, lessThan(0.50));
   });
+
+  test('unknown memory never produces a confident recommendation', () {
+    const profile = DeviceHardwareProfile(
+      totalRamGB: null,
+      availableRamGB: null,
+      cpuArchitecture: 'unknown',
+      cpuCores: 4,
+      hasGpuAcceleration: null,
+      availableStorageGB: null,
+      thermalState: null,
+    );
+
+    final result = engine.evaluateModel(
+      profile: profile,
+      parameterCountB: 1,
+      quantization: 'Q4_K_M',
+      contextLength: 4096,
+    );
+
+    expect(result.badge, RecommendationBadge.riskOfCrash);
+    expect(result.estimatedSpeed, 'Not benchmarked on this device');
+  });
 }

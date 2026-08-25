@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
+import 'package:crypto/crypto.dart';
+import 'network_policy_service.dart';
+import 'network_gateway.dart';
+import 'model_storage_service.dart';
 
 class ModelDownloadProgress {
   final double progress;
@@ -21,20 +24,47 @@ class ModelDownloadProgress {
 }
 
 class ModelDownloadService {
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 100),
-      receiveTimeout: const Duration(minutes: 120),
-    ),
-  );
+  final Dio _dio;
+  final NetworkPolicyService _networkPolicy;
+
+  ModelDownloadService({Dio? dio, NetworkPolicyService? networkPolicy})
+      : _dio = dio ??
+            Dio(
+              BaseOptions(
+                connectTimeout: const Duration(seconds: 100),
+                receiveTimeout: const Duration(minutes: 120),
+              ),
+            ),
+        _networkPolicy = networkPolicy ?? NetworkPolicyService() {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          final decision = _networkPolicy.evaluateConnection(
+            uri: options.uri,
+            purpose: ConnectionPurpose.modelDownload,
+            trigger: 'model_download_transport',
+            infoSent: 'Requested model file path; no user content',
+          );
+          if (!decision.allowed) {
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                type: DioExceptionType.cancel,
+                error: NetworkPolicyError(
+                  decision.reason ?? 'Model download blocked.',
+                ),
+              ),
+            );
+            return;
+          }
+          handler.next(options);
+        },
+      ),
+    );
+  }
 
   Future<String> getModelsDirectory() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final modelsDir = Directory('${appDir.path}/models');
-    if (!await modelsDir.exists()) {
-      await modelsDir.create(recursive: true);
-    }
-    return modelsDir.path;
+    return (await ModelStorageService.instance.getModelDirectory()).path;
   }
 
   /// Downloads a GGUF model and shows a UI dialog with progress.
@@ -45,9 +75,12 @@ class ModelDownloadService {
     required String url,
     required String expectedFilename,
     required int expectedSizeBytes,
+    String? expectedSha256,
+    Map<String, String>? headers,
   }) async {
-    final modelsDir = await getModelsDirectory();
-    final targetFilePath = '$modelsDir/$expectedFilename';
+    final targetFilePath =
+        await ModelStorageService.instance.targetPathFor(expectedFilename);
+    await File(targetFilePath).parent.create(recursive: true);
 
     // Show consent dialog
     if (!context.mounted) return null;
@@ -69,7 +102,10 @@ class ModelDownloadService {
             const Text('📁 Storage Location:'),
             Text(
               targetFilePath,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -151,10 +187,31 @@ class ModelDownloadService {
     );
 
     try {
+      final freeBytes =
+          await ModelStorageService.instance.getAvailableDiskSpace();
+      if (expectedSizeBytes > 0 && freeBytes < expectedSizeBytes * 1.15) {
+        throw StateError(
+          'Not enough free storage for this model and verification copy.',
+        );
+      }
+      final downloadUri = Uri.parse(url);
+      final policy = _networkPolicy.evaluateConnection(
+        uri: downloadUri,
+        purpose: ConnectionPurpose.modelDownload,
+        trigger: 'model_download_dialog',
+        infoSent: 'Requested model file path; no user content',
+      );
+      if (!policy.allowed) {
+        throw NetworkPolicyError(policy.reason ?? 'Model download blocked.');
+      }
+      final partialPath = '$targetFilePath.partial';
+      final partialFile = File(partialPath);
+      if (await partialFile.exists()) await partialFile.delete();
       final response = await _dio.download(
         url,
-        targetFilePath,
+        partialPath,
         cancelToken: cancelToken,
+        options: Options(headers: headers),
         onReceiveProgress: (received, total) {
           final now = DateTime.now().millisecondsSinceEpoch;
           final elapsed = now - lastUpdateTime;
@@ -189,6 +246,23 @@ class ModelDownloadService {
       }
 
       if (response.statusCode == 200) {
+        if (expectedSizeBytes > 0 &&
+            await partialFile.length() != expectedSizeBytes) {
+          throw StateError('Downloaded file size does not match Hub metadata.');
+        }
+        if (expectedSha256?.trim().isNotEmpty == true) {
+          final digest = await sha256.bind(partialFile.openRead()).first;
+          if (digest.toString().toLowerCase() !=
+              expectedSha256!.trim().toLowerCase()) {
+            throw StateError('Downloaded file checksum verification failed.');
+          }
+        }
+        if (!await ModelStorageService.instance.isValidGGUFFile(partialPath)) {
+          throw StateError('Downloaded file is not a valid GGUF model.');
+        }
+        final target = File(targetFilePath);
+        if (await target.exists()) await target.delete();
+        await partialFile.rename(targetFilePath);
         return targetFilePath;
       } else {
         throw Exception('Download failed status: ${response.statusCode}');
@@ -201,9 +275,17 @@ class ModelDownloadService {
       }
 
       // Cleanup partial file
-      final file = File(targetFilePath);
-      if (await file.exists()) {
-        await file.delete();
+      for (final path in [targetFilePath, '$targetFilePath.partial']) {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Model download failed: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
       return null;
     }

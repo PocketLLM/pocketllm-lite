@@ -12,6 +12,7 @@ import 'package:pocketllm_lite/features/profile/presentation/providers/profile_p
 import '../../../../providers/model_manager_provider.dart';
 import '../../../../models/local_model.dart';
 import 'chat_bubble.dart';
+import '../../../../services/remote_provider_registry.dart';
 
 class ChatBody extends ConsumerStatefulWidget {
   const ChatBody({super.key});
@@ -100,10 +101,12 @@ class _ChatBodyState extends ConsumerState<ChatBody> {
     final localState = ref.watch(modelManagerProvider);
     final isLocalModel = localState.models.containsKey(selectedModel) &&
         localState.models[selectedModel]?.status == DownloadStatus.downloaded;
+    final isRemoteModel =
+        RemoteProviderConfig.decodeSelection(selectedModel) != null;
 
     return connectionStatusAsync.when(
       data: (isConnected) {
-        if (!isConnected && !isLocalModel) {
+        if (!isConnected && !isLocalModel && !isRemoteModel) {
           return _DisconnectedState();
         }
 

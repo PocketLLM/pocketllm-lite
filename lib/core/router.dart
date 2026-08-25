@@ -30,9 +30,11 @@ import '../features/chat/presentation/screens/model_comparison_screen.dart';
 import '../features/profile/presentation/screens/memory_inspector_screen.dart';
 import '../features/media/presentation/screens/audio_transcription_screen.dart';
 import '../features/settings/presentation/screens/prompt_lab_screen.dart';
+import 'navigation.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     routes: [
       GoRoute(

@@ -1,13 +1,17 @@
+import 'dart:ffi';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
+
 class DeviceHardwareProfile {
-  final double totalRamGB;
-  final double availableRamGB;
+  final double? totalRamGB;
+  final double? availableRamGB;
   final String cpuArchitecture;
   final int cpuCores;
-  final bool hasGpuAcceleration;
-  final double availableStorageGB;
-  final String thermalState;
+  final bool? hasGpuAcceleration;
+  final double? availableStorageGB;
+  final String? thermalState;
+  final int? batteryLevel;
 
   const DeviceHardwareProfile({
     required this.totalRamGB,
@@ -17,45 +21,59 @@ class DeviceHardwareProfile {
     required this.hasGpuAcceleration,
     required this.availableStorageGB,
     required this.thermalState,
+    this.batteryLevel,
   });
 }
 
-class DeviceSpecService {
-  static final DeviceSpecService _instance = DeviceSpecService._internal();
-  factory DeviceSpecService() => _instance;
-  DeviceSpecService._internal();
+abstract class DeviceHardwareProbe {
+  Future<Map<String, dynamic>> read();
+}
 
+class MethodChannelDeviceProbe implements DeviceHardwareProbe {
+  static const _channel = MethodChannel('pocketllm_lite/device');
+
+  @override
+  Future<Map<String, dynamic>> read() async {
+    final result =
+        await _channel.invokeMapMethod<String, dynamic>('getProfile');
+    return result ?? const {};
+  }
+}
+
+class DeviceSpecService {
+  final DeviceHardwareProbe _probe;
   DeviceHardwareProfile? _cachedProfile;
 
-  Future<DeviceHardwareProfile> getHardwareProfile() async {
-    if (_cachedProfile != null) return _cachedProfile!;
+  DeviceSpecService({DeviceHardwareProbe? probe})
+      : _probe = probe ?? MethodChannelDeviceProbe();
 
-    double totalRamGB = 6.0;
-    double availableRamGB = 3.5;
-    bool hasGpu = true;
-    double storageGB = 32.0;
-
-    try {
-      if (Platform.isAndroid || Platform.isIOS) {
-        // Mobile platform estimate or native invocation fallback
-        totalRamGB = 8.0;
-        availableRamGB = 4.2;
-      } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-        totalRamGB = 16.0;
-        availableRamGB = 10.0;
+  Future<DeviceHardwareProfile> getHardwareProfile(
+      {bool refresh = false}) async {
+    if (!refresh && _cachedProfile != null) return _cachedProfile!;
+    Map<String, dynamic> values = const {};
+    if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        values = await _probe.read();
+      } on PlatformException {
+        values = const {};
+      } on MissingPluginException {
+        values = const {};
       }
-    } catch (_) {}
-
+    }
+    double? gib(dynamic bytes) => bytes is num && bytes >= 0
+        ? bytes.toDouble() / (1024 * 1024 * 1024)
+        : null;
     final profile = DeviceHardwareProfile(
-      totalRamGB: totalRamGB,
-      availableRamGB: availableRamGB,
-      cpuArchitecture: Platform.operatingSystem,
-      cpuCores: Platform.numberOfProcessors,
-      hasGpuAcceleration: hasGpu,
-      availableStorageGB: storageGB,
-      thermalState: 'normal',
+      totalRamGB: gib(values['totalRamBytes']),
+      availableRamGB: gib(values['availableRamBytes']),
+      cpuArchitecture:
+          values['cpuArchitecture'] as String? ?? Abi.current().toString(),
+      cpuCores: values['cpuCores'] as int? ?? Platform.numberOfProcessors,
+      hasGpuAcceleration: values['hasGpuAcceleration'] as bool?,
+      availableStorageGB: gib(values['availableStorageBytes']),
+      thermalState: values['thermalState'] as String?,
+      batteryLevel: values['batteryLevel'] as int?,
     );
-
     _cachedProfile = profile;
     return profile;
   }

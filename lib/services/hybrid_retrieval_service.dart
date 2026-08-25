@@ -1,10 +1,11 @@
 import 'dart:math';
+
 import 'local_memory_service.dart';
 
 class MemorySearchResult {
   final UserMemoryEntry memory;
   final double score;
-  final double embeddingSim;
+  final double? embeddingSimilarity;
   final double bm25Score;
   final double recencyScore;
   final String debugReason;
@@ -12,7 +13,7 @@ class MemorySearchResult {
   const MemorySearchResult({
     required this.memory,
     required this.score,
-    required this.embeddingSim,
+    required this.embeddingSimilarity,
     required this.bm25Score,
     required this.recencyScore,
     required this.debugReason,
@@ -20,98 +21,148 @@ class MemorySearchResult {
 }
 
 class HybridRetrievalService {
-  static final HybridRetrievalService _instance = HybridRetrievalService._internal();
+  static final HybridRetrievalService _instance =
+      HybridRetrievalService._internal();
   factory HybridRetrievalService() => _instance;
   HybridRetrievalService._internal();
-
-  double computeBm25(String query, String text) {
-    final queryTerms = query.toLowerCase().split(RegExp(r'\s+'));
-    final textTerms = text.toLowerCase().split(RegExp(r'\s+'));
-    if (queryTerms.isEmpty || textTerms.isEmpty) return 0.0;
-
-    int matches = 0;
-    for (final term in queryTerms) {
-      if (textTerms.contains(term)) matches++;
-    }
-    return (matches / queryTerms.length).clamp(0.0, 1.0);
-  }
-
-  double computeSimulatedEmbedding(String query, String text) {
-    // Exact or partial string match approximation for dense vector score
-    final q = query.toLowerCase();
-    final t = text.toLowerCase();
-    if (t.contains(q) || q.contains(t)) return 0.95;
-
-    final stopWords = {'how', 'should', 'i', 'my', 'the', 'is', 'a', 'an', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'with'};
-    final qWords = q.split(RegExp(r'\s+')).where((w) => !stopWords.contains(w) && w.length > 2).toList();
-    if (qWords.isEmpty) return 0.05;
-
-    int count = 0;
-    for (final w in qWords) {
-      if (t.contains(w)) count++;
-    }
-    return count > 0 ? (count / qWords.length).clamp(0.15, 0.95) : 0.05;
-  }
 
   List<MemorySearchResult> retrieveMemories({
     required String userQuery,
     required List<UserMemoryEntry> candidateMemories,
+    List<double>? queryEmbedding,
     int topK = 5,
-    double lambdaMMR = 0.7,
+    double lambdaMmr = 0.7,
   }) {
-    final List<MemorySearchResult> scored = [];
+    if (lambdaMmr < 0 || lambdaMmr > 1) {
+      throw ArgumentError.value(lambdaMmr, 'lambdaMmr', 'must be 0 to 1');
+    }
+    final enabled =
+        candidateMemories.where((memory) => memory.enabled).toList();
+    if (enabled.isEmpty || userQuery.trim().isEmpty) return const [];
+    final queryTerms = _terms(userQuery);
+    final documents = enabled.map((memory) => _terms(memory.fact)).toList();
+    final averageLength =
+        documents.fold<int>(0, (sum, terms) => sum + terms.length) /
+            max(1, documents.length);
     final now = DateTime.now();
+    final scored = <MemorySearchResult>[];
 
-    for (final mem in candidateMemories) {
-      if (!mem.enabled) continue;
-
-      final embSim = computeSimulatedEmbedding(userQuery, mem.fact);
-      final bm25 = computeBm25(userQuery, mem.fact);
-
-      final daysOld = now.difference(mem.createdAt).inDays;
-      final recency = max(0.0, 1.0 - (daysOld / 30.0));
-      final importance = mem.confidence;
-      final pinnedScore = mem.pinned ? 1.0 : 0.0;
-
-      // Hybrid score: 0.45*emb + 0.25*bm25 + 0.15*recency + 0.10*importance + 0.05*pinned
-      final finalScore = (0.45 * embSim) +
-          (0.25 * bm25) +
-          (0.15 * recency) +
-          (0.10 * importance) +
-          (0.05 * pinnedScore);
-
-      scored.add(MemorySearchResult(
-        memory: mem,
-        score: finalScore,
-        embeddingSim: embSim,
-        bm25Score: bm25,
-        recencyScore: recency,
-        debugReason: 'Score: ${finalScore.toStringAsFixed(2)} (Emb: ${embSim.toStringAsFixed(2)}, BM25: ${bm25.toStringAsFixed(2)})',
-      ));
+    for (var i = 0; i < enabled.length; i++) {
+      final memory = enabled[i];
+      final dense = queryEmbedding != null && memory.embedding != null
+          ? cosineSimilarity(queryEmbedding, memory.embedding!)
+          : null;
+      final bm25 = _bm25(
+        queryTerms: queryTerms,
+        documentTerms: documents[i],
+        corpus: documents,
+        averageDocumentLength: averageLength,
+      );
+      final daysOld = now.difference(memory.updatedAt).inDays;
+      final recency = max(0.0, 1 - (daysOld / 90));
+      final retrieval = dense == null ? bm25 : (0.6 * dense) + (0.4 * bm25);
+      final score = (0.75 * retrieval) +
+          (0.1 * recency) +
+          (0.1 * memory.confidence) +
+          (memory.pinned ? 0.05 : 0);
+      scored.add(
+        MemorySearchResult(
+          memory: memory,
+          score: score,
+          embeddingSimilarity: dense,
+          bm25Score: bm25,
+          recencyScore: recency,
+          debugReason: dense == null
+              ? 'Lexical-only BM25 ${bm25.toStringAsFixed(3)}; no stored embedding'
+              : 'Dense ${dense.toStringAsFixed(3)}, BM25 ${bm25.toStringAsFixed(3)}',
+        ),
+      );
     }
 
-    scored.sort((a, b) => b.score.compareTo(a.score));
-
-    // Maximum Marginal Relevance (MMR) deduplication
-    final List<MemorySearchResult> selected = [];
-    for (final candidate in scored) {
-      if (selected.length >= topK) break;
-
-      bool isTooSimilar = false;
-      for (final existing in selected) {
-        final similarity = computeSimulatedEmbedding(candidate.memory.fact, existing.memory.fact);
-        if (similarity > 0.80) {
-          isTooSimilar = true;
-          break;
-        }
-      }
-
-      if (!isTooSimilar) {
-        selected.add(candidate);
-        candidate.memory.lastUsedAt = DateTime.now();
-      }
+    final selected = <MemorySearchResult>[];
+    final remaining = [...scored];
+    while (remaining.isNotEmpty && selected.length < topK) {
+      remaining.sort((left, right) {
+        final leftMmr = _mmr(left, selected, lambdaMmr);
+        final rightMmr = _mmr(right, selected, lambdaMmr);
+        return rightMmr.compareTo(leftMmr);
+      });
+      selected.add(remaining.removeAt(0));
     }
-
     return selected;
+  }
+
+  double cosineSimilarity(List<double> left, List<double> right) {
+    if (left.isEmpty || left.length != right.length) {
+      throw ArgumentError(
+          'Embedding vectors must have the same non-zero length.');
+    }
+    var dot = 0.0;
+    var leftNorm = 0.0;
+    var rightNorm = 0.0;
+    for (var i = 0; i < left.length; i++) {
+      dot += left[i] * right[i];
+      leftNorm += left[i] * left[i];
+      rightNorm += right[i] * right[i];
+    }
+    if (leftNorm == 0 || rightNorm == 0) return 0;
+    return (dot / (sqrt(leftNorm) * sqrt(rightNorm))).clamp(-1, 1);
+  }
+
+  double _mmr(
+    MemorySearchResult candidate,
+    List<MemorySearchResult> selected,
+    double lambda,
+  ) {
+    if (selected.isEmpty) return candidate.score;
+    var maximumSimilarity = 0.0;
+    for (final existing in selected) {
+      final left = candidate.memory.embedding;
+      final right = existing.memory.embedding;
+      final similarity = left != null && right != null
+          ? cosineSimilarity(left, right).abs()
+          : _jaccard(
+              _terms(candidate.memory.fact), _terms(existing.memory.fact));
+      maximumSimilarity = max(maximumSimilarity, similarity);
+    }
+    return (lambda * candidate.score) - ((1 - lambda) * maximumSimilarity);
+  }
+
+  double _bm25({
+    required List<String> queryTerms,
+    required List<String> documentTerms,
+    required List<List<String>> corpus,
+    required double averageDocumentLength,
+  }) {
+    if (queryTerms.isEmpty || documentTerms.isEmpty) return 0;
+    const k1 = 1.2;
+    const b = 0.75;
+    var score = 0.0;
+    for (final term in queryTerms.toSet()) {
+      final frequency = documentTerms.where((token) => token == term).length;
+      if (frequency == 0) continue;
+      final containing = corpus.where((doc) => doc.contains(term)).length;
+      final idf =
+          log(1 + ((corpus.length - containing + 0.5) / (containing + 0.5)));
+      final denominator = frequency +
+          k1 *
+              (1 -
+                  b +
+                  b * documentTerms.length / max(1, averageDocumentLength));
+      score += idf * (frequency * (k1 + 1)) / denominator;
+    }
+    return 1 - exp(-score);
+  }
+
+  List<String> _terms(String text) => RegExp(r'[\p{L}\p{N}]+', unicode: true)
+      .allMatches(text.toLowerCase())
+      .map((match) => match.group(0)!)
+      .toList(growable: false);
+
+  double _jaccard(List<String> left, List<String> right) {
+    final a = left.toSet();
+    final b = right.toSet();
+    if (a.isEmpty && b.isEmpty) return 0;
+    return a.intersection(b).length / a.union(b).length;
   }
 }

@@ -175,7 +175,7 @@ class LocalModelHelpScreen extends StatelessWidget {
               children: [
                 _buildTableCell('Offline', theme),
                 _buildTableCell(
-                    '100% offline. Fits completely in sandboxed memory.',
+                    'Inference can run offline after a compatible model is available locally.',
                     theme),
                 _buildTableCell(
                     'Requires local socket connections to background daemon.',
@@ -197,7 +197,7 @@ class LocalModelHelpScreen extends StatelessWidget {
               children: [
                 _buildTableCell('Speed', theme),
                 _buildTableCell(
-                    'Extremely fast on-device inference using the Cactus SDK.',
+                    'Performance varies by model, quantization, device, and thermal state.',
                     theme),
                 _buildTableCell(
                     'Subject to local socket latency or HTTP overheads.',

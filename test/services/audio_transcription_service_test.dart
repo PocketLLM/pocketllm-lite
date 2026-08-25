@@ -1,25 +1,50 @@
+import 'dart:io';
+
+import 'package:cactus/cactus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketllm_lite/services/audio_transcription_service.dart';
 
+class _FakeTranscriber implements AudioTranscriber {
+  String? receivedPath;
+
+  @override
+  Future<CactusTranscriptionResult> transcribe(String filePath) async {
+    receivedPath = filePath;
+    return CactusTranscriptionResult(
+      success: true,
+      text: 'Words produced from the selected fixture.',
+      totalTimeMs: 42,
+    );
+  }
+}
+
 void main() {
-  group('AudioTranscriptionService Tests', () {
-    final service = AudioTranscriptionService();
+  test('passes the real selected file to the ASR backend without invented data',
+      () async {
+    final directory = await Directory.systemTemp.createTemp('pocketllm_audio_');
+    addTearDown(() => directory.delete(recursive: true));
+    final fixture =
+        File('${directory.path}${Platform.pathSeparator}sample.wav');
+    await fixture.writeAsBytes([0x52, 0x49, 0x46, 0x46]);
+    final backend = _FakeTranscriber();
 
-    test('transcribes audio file and exports markdown and SRT formats', () async {
-      final res = await service.transcribeAudioFile(
-        filePath: '/test/sample.mp3',
-        fileName: 'meeting.mp3',
-      );
+    final result = await AudioTranscriptionService(transcriber: backend)
+        .transcribeAudioFile(filePath: fixture.path, fileName: 'sample.wav');
 
-      expect(res.fileName, equals('meeting.mp3'));
-      expect(res.segments.isNotEmpty, isTrue);
-      expect(res.extractedTasks.length, equals(2));
+    expect(backend.receivedPath, fixture.path);
+    expect(result.text, 'Words produced from the selected fixture.');
+    expect(result.exportToMarkdown(), isNot(contains('Speaker 1')));
+    expect(result.exportToSrt(), isEmpty,
+        reason: 'Cactus 1.3 does not return verified segment timestamps.');
+  });
 
-      final md = res.exportToMarkdown();
-      expect(md.contains('# Audio Transcript: meeting.mp3'), isTrue);
-
-      final srt = res.exportToSrt();
-      expect(srt.contains('00:00:00,000 --> 00:00:04,500'), isTrue);
-    });
+  test('rejects missing input before invoking ASR', () async {
+    final backend = _FakeTranscriber();
+    expect(
+      () => AudioTranscriptionService(transcriber: backend).transcribeAudioFile(
+          filePath: 'missing.wav', fileName: 'missing.wav'),
+      throwsA(isA<AudioTranscriptionError>()),
+    );
+    expect(backend.receivedPath, isNull);
   });
 }

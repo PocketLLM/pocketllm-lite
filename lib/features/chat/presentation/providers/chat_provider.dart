@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -14,6 +13,8 @@ import '../../domain/models/chat_persona.dart';
 import '../../domain/models/skill.dart';
 import '../../../../providers/model_manager_provider.dart';
 import '../../../../models/local_model.dart';
+import '../../../../services/generation_pipeline.dart';
+import '../../../../core/navigation.dart';
 
 class ThinkingParseResult {
   final String thinking;
@@ -168,6 +169,7 @@ class ChatState {
 
 class ChatNotifier extends Notifier<ChatState> {
   static final _wordRegExp = RegExp(r'\S+');
+  GenerationCancellationToken? _activeCancellation;
 
   @override
   ChatState build() {
@@ -396,8 +398,11 @@ class ChatNotifier extends Notifier<ChatState> {
         localState.models[state.selectedModel]?.status ==
             DownloadStatus.downloaded;
 
+    final conversationId = state.currentSessionId ?? const Uuid().v4();
+    _activeCancellation = GenerationCancellationToken();
     state = state.copyWith(
       messages: baseMessages,
+      currentSessionId: conversationId,
       isGenerating: true,
       isModelLoading: isLocalModel,
       streamingContent: '',
@@ -406,35 +411,17 @@ class ChatNotifier extends Notifier<ChatState> {
       lastTtftMs: 0,
     );
 
-    final inferenceFactory = ref.read(inferenceServiceFactoryProvider);
-
     try {
-      // Augment the last user query with RAG if enabled
       final messages = <ChatRequestMessage>[];
       for (int i = 0; i < baseMessages.length; i++) {
         final m = baseMessages[i];
-        String content = _buildMessageContent(m);
-
-        if (state.useRag && i == baseMessages.length - 1 && m.role == 'user') {
-          try {
-            final ragService = ref.read(ragServiceProvider);
-            content = await ragService.augmentPrompt(content);
-          } catch (e) {
-            // Fallback to unaugmented content on RAG error
-            debugPrint('RAG error: $e');
-          }
-        }
-
         messages.add(
-          ChatRequestMessage(role: m.role, content: content, images: m.images),
+          ChatRequestMessage(
+            role: m.role,
+            content: _buildMessageContent(m),
+            images: m.images,
+          ),
         );
-      }
-
-      String? systemPrompt = state.systemPrompt;
-      if (state.useTools || state.useWebSearch) {
-        final toolService = ref.read(toolCallingServiceProvider);
-        systemPrompt =
-            '${systemPrompt ?? ""}\n${toolService.getToolSystemInstructions()}';
       }
 
       // Check for skill triggers inside user message
@@ -459,33 +446,140 @@ class ChatNotifier extends Notifier<ChatState> {
         }
       }
 
-      if (activeSkills.isNotEmpty) {
-        final skillsBuffer = StringBuffer();
-        skillsBuffer.writeln('\n### ACTIVE AGENT SKILLS');
-        skillsBuffer.writeln(
-          'The user has activated the following skills for this turn. Follow their instructions strictly:',
-        );
-        for (final skill in activeSkills) {
-          skillsBuffer.writeln('- Skill: ${skill.title} (/${skill.id})');
-          skillsBuffer.writeln('  Instructions:\n${skill.body}\n');
+      String? documentContext;
+      if (state.useRag) {
+        final userMessages = baseMessages
+            .where((message) => message.role == 'user')
+            .toList(growable: false);
+        final query = userInput ??
+            (userMessages.isEmpty ? null : userMessages.last.content);
+        if (query != null && query.trim().isNotEmpty) {
+          final retrieved = await ref
+              .read(ragServiceProvider)
+              .retrieveContext(query, topK: 4);
+          documentContext = retrieved.promptContext;
         }
-        skillsBuffer.writeln('### END OF ACTIVE AGENT SKILLS');
-        systemPrompt = '${systemPrompt ?? ""}\n${skillsBuffer.toString()}';
       }
 
       final request = ChatRequest(
         modelId: state.selectedModel,
         messages: messages,
-        systemPrompt: systemPrompt,
+        systemPrompt: state.systemPrompt,
         temperature: state.temperature,
         topP: state.topP,
         topK: state.topK,
       );
 
-      final service = await inferenceFactory.chooseForModel(
-        state.selectedModel,
-      );
-      final stream = service.chatStream(request);
+      final toolsEnabled = state.useTools || state.useWebSearch;
+      final allowedTools = state.useTools
+          ? (state.useWebSearch
+              ? null
+              : const <String>{
+                  'calculator',
+                  'system_info',
+                  'clipboard',
+                  'notes',
+                  'reminders',
+                  'draft_email',
+                  'open_url',
+                })
+          : (state.useWebSearch ? const <String>{'web_search'} : null);
+      final stream = ref.read(generationPipelineProvider).stream(
+            request,
+            options: GenerationOptions(
+              enableTools: toolsEnabled,
+              enableMemoryExtraction:
+                  ref.read(storageServiceProvider).getSetting(
+                            AppConstants.autoMemoryExtractionKey,
+                            defaultValue: false,
+                          ) ==
+                      true,
+              allowedTools: allowedTools,
+              conversationId: conversationId,
+              documentContext: documentContext,
+              skillInstructions: activeSkills.map(
+                (skill) => '${skill.title} (/${skill.id})\n${skill.body}',
+              ),
+              cancellationToken: _activeCancellation,
+              confirmTool: (tool, call) async {
+                final context = rootNavigatorKey.currentContext;
+                if (context == null || !context.mounted) return false;
+                return await showDialog<bool>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (dialogContext) => AlertDialog(
+                        icon: Icon(
+                          Icons.security_rounded,
+                          color: Theme.of(dialogContext).colorScheme.primary,
+                        ),
+                        title: Text('Allow ${tool.name}?'),
+                        content: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(tool.description),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Risk: ${tool.riskLevel.name}',
+                                style: Theme.of(dialogContext)
+                                    .textTheme
+                                    .labelLarge,
+                              ),
+                              const SizedBox(height: 8),
+                              SelectableText(
+                                call.arguments.toString(),
+                                style: Theme.of(dialogContext)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(fontFamily: 'monospace'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pop(dialogContext, false),
+                            child: const Text('Deny'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(dialogContext, true),
+                            child: const Text('Allow once'),
+                          ),
+                        ],
+                      ),
+                    ) ??
+                    false;
+              },
+              onToolEvent: (event) async {
+                final content = event.type == GenerationToolEventType.call
+                    ? '🔧 [TOOL_CALL] ${event.call.name}\n'
+                        '${event.call.arguments}'
+                    : '🔧 [TOOL_RESPONSE] ${event.call.name}\n'
+                        '${event.result?.modelContent ?? "No result"}';
+                if (event.call.name == 'web_search') {
+                  state = state.copyWith(
+                    isSearchingWeb: event.type == GenerationToolEventType.call,
+                  );
+                }
+                state = state.copyWith(
+                  messages: [
+                    ...state.messages,
+                    ChatMessage(
+                      role: event.type == GenerationToolEventType.call
+                          ? 'assistant'
+                          : 'user',
+                      content: content,
+                      timestamp: DateTime.now(),
+                    ),
+                  ],
+                  streamingContent: '',
+                  streamingThinkingContent: '',
+                );
+              },
+            ),
+          );
 
       final hapticEnabled = ref
           .read(storageServiceProvider)
@@ -566,79 +660,15 @@ class ChatNotifier extends Notifier<ChatState> {
         thinkingContent: finalThinking.isNotEmpty ? finalThinking : null,
       );
 
-      final toolService = ref.read(toolCallingServiceProvider);
-      final toolCall = toolService.parseToolCall(finalMainContent);
-
-      if ((state.useTools || state.useWebSearch) && toolCall != null) {
-        int toolCallCount = 0;
-        for (final m in baseMessages.reversed) {
-          if (m.content.startsWith('🔧 [TOOL_RESPONSE]')) {
-            toolCallCount++;
-          } else {
-            break;
-          }
-        }
-
-        if (toolCallCount < 5) {
-          final toolName = toolCall['name']!;
-          final toolArgsRaw = toolCall['args']!;
-
-          final toolMessage = ChatMessage(
-            role: 'assistant',
-            content:
-                '🔧 [TOOL_CALL] Calling native tool "$toolName" with arguments: $toolArgsRaw',
-            timestamp: DateTime.now(),
-          );
-
-          state = state.copyWith(
-            messages: [...baseMessages, toolMessage],
-            streamingContent: '',
-            streamingThinkingContent: '',
-          );
-
-          if (toolName == 'web_search') {
-            state = state.copyWith(isSearchingWeb: true);
-          }
-
-          String toolResult = 'Error: Tool handler not found.';
-          final tool = toolService.getTool(toolName);
-          if (tool != null) {
-            try {
-              // Convert single quotes in JSON string to double quotes
-              final cleanJson = toolArgsRaw.replaceAll("'", '"');
-              final Map<String, dynamic> args = jsonDecode(cleanJson);
-              toolResult = await tool.handler(args);
-            } catch (e) {
-              toolResult = 'Error invoking tool: $e';
-            }
-          }
-
-          if (toolName == 'web_search') {
-            state = state.copyWith(isSearchingWeb: false);
-          }
-
-          final toolReturnMessage = ChatMessage(
-            role: 'user',
-            content: '🔧 [TOOL_RESPONSE] Tool returned:\n$toolResult',
-            timestamp: DateTime.now(),
-          );
-
-          await _generateAssistantResponse([
-            ...baseMessages,
-            toolMessage,
-            toolReturnMessage,
-          ]);
-          return;
-        }
-      }
-
       state = state.copyWith(
-        messages: [...baseMessages, assistantMessage],
+        messages: [...state.messages, assistantMessage],
         streamingContent: '',
         streamingThinkingContent: '',
         lastTps: finalTps,
         lastTtftMs: timeToFirstTokenMs ?? elapsed,
       );
+    } on GenerationCancelledError {
+      // Cancellation is user initiated and should not create an error message.
     } catch (e) {
       // Handle potential errors, e.g., show a message to the user
       debugPrint('Inference Error: $e');
@@ -655,8 +685,13 @@ class ChatNotifier extends Notifier<ChatState> {
         streamingContent: '',
         streamingThinkingContent: '',
       );
+      _activeCancellation = null;
       _saveSession();
     }
+  }
+
+  void cancelGeneration() {
+    _activeCancellation?.cancel();
   }
 
   Future<void> _saveSession() async {

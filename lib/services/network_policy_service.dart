@@ -5,11 +5,14 @@ import 'storage_service.dart';
 
 enum ConnectionPurpose {
   updateCheck,
+  manualUpdateCheck,
+  updateDownload,
   modelSearch,
   modelDownload,
   webSearch,
   skillInstall,
   remoteInference,
+  externalNavigation,
   fontDownload,
 }
 
@@ -21,7 +24,8 @@ class NetworkPolicyResult {
 }
 
 class NetworkPolicyService {
-  static final NetworkPolicyService _instance = NetworkPolicyService._internal();
+  static final NetworkPolicyService _instance =
+      NetworkPolicyService._internal();
   factory NetworkPolicyService() => _instance;
   NetworkPolicyService._internal();
 
@@ -30,11 +34,33 @@ class NetworkPolicyService {
   final StreamController<List<NetworkAuditEntry>> _auditLogController =
       StreamController<List<NetworkAuditEntry>>.broadcast();
 
-  Stream<List<NetworkAuditEntry>> get auditLogStream => _auditLogController.stream;
+  Stream<List<NetworkAuditEntry>> get auditLogStream =>
+      _auditLogController.stream;
   List<NetworkAuditEntry> get auditLog => List.unmodifiable(_auditLog);
 
   void init(StorageService storageService) {
     _storageService = storageService;
+    _auditLog.clear();
+    final raw = storageService.getSetting(
+      AppConstants.networkAuditLogKey,
+      defaultValue: const [],
+    );
+    if (raw is List) {
+      for (final item in raw) {
+        if (item is! Map) continue;
+        try {
+          _auditLog.add(
+            NetworkAuditEntry.fromJson(Map<String, dynamic>.from(item)),
+          );
+        } catch (_) {
+          // Preserve valid audit records if one legacy entry is malformed.
+        }
+      }
+    }
+    _auditLog.sort((left, right) => right.timestamp.compareTo(left.timestamp));
+    if (_auditLog.length > 100) {
+      _auditLog.removeRange(100, _auditLog.length);
+    }
   }
 
   bool isLoopback(Uri uri) {
@@ -61,6 +87,14 @@ class NetworkPolicyService {
       defaultValue: false,
     );
     return val is bool ? val : false;
+  }
+
+  Future<void> setAutoUpdateCheckEnabled(bool enabled) async {
+    final storage = _storageService;
+    if (storage == null) {
+      throw StateError('Network policy has not been initialized.');
+    }
+    await storage.saveSetting(AppConstants.autoUpdateCheckKey, enabled);
   }
 
   bool get isOnlineModelBrowsingEnabled {
@@ -139,6 +173,13 @@ class NetworkPolicyService {
         }
         break;
 
+      case ConnectionPurpose.manualUpdateCheck:
+      case ConnectionPurpose.updateDownload:
+        // These are explicit user actions. Strict Offline Mode is still
+        // enforced before this switch, but the background-update preference
+        // must not block a user-initiated check or confirmed download.
+        break;
+
       case ConnectionPurpose.modelSearch:
       case ConnectionPurpose.modelDownload:
         if (!isOnlineModelBrowsingEnabled) {
@@ -186,7 +227,8 @@ class NetworkPolicyService {
         break;
 
       case ConnectionPurpose.fontDownload:
-        const reason = 'Runtime font downloading is disabled (fonts bundled locally)';
+        const reason =
+            'Runtime font downloading is disabled (fonts bundled locally)';
         _logAudit(
           domain: domain,
           purpose: purpose.name,
@@ -198,6 +240,7 @@ class NetworkPolicyService {
         return const NetworkPolicyResult(allowed: false, reason: reason);
 
       case ConnectionPurpose.remoteInference:
+      case ConnectionPurpose.externalNavigation:
         break;
     }
 
@@ -233,5 +276,14 @@ class NetworkPolicyService {
       _auditLog.removeLast();
     }
     _auditLogController.add(List.unmodifiable(_auditLog));
+    final storage = _storageService;
+    if (storage != null) {
+      unawaited(
+        storage.saveSetting(
+          AppConstants.networkAuditLogKey,
+          _auditLog.map((item) => item.toJson()).toList(growable: false),
+        ),
+      );
+    }
   }
 }

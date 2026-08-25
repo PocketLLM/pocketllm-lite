@@ -18,11 +18,16 @@ class SkillPermissionManifest {
   factory SkillPermissionManifest.fromFrontmatter(Map<String, dynamic> data) {
     final permissions = data['permissions'] as Map<String, dynamic>? ?? {};
 
-    final network = (permissions['network'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final network =
+        (permissions['network'] as List?)?.map((e) => e.toString()).toList() ??
+            [];
     final fs = permissions['filesystem'] as Map<String, dynamic>? ?? {};
     final read = (fs['read'] as List?)?.map((e) => e.toString()).toList() ?? [];
-    final write = (fs['write'] as List?)?.map((e) => e.toString()).toList() ?? [];
-    final device = (permissions['device'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final write =
+        (fs['write'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final device =
+        (permissions['device'] as List?)?.map((e) => e.toString()).toList() ??
+            [];
 
     SkillRiskLevel risk = SkillRiskLevel.low;
     final riskStr = (permissions['risk'] as String?)?.toLowerCase();

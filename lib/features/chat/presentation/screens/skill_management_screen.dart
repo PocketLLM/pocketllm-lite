@@ -3,11 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_m3shapes/flutter_m3shapes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
 import '../../../../core/providers.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../../core/widgets/m3_empty_state.dart';
 import '../../domain/models/skill.dart';
+import '../../../../services/network_gateway.dart';
+import '../../../../services/network_policy_service.dart';
 
 class SkillManagementScreen extends ConsumerStatefulWidget {
   const SkillManagementScreen({super.key});
@@ -588,7 +589,12 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen> {
         fetchUrl = fetchUrl.replaceFirst('/blob/', '/');
       }
 
-      final response = await http.get(Uri.parse(fetchUrl));
+      final response = await NetworkGateway().get(
+        Uri.parse(fetchUrl),
+        purpose: ConnectionPurpose.skillInstall,
+        trigger: 'github_skill_install',
+        infoSent: 'Skill URL; no chat or credential content',
+      );
       if (response.statusCode != 200) return null;
 
       final content = response.body;
