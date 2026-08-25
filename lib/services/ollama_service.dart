@@ -8,6 +8,18 @@ import '../features/chat/domain/models/pull_progress.dart';
 import 'network_gateway.dart';
 import 'network_policy_service.dart';
 
+class OllamaGenerationStats {
+  final int promptTokens;
+  final int completionTokens;
+  final Duration totalDuration;
+
+  const OllamaGenerationStats({
+    required this.promptTokens,
+    required this.completionTokens,
+    required this.totalDuration,
+  });
+}
+
 class OllamaService {
   String _baseUrl;
   final NetworkGateway _network;
@@ -82,6 +94,7 @@ class OllamaService {
     List<Map<String, dynamic>> messages, {
     Map<String, dynamic>? options,
     String? system,
+    void Function(OllamaGenerationStats stats)? onComplete,
   }) async* {
     final url = Uri.parse('$_baseUrl/api/chat');
 
@@ -137,7 +150,20 @@ class OllamaService {
           try {
             final json = jsonDecode(line);
             final done = json['done'] as bool? ?? false;
-            if (!done) {
+            if (done) {
+              onComplete?.call(
+                OllamaGenerationStats(
+                  promptTokens:
+                      (json['prompt_eval_count'] as num?)?.toInt() ?? 0,
+                  completionTokens: (json['eval_count'] as num?)?.toInt() ?? 0,
+                  totalDuration: Duration(
+                    microseconds:
+                        ((json['total_duration'] as num?)?.toInt() ?? 0) ~/
+                            1000,
+                  ),
+                ),
+              );
+            } else {
               final content = json['message']?['content'] as String?;
               if (content != null) {
                 yield content;
@@ -162,6 +188,41 @@ class OllamaService {
       if (e is Exception) rethrow;
       throw Exception('Network error: $e');
     }
+  }
+
+  Future<List<double>> generateEmbedding({
+    required String model,
+    required String input,
+  }) async {
+    final response = await _network
+        .post(
+          Uri.parse('$_baseUrl/api/embed'),
+          purpose: ConnectionPurpose.remoteInference,
+          trigger: 'Ollama embedding generation',
+          infoSent: 'Model ID and embedding input text',
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'model': model,
+            'input': input,
+            'truncate': false,
+          }),
+        )
+        .timeout(AppConstants.apiGenerationTimeout);
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Ollama embedding request failed: ${response.statusCode}',
+      );
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final embeddings = body['embeddings'] as List?;
+    if (embeddings == null || embeddings.isEmpty) {
+      throw Exception('Ollama returned no embedding vector.');
+    }
+    final first = embeddings.first as List?;
+    if (first == null || first.isEmpty) {
+      throw Exception('Ollama returned an empty embedding vector.');
+    }
+    return first.map((value) => (value as num).toDouble()).toList();
   }
 
   Stream<PullProgress> pullModel(String modelName) async* {

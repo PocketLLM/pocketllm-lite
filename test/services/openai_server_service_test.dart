@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -28,6 +29,18 @@ class _ServerInference implements InferenceService {
   @override
   Future<List<double>> generateEmbeddings(String text, String modelId) async =>
       const [0.25, 0.75];
+}
+
+class _BlockingInference extends _ServerInference {
+  final started = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Stream<ChatToken> chatStream(ChatRequest request) async* {
+    if (!started.isCompleted) started.complete();
+    await release.future;
+    yield const ChatToken(text: 'finished');
+  }
 }
 
 void main() {
@@ -119,5 +132,75 @@ void main() {
     expect(response.headers['content-type'], contains('text/event-stream'));
     expect(response.body, contains('pipeline '));
     expect(response.body, contains('data: [DONE]'));
+    expect(response.body, contains('"finish_reason":"stop"'));
+    expect(
+      response.body.indexOf('"finish_reason":"stop"'),
+      lessThan(response.body.indexOf('data: [DONE]')),
+    );
+  });
+
+  test('rejects malformed roles and concurrent generation beyond the limit',
+      () async {
+    final malformed = await http.post(
+      baseUri.resolve('/v1/chat/completions'),
+      headers: {
+        'Authorization': 'Bearer $key',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': 'local-test',
+        'messages': [
+          {'role': 'root', 'content': 'hello'}
+        ],
+      }),
+    );
+    expect(malformed.statusCode, 400);
+
+    await server.stopServer();
+    final inference = _BlockingInference();
+    server = OpenAiServerService(
+      pipeline: GenerationPipeline(resolveInference: (_) async => inference),
+      listModels: () async => const [],
+      embed: inference.generateEmbeddings,
+    );
+    await server.startServer(
+      const OpenAiServerConfig(
+        enabled: true,
+        port: 0,
+        apiKey: key,
+        maxConcurrentRequests: 1,
+      ),
+    );
+    baseUri = Uri.parse('http://127.0.0.1:${server.boundPort}');
+    final first = http.post(
+      baseUri.resolve('/v1/chat/completions'),
+      headers: {
+        'Authorization': 'Bearer $key',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': 'local-test',
+        'messages': [
+          {'role': 'user', 'content': 'first'}
+        ],
+      }),
+    );
+    await inference.started.future;
+    final second = await http.post(
+      baseUri.resolve('/v1/chat/completions'),
+      headers: {
+        'Authorization': 'Bearer $key',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': 'local-test',
+        'messages': [
+          {'role': 'user', 'content': 'second'}
+        ],
+      }),
+    );
+    expect(second.statusCode, 429);
+    inference.release.complete();
+    expect((await first).statusCode, 200);
   });
 }

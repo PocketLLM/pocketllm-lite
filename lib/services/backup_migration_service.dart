@@ -20,6 +20,8 @@ class BackupArchivePayload {
   final List<dynamic> memories;
   final List<dynamic> personas;
   final List<dynamic> prompts;
+  final List<dynamic> skills;
+  final Map<String, dynamic> documentIndex;
 
   const BackupArchivePayload({
     required this.schemaVersion,
@@ -30,6 +32,8 @@ class BackupArchivePayload {
     required this.memories,
     required this.personas,
     this.prompts = const [],
+    this.skills = const [],
+    this.documentIndex = const {},
   });
 
   Map<String, dynamic> toJson() => {
@@ -41,14 +45,17 @@ class BackupArchivePayload {
         'memories': memories,
         'personas': personas,
         'prompts': prompts,
+        'skills': skills,
+        'documentIndex': documentIndex,
       };
 
   factory BackupArchivePayload.fromJson(Map<String, dynamic> json) {
-    if (json['schemaVersion'] != 2) {
+    final schemaVersion = json['schemaVersion'] as int?;
+    if (schemaVersion != 2 && schemaVersion != 3) {
       throw const BackupDecryptError('Unsupported backup format version.');
     }
     return BackupArchivePayload(
-      schemaVersion: json['schemaVersion'] as int,
+      schemaVersion: schemaVersion!,
       appVersion: json['appVersion'] as String? ?? 'unknown',
       exportedAt: DateTime.parse(json['exportedAt'] as String),
       settings: Map<String, dynamic>.from(json['settings'] as Map? ?? const {}),
@@ -56,6 +63,10 @@ class BackupArchivePayload {
       memories: List<dynamic>.from(json['memories'] as List? ?? const []),
       personas: List<dynamic>.from(json['personas'] as List? ?? const []),
       prompts: List<dynamic>.from(json['prompts'] as List? ?? const []),
+      skills: List<dynamic>.from(json['skills'] as List? ?? const []),
+      documentIndex: Map<String, dynamic>.from(
+        json['documentIndex'] as Map? ?? const {},
+      ),
     );
   }
 }
@@ -86,6 +97,8 @@ class BackupMigrationService {
     required List<dynamic> memories,
     required List<dynamic> personas,
     List<dynamic> prompts = const [],
+    List<dynamic> skills = const [],
+    Map<String, dynamic> documentIndex = const {},
   }) async {
     if (password.length < 8) {
       throw const BackupDecryptError(
@@ -93,7 +106,7 @@ class BackupMigrationService {
       );
     }
     final payload = BackupArchivePayload(
-      schemaVersion: 2,
+      schemaVersion: 3,
       appVersion: '1.0.36',
       exportedAt: DateTime.now(),
       settings: settings,
@@ -101,6 +114,8 @@ class BackupMigrationService {
       memories: memories,
       personas: personas,
       prompts: prompts,
+      skills: skills,
+      documentIndex: documentIndex,
     );
     final salt = _randomBytes(_saltLength);
     final nonce = _randomBytes(_nonceLength);
@@ -112,7 +127,7 @@ class BackupMigrationService {
     );
     return jsonEncode({
       'format': 'pocketllm-backup',
-      'version': 2,
+      'version': 3,
       'kdf': {
         'name': 'PBKDF2-HMAC-SHA256',
         'iterations': _iterations,
@@ -133,8 +148,9 @@ class BackupMigrationService {
   }) async {
     try {
       final envelope = jsonDecode(encryptedJson) as Map<String, dynamic>;
+      final envelopeVersion = envelope['version'];
       if (envelope['format'] != 'pocketllm-backup' ||
-          envelope['version'] != 2) {
+          envelopeVersion != 2 && envelopeVersion != 3) {
         throw const BackupDecryptError('Not a supported PocketLLM backup.');
       }
       final kdf = Map<String, dynamic>.from(envelope['kdf'] as Map);

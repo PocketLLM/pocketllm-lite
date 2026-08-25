@@ -113,6 +113,8 @@ class HuggingFaceService {
         pipelineTag: baseModel.pipelineTag,
         isGated: baseModel.isGated,
         description: description,
+        license: baseModel.license,
+        licenseUrl: baseModel.licenseUrl,
       );
     } else {
       throw Exception('Failed to get model details: ${response.statusCode}');
@@ -121,7 +123,11 @@ class HuggingFaceService {
 
   Future<List<HFModelFile>> getModelFiles(String modelId) async {
     final token = await getToken();
-    final uri = Uri.https('huggingface.co', '/api/models/$modelId/tree/main');
+    final uri = Uri.https(
+      'huggingface.co',
+      '/api/models/$modelId/tree/main',
+      const {'expand': 'true'},
+    );
 
     final response = await _network.get(
       uri,

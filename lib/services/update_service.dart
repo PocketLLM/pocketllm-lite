@@ -13,6 +13,9 @@ class AppRelease {
   final String name;
   final String body;
   final String? apkDownloadUrl;
+  final String? apkFilename;
+  final String? checksumDownloadUrl;
+  final String? apkSha256;
   final DateTime publishedAt;
 
   AppRelease({
@@ -21,18 +24,27 @@ class AppRelease {
     required this.name,
     required this.body,
     this.apkDownloadUrl,
+    this.apkFilename,
+    this.checksumDownloadUrl,
+    this.apkSha256,
     required this.publishedAt,
   });
 
   factory AppRelease.fromJson(Map<String, dynamic> json) {
     String? apkUrl;
+    String? apkFilename;
+    String? checksumUrl;
     final assets = json['assets'] as List<dynamic>?;
     if (assets != null && assets.isNotEmpty) {
       for (final asset in assets) {
         final name = asset['name'] as String?;
         if (name != null && name.endsWith('.apk')) {
           apkUrl = asset['browser_download_url'] as String?;
-          break;
+          apkFilename = name;
+        }
+        final lower = name?.toLowerCase() ?? '';
+        if (lower == 'sha256sums.txt' || lower.endsWith('.sha256')) {
+          checksumUrl = asset['browser_download_url'] as String?;
         }
       }
     }
@@ -47,9 +59,23 @@ class AppRelease {
       name: json['name'] as String? ?? tagName,
       body: json['body'] as String? ?? '',
       apkDownloadUrl: apkUrl,
+      apkFilename: apkFilename,
+      checksumDownloadUrl: checksumUrl,
       publishedAt: DateTime.parse(json['published_at'] as String),
     );
   }
+
+  AppRelease withApkSha256(String checksum) => AppRelease(
+        tagName: tagName,
+        version: version,
+        name: name,
+        body: body,
+        apkDownloadUrl: apkDownloadUrl,
+        apkFilename: apkFilename,
+        checksumDownloadUrl: checksumDownloadUrl,
+        apkSha256: checksum,
+        publishedAt: publishedAt,
+      );
 
   /// Check if this release is newer than the current app version
   bool isNewerThan(String currentVersion) {
@@ -94,7 +120,6 @@ class UpdateService {
   static const String _githubRepo = 'PocketLLM/pocketllm-lite';
   static const String _releasesApiUrl =
       'https://api.github.com/repos/$_githubRepo/releases/latest';
-  static const String _autoUpdateKey = 'auto_update_enabled';
   static const String _lastUpdateCheckKey = 'last_update_check';
   static const String _dismissedVersionKey = 'dismissed_update_version';
 
@@ -105,17 +130,12 @@ class UpdateService {
   final NetworkGateway _network = NetworkGateway();
 
   /// Check if auto-update is enabled (disabled by default)
-  Future<bool> isAutoUpdateEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_autoUpdateKey) ??
-        false; // Disabled by default for privacy
-  }
+  Future<bool> isAutoUpdateEnabled() async =>
+      NetworkPolicyService().isAutoUpdateCheckEnabled;
 
   /// Set auto-update preference
-  Future<void> setAutoUpdateEnabled(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_autoUpdateKey, enabled);
-  }
+  Future<void> setAutoUpdateEnabled(bool enabled) =>
+      NetworkPolicyService().setAutoUpdateCheckEnabled(enabled);
 
   /// Get the dismissed version (if user dismissed an update notification)
   Future<String?> getDismissedVersion() async {
@@ -167,7 +187,9 @@ class UpdateService {
       // Fetch latest release from GitHub
       final response = await _network.get(
         uri,
-        purpose: ConnectionPurpose.updateCheck,
+        purpose: force
+            ? ConnectionPurpose.manualUpdateCheck
+            : ConnectionPurpose.updateCheck,
         trigger: force ? 'manual_update_check' : 'auto_update_check',
         infoSent: 'App version and standard HTTP headers; no user content',
         headers: {'Accept': 'application/vnd.github.v3+json'},
@@ -181,7 +203,8 @@ class UpdateService {
       }
 
       final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final release = AppRelease.fromJson(json);
+      var release = AppRelease.fromJson(json);
+      release = await _resolveChecksum(release, manual: force);
 
       // Save last update check time
       final prefs = await SharedPreferences.getInstance();
@@ -221,9 +244,56 @@ class UpdateService {
     }
   }
 
+  Future<AppRelease> _resolveChecksum(
+    AppRelease release, {
+    required bool manual,
+  }) async {
+    final checksumUrl = release.checksumDownloadUrl;
+    final filename = release.apkFilename;
+    if (checksumUrl == null || filename == null) return release;
+    final response = await _network.get(
+      Uri.parse(checksumUrl),
+      purpose: manual
+          ? ConnectionPurpose.manualUpdateCheck
+          : ConnectionPurpose.updateCheck,
+      trigger: 'release_checksum_verification',
+      infoSent: 'Requested checksum asset; no user content',
+      headers: {'Accept': 'text/plain'},
+    ).timeout(const Duration(seconds: 10));
+    if (response.statusCode != 200) return release;
+    final match = RegExp(
+      '^([a-fA-F0-9]{64})\\s+\\*?${RegExp.escape(filename)}\\s*\$',
+      multiLine: true,
+    ).firstMatch(response.body);
+    return match == null ? release : release.withApkSha256(match.group(1)!);
+  }
+
   /// Download and install the APK update
   /// Returns a stream of download progress (0.0 to 1.0)
-  Stream<OtaEvent> downloadAndInstallUpdate(String downloadUrl) {
+  Stream<OtaEvent> downloadAndInstallUpdate(
+    String downloadUrl, {
+    required String? sha256,
+  }) {
+    final checksum = sha256?.trim().toLowerCase();
+    if (checksum == null || !RegExp(r'^[a-f0-9]{64}$').hasMatch(checksum)) {
+      return Stream.error(
+        StateError(
+          'Direct installation is disabled because this release has no '
+          'verified APK SHA-256 checksum.',
+        ),
+      );
+    }
+    final decision = NetworkPolicyService().evaluateConnection(
+      uri: Uri.parse(downloadUrl),
+      purpose: ConnectionPurpose.updateDownload,
+      trigger: 'user_confirmed_ota_download',
+      infoSent: 'Requested APK asset; no user content',
+    );
+    if (!decision.allowed) {
+      return Stream.error(
+        NetworkPolicyError(decision.reason ?? 'Update download blocked.'),
+      );
+    }
     if (kDebugMode) {
       print('Starting download from: $downloadUrl');
     }
@@ -231,8 +301,7 @@ class UpdateService {
     return OtaUpdate().execute(
       downloadUrl,
       destinationFilename: 'pocketllm_lite_update.apk',
-      sha256checksum:
-          null, // GitHub doesn't provide SHA256, but this is optional
+      sha256checksum: checksum,
     );
   }
 

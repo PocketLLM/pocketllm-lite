@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math';
 
 import '../features/chat/domain/models/chat_message.dart';
+import '../core/constants/app_constants.dart';
 import 'storage_service.dart';
 
 enum MemoryType {
@@ -12,6 +14,25 @@ enum MemoryType {
   writingStyle,
   reusableInstruction,
 }
+
+class ExtractedMemoryCandidate {
+  final String key;
+  final MemoryType type;
+  final String subject;
+  final String fact;
+  final double confidence;
+
+  const ExtractedMemoryCandidate({
+    required this.key,
+    required this.type,
+    required this.subject,
+    required this.fact,
+    required this.confidence,
+  });
+}
+
+typedef StructuredMemoryExtractor = Future<List<ExtractedMemoryCandidate>>
+    Function(List<ChatMessage> messages);
 
 extension MemoryTypeExtension on MemoryType {
   String get displayName => switch (this) {
@@ -39,6 +60,9 @@ class UserMemoryEntry {
   final DateTime updatedAt;
   final DateTime? lastUsedAt;
   final List<double>? embedding;
+  final String? memoryKey;
+  final DateTime? supersededAt;
+  final String? supersededById;
 
   UserMemoryEntry({
     required this.id,
@@ -54,6 +78,9 @@ class UserMemoryEntry {
     DateTime? updatedAt,
     this.lastUsedAt,
     this.embedding,
+    this.memoryKey,
+    this.supersededAt,
+    this.supersededById,
   }) : updatedAt = updatedAt ?? createdAt;
 
   UserMemoryEntry copyWith({
@@ -64,6 +91,9 @@ class UserMemoryEntry {
     DateTime? updatedAt,
     DateTime? lastUsedAt,
     List<double>? embedding,
+    String? memoryKey,
+    DateTime? supersededAt,
+    String? supersededById,
   }) =>
       UserMemoryEntry(
         id: id,
@@ -79,6 +109,9 @@ class UserMemoryEntry {
         updatedAt: updatedAt ?? this.updatedAt,
         lastUsedAt: lastUsedAt ?? this.lastUsedAt,
         embedding: embedding ?? this.embedding,
+        memoryKey: memoryKey ?? this.memoryKey,
+        supersededAt: supersededAt ?? this.supersededAt,
+        supersededById: supersededById ?? this.supersededById,
       );
 
   Map<String, dynamic> toJson() => {
@@ -95,6 +128,9 @@ class UserMemoryEntry {
         'updatedAt': updatedAt.toIso8601String(),
         'lastUsedAt': lastUsedAt?.toIso8601String(),
         'embedding': embedding,
+        'memoryKey': memoryKey,
+        'supersededAt': supersededAt?.toIso8601String(),
+        'supersededById': supersededById,
       };
 
   factory UserMemoryEntry.fromJson(Map<String, dynamic> json) {
@@ -122,12 +158,16 @@ class UserMemoryEntry {
       embedding: (json['embedding'] as List?)
           ?.map((value) => (value as num).toDouble())
           .toList(growable: false),
+      memoryKey: json['memoryKey'] as String?,
+      supersededAt: json['supersededAt'] == null
+          ? null
+          : DateTime.parse(json['supersededAt'] as String),
+      supersededById: json['supersededById'] as String?,
     );
   }
 }
 
 class LocalMemoryService {
-  static const _storageKey = 'local_memory_records_v2';
   static final LocalMemoryService _instance = LocalMemoryService._internal();
   factory LocalMemoryService() => _instance;
   LocalMemoryService._internal();
@@ -138,7 +178,10 @@ class LocalMemoryService {
   Future<void> init(StorageService storage) async {
     _storage = storage;
     _memories.clear();
-    final raw = storage.getSetting(_storageKey, defaultValue: const []);
+    final raw = storage.getSetting(
+      AppConstants.localMemoryRecordsKey,
+      defaultValue: const [],
+    );
     if (raw is List) {
       for (final item in raw) {
         if (item is Map) {
@@ -157,29 +200,61 @@ class LocalMemoryService {
   List<UserMemoryEntry> getMemories({
     MemoryType? type,
     bool enabledOnly = false,
+    bool includeSuperseded = false,
   }) =>
       _memories
           .where((memory) =>
               (!enabledOnly || memory.enabled) &&
+              (includeSuperseded || memory.supersededAt == null) &&
               (type == null || memory.type == type))
           .toList(growable: false);
 
   Future<bool> saveMemory(UserMemoryEntry entry) async {
     if (isSensitive(entry.fact)) return false;
     final normalized = _normalize(entry.fact);
-    final index = _memories.indexWhere((memory) =>
-        memory.id == entry.id ||
-        (memory.type == entry.type &&
-            memory.subject.toLowerCase() == entry.subject.toLowerCase() &&
-            _normalize(memory.fact) == normalized));
+    final normalizedKey = entry.memoryKey?.trim().toLowerCase();
+    bool semanticDuplicate(UserMemoryEntry memory) =>
+        memory.supersededAt == null &&
+        memory.type == entry.type &&
+        memory.subject.toLowerCase() == entry.subject.toLowerCase() &&
+        memory.embedding != null &&
+        entry.embedding != null &&
+        _cosineSimilarity(memory.embedding!, entry.embedding!) >= 0.94;
+    final index = _memories.indexWhere(
+      (memory) =>
+          memory.id == entry.id ||
+          (normalizedKey?.isNotEmpty == true &&
+              memory.memoryKey?.toLowerCase() == normalizedKey &&
+              memory.supersededAt == null) ||
+          (memory.type == entry.type &&
+              memory.subject.toLowerCase() == entry.subject.toLowerCase() &&
+              _normalize(memory.fact) == normalized) ||
+          semanticDuplicate(memory),
+    );
     if (index >= 0) {
       final current = _memories[index];
-      _memories[index] = entry.copyWith(
-        confidence: entry.confidence > current.confidence
-            ? entry.confidence
-            : current.confidence,
-        updatedAt: DateTime.now(),
-      );
+      if (_normalize(current.fact) == normalized ||
+          current.id == entry.id ||
+          semanticDuplicate(current)) {
+        _memories[index] = current.copyWith(
+          fact: entry.fact,
+          confidence: entry.confidence > current.confidence
+              ? entry.confidence
+              : current.confidence,
+          embedding: entry.embedding,
+          memoryKey: entry.memoryKey,
+          updatedAt: DateTime.now(),
+        );
+      } else {
+        final now = DateTime.now();
+        _memories[index] = current.copyWith(
+          enabled: false,
+          updatedAt: now,
+          supersededAt: now,
+          supersededById: entry.id,
+        );
+        _memories.add(entry);
+      }
     } else {
       _memories.add(entry);
     }
@@ -226,29 +301,30 @@ class LocalMemoryService {
   }
 
   Future<List<UserMemoryEntry>> extractMemoriesFromConversation(
-    List<ChatMessage> messages,
-  ) async {
+    List<ChatMessage> messages, {
+    required StructuredMemoryExtractor extractor,
+  }) async {
     final extracted = <UserMemoryEntry>[];
-    for (final message in messages.where((item) => item.role == 'user')) {
-      final lower = message.content.toLowerCase();
-      final type = lower.contains('i prefer ') ||
-              lower.contains('i like ') ||
-              lower.contains('always write ')
-          ? MemoryType.preference
-          : lower.contains('my name is ') ||
-                  lower.contains("i'm a ") ||
-                  lower.contains('i live in ')
-              ? MemoryType.personalFact
-              : null;
-      if (type == null || isSensitive(message.content)) continue;
+    final candidates = await extractor(messages);
+    for (var index = 0; index < candidates.length; index++) {
+      final candidate = candidates[index];
+      if (candidate.fact.trim().isEmpty ||
+          candidate.key.trim().isEmpty ||
+          candidate.confidence < 0.75 ||
+          isSensitive(candidate.fact)) {
+        continue;
+      }
       final memory = UserMemoryEntry(
-        id: 'mem_${message.timestamp.microsecondsSinceEpoch}',
-        type: type,
-        subject: 'user',
-        fact: message.content.trim(),
-        confidence: type == MemoryType.personalFact ? 0.92 : 0.88,
-        sourceMessageId: message.timestamp.microsecondsSinceEpoch.toString(),
+        id: 'mem_${DateTime.now().microsecondsSinceEpoch}_$index',
+        type: candidate.type,
+        subject: candidate.subject.trim(),
+        fact: candidate.fact.trim(),
+        confidence: candidate.confidence.clamp(0, 1),
+        sourceMessageId: messages.isEmpty
+            ? null
+            : messages.last.timestamp.microsecondsSinceEpoch.toString(),
         createdAt: DateTime.now(),
+        memoryKey: candidate.key.trim().toLowerCase(),
       );
       if (await saveMemory(memory)) extracted.add(memory);
     }
@@ -259,11 +335,25 @@ class LocalMemoryService {
     final storage = _storage;
     if (storage == null) return;
     await storage.saveSetting(
-      _storageKey,
+      AppConstants.localMemoryRecordsKey,
       _memories.map((memory) => memory.toJson()).toList(growable: false),
     );
   }
 
   String _normalize(String value) =>
       value.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+
+  double _cosineSimilarity(List<double> left, List<double> right) {
+    if (left.isEmpty || left.length != right.length) return -1;
+    var dot = 0.0;
+    var leftNorm = 0.0;
+    var rightNorm = 0.0;
+    for (var index = 0; index < left.length; index++) {
+      dot += left[index] * right[index];
+      leftNorm += pow(left[index], 2);
+      rightNorm += pow(right[index], 2);
+    }
+    if (leftNorm == 0 || rightNorm == 0) return -1;
+    return dot / (sqrt(leftNorm) * sqrt(rightNorm));
+  }
 }

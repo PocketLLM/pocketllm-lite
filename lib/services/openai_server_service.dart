@@ -13,12 +13,14 @@ class OpenAiServerConfig {
   final int port;
   final String? apiKey;
   final bool localhostOnly;
+  final int maxConcurrentRequests;
 
   const OpenAiServerConfig({
     this.enabled = false,
     this.port = 8080,
     this.apiKey,
     this.localhostOnly = true,
+    this.maxConcurrentRequests = 2,
   });
 }
 
@@ -41,6 +43,8 @@ class OpenAiServerService {
   OpenAiServerConfig _config = const OpenAiServerConfig();
   String? _activeApiKey;
   final List<OpenAiServerLog> _logs = [];
+  int _activeRequests = 0;
+  final Map<String, List<DateTime>> _requestTimes = {};
 
   OpenAiServerService({
     required GenerationPipeline pipeline,
@@ -60,6 +64,16 @@ class OpenAiServerService {
 
   Future<bool> startServer(OpenAiServerConfig config) async {
     await stopServer();
+    if (config.port < 0 || config.port > 65535) {
+      throw ArgumentError.value(config.port, 'port', 'must be 0 to 65535');
+    }
+    if (config.maxConcurrentRequests < 1) {
+      throw ArgumentError.value(
+        config.maxConcurrentRequests,
+        'maxConcurrentRequests',
+        'must be at least 1',
+      );
+    }
     _config = config;
     if (!config.enabled) return false;
     if (config.apiKey?.trim().isNotEmpty == true) {
@@ -86,6 +100,7 @@ class OpenAiServerService {
 
   Future<void> _handleRequest(HttpRequest request) async {
     var status = HttpStatus.internalServerError;
+    var acquiredSlot = false;
     try {
       request.response.headers.contentType = ContentType.json;
       if (request.headers.value(HttpHeaders.authorizationHeader) !=
@@ -95,6 +110,32 @@ class OpenAiServerService {
           'error': {'message': 'Unauthorized'}
         });
         return;
+      }
+      final clientIp =
+          request.connectionInfo?.remoteAddress.address ?? 'unknown';
+      if (!_withinRateLimit(clientIp)) {
+        status = HttpStatus.tooManyRequests;
+        await _json(request.response, status, {
+          'error': {'message': 'Rate limit exceeded. Try again shortly.'}
+        });
+        return;
+      }
+      final needsGenerationSlot = request.method == 'POST' &&
+          (request.uri.path == '/v1/chat/completions' ||
+              request.uri.path == '/v1/embeddings');
+      if (needsGenerationSlot &&
+          _activeRequests >= _config.maxConcurrentRequests) {
+        status = HttpStatus.tooManyRequests;
+        await _json(request.response, status, {
+          'error': {
+            'message': 'Local runtime is busy. Retry after the active request.'
+          }
+        });
+        return;
+      }
+      if (needsGenerationSlot) {
+        _activeRequests++;
+        acquiredSlot = true;
       }
       if (request.method == 'GET' && request.uri.path == '/v1/models') {
         final models = await _listModels();
@@ -131,6 +172,7 @@ class OpenAiServerService {
         // Streaming responses may already be closed by the client.
       }
     } finally {
+      if (acquiredSlot) _activeRequests--;
       _log(request, status);
     }
   }
@@ -144,9 +186,18 @@ class OpenAiServerService {
     }
     final messages = rawMessages.map((item) {
       final map = Map<String, dynamic>.from(item as Map);
+      final role = map['role'];
+      final content = map['content'];
+      if (role is! String ||
+          !{'system', 'user', 'assistant', 'tool'}.contains(role) ||
+          content is! String) {
+        throw const FormatException(
+          'Each message requires a valid role and string content.',
+        );
+      }
       return ChatRequestMessage(
-        role: map['role'] as String,
-        content: map['content'] as String,
+        role: role,
+        content: content,
       );
     }).toList(growable: false);
     final generation = ChatRequest(
@@ -159,10 +210,19 @@ class OpenAiServerService {
     final created = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final id = 'chatcmpl-${DateTime.now().microsecondsSinceEpoch}';
     if (body['stream'] == true) {
+      final cancellation = GenerationCancellationToken();
+      unawaited(
+        request.response.done.catchError((_) {
+          cancellation.cancel();
+        }),
+      );
       request.response.headers.contentType =
           ContentType('text', 'event-stream', charset: 'utf-8');
       request.response.headers.set('Cache-Control', 'no-cache');
-      await for (final token in _pipeline.stream(generation)) {
+      await for (final token in _pipeline.stream(
+        generation,
+        options: GenerationOptions(cancellationToken: cancellation),
+      )) {
         request.response.write('data: ${jsonEncode({
               'id': id,
               'object': 'chat.completion.chunk',
@@ -178,6 +238,15 @@ class OpenAiServerService {
             })}\n\n');
         await request.response.flush();
       }
+      request.response.write('data: ${jsonEncode({
+            'id': id,
+            'object': 'chat.completion.chunk',
+            'created': created,
+            'model': model,
+            'choices': [
+              {'index': 0, 'delta': {}, 'finish_reason': 'stop'}
+            ],
+          })}\n\n');
       request.response.write('data: [DONE]\n\n');
       await request.response.close();
       return HttpStatus.ok;
@@ -260,5 +329,15 @@ class OpenAiServerService {
   String _generateApiKey() {
     final bytes = List<int>.generate(32, (_) => Random.secure().nextInt(256));
     return 'pk-pllm-${base64UrlEncode(bytes).replaceAll('=', '')}';
+  }
+
+  bool _withinRateLimit(String clientIp) {
+    final now = DateTime.now();
+    final cutoff = now.subtract(const Duration(minutes: 1));
+    final times = _requestTimes.putIfAbsent(clientIp, () => []);
+    times.removeWhere((time) => time.isBefore(cutoff));
+    if (times.length >= 60) return false;
+    times.add(now);
+    return true;
   }
 }

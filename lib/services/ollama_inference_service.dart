@@ -31,6 +31,7 @@ class OllamaInferenceService implements InferenceService {
   Stream<ChatToken> chatStream(ChatRequest request) async* {
     final stopwatch = Stopwatch()..start();
     var completionCharacters = 0;
+    OllamaGenerationStats? measuredStats;
 
     final stream = _ollamaService.generateChatStream(
       request.modelId,
@@ -41,6 +42,7 @@ class OllamaInferenceService implements InferenceService {
         'top_p': request.topP,
         'top_k': request.topK,
       },
+      onComplete: (stats) => measuredStats = stats,
     );
 
     await for (final chunk in stream) {
@@ -50,24 +52,25 @@ class OllamaInferenceService implements InferenceService {
 
     stopwatch.stop();
     final estimatedTokens = (completionCharacters / 4).ceil();
-    final seconds = stopwatch.elapsedMilliseconds / 1000;
-    final tokensPerSecond = seconds > 0 ? estimatedTokens / seconds : 0.0;
+    final completionTokens = measuredStats?.completionTokens ?? estimatedTokens;
+    final elapsed = measuredStats?.totalDuration ?? stopwatch.elapsed;
+    final seconds = elapsed.inMicroseconds / Duration.microsecondsPerSecond;
+    final tokensPerSecond = seconds > 0 ? completionTokens / seconds : 0.0;
     _lastMetrics = InferenceMetrics(
       tokensPerSecond: tokensPerSecond,
-      millisecondsPerToken: estimatedTokens > 0
-          ? stopwatch.elapsedMilliseconds / estimatedTokens
+      millisecondsPerToken: completionTokens > 0
+          ? elapsed.inMicroseconds / 1000 / completionTokens
           : 0,
-      totalTime: stopwatch.elapsed,
-      completionTokens: estimatedTokens,
+      totalTime: elapsed,
+      promptTokens: measuredStats?.promptTokens ?? 0,
+      completionTokens: completionTokens,
+      tokenCountsEstimated: measuredStats == null,
     );
   }
 
   @override
-  Future<List<double>> generateEmbeddings(String text, String modelId) {
-    throw const InferenceError(
-      'Ollama embedding generation is not wired yet for this app version.',
-    );
-  }
+  Future<List<double>> generateEmbeddings(String text, String modelId) =>
+      _ollamaService.generateEmbedding(model: modelId, input: text);
 
   @override
   Future<InferenceMetrics> getMetrics() async => _lastMetrics;

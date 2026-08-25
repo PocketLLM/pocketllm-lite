@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:cactus/cactus.dart' as cactus;
+// Pinned Cactus 1.3.0 local adapter. The public STT wrapper can download from
+// Supabase internally, which cannot satisfy PocketLLM's central network policy.
+// ignore: implementation_imports
+import 'package:cactus/src/services/context.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-
-import 'network_policy_service.dart';
 
 class AudioTranscriptionError implements Exception {
   final String message;
@@ -82,10 +84,6 @@ abstract class AudioTranscriber {
 
 class CactusWhisperTranscriber implements AudioTranscriber {
   static const modelId = 'whisper-tiny';
-  final cactus.CactusSTT _stt;
-
-  CactusWhisperTranscriber({cactus.CactusSTT? stt})
-      : _stt = stt ?? cactus.CactusSTT();
 
   @override
   Future<cactus.CactusTranscriptionResult> transcribe(String filePath) async {
@@ -93,23 +91,33 @@ class CactusWhisperTranscriber implements AudioTranscriber {
     final modelDirectory =
         Directory(path.join(documents.path, 'models', modelId));
     if (!await modelDirectory.exists()) {
-      final policy = NetworkPolicyService().evaluateConnection(
-        uri: Uri.parse('https://huggingface.co/Cactus-Compute'),
-        purpose: ConnectionPurpose.modelDownload,
-        trigger: 'audio_transcription_model_download',
-        infoSent: 'Whisper model identifier; no audio or transcript content',
+      throw const AudioTranscriptionError(
+        'The offline Whisper model is not installed. Automatic Cactus '
+        'downloads are disabled because that SDK path bypasses the network '
+        'audit gateway.',
       );
-      if (!policy.allowed) {
-        throw AudioTranscriptionError(
-          policy.reason ?? 'The Whisper model download is blocked.',
-        );
-      }
-      await _stt.downloadModel(model: modelId);
     }
-    await _stt.initializeModel(
-      params: cactus.CactusInitParams(model: modelId, contextSize: 2048),
+    final initialized = await CactusContext.initContext(
+      modelDirectory.path,
+      2048,
     );
-    return _stt.transcribe(audioFilePath: filePath);
+    final handle = initialized.$1;
+    if (handle == null) {
+      throw AudioTranscriptionError(
+        'The installed Whisper model could not be initialized: '
+        '${initialized.$2}',
+      );
+    }
+    try {
+      return await CactusContext.transcribe(
+        handle,
+        cactus.CactusSTT.whisperPrompt,
+        audioFilePath: filePath,
+        params: cactus.CactusTranscriptionParams(maxTokens: 2048),
+      );
+    } finally {
+      CactusContext.freeContext(handle);
+    }
   }
 }
 

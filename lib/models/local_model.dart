@@ -1,3 +1,5 @@
+import 'model_manifest.dart';
+
 enum DownloadStatus {
   notDownloaded,
   downloading,
@@ -17,7 +19,7 @@ class LocalModel {
   final String? provider;
   final String? family;
   final List<String>? capabilities;
-  final Map<String, String>? benchmarks;
+  final ModelManifest? manifest;
 
   const LocalModel({
     required this.id,
@@ -32,13 +34,8 @@ class LocalModel {
     this.provider,
     this.family,
     this.capabilities,
-    this.benchmarks,
+    this.manifest,
   });
-
-  /// Factory constructors or helpers to classify GGUF variants
-  bool get isGemma => id.toLowerCase().contains('gemma');
-  bool get isLlama => id.toLowerCase().contains('llama');
-  bool get isQwen => id.toLowerCase().contains('qwen');
 
   /// Helper to convert size in bytes to a human-readable string
   String get formattedSize {
@@ -64,7 +61,7 @@ class LocalModel {
     String? provider,
     String? family,
     List<String>? capabilities,
-    Map<String, String>? benchmarks,
+    ModelManifest? manifest,
   }) {
     return LocalModel(
       id: id ?? this.id,
@@ -79,7 +76,7 @@ class LocalModel {
       provider: provider ?? this.provider,
       family: family ?? this.family,
       capabilities: capabilities ?? this.capabilities,
-      benchmarks: benchmarks ?? this.benchmarks,
+      manifest: manifest ?? this.manifest,
     );
   }
 
@@ -97,7 +94,7 @@ class LocalModel {
       'provider': provider,
       'family': family,
       'capabilities': capabilities,
-      'benchmarks': benchmarks,
+      'manifest': manifest?.toJson(),
     };
   }
 
@@ -117,8 +114,11 @@ class LocalModel {
       capabilities: (map['capabilities'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
-      benchmarks: (map['benchmarks'] as Map<dynamic, dynamic>?)
-          ?.map((k, v) => MapEntry(k as String, v as String)),
+      manifest: map['manifest'] is Map
+          ? ModelManifest.fromJson(
+              Map<String, dynamic>.from(map['manifest'] as Map),
+            )
+          : null,
     );
   }
 }

@@ -24,6 +24,15 @@ void main() {
         prompts: [
           {'id': 'prompt-1', 'content': 'Be concise'},
         ],
+        skills: [
+          {'id': 'skill-1', 'body': 'Verified skill instructions'},
+        ],
+        documentIndex: {
+          'schemaVersion': 2,
+          'documents': <String, dynamic>{},
+          'chunks': <String, dynamic>{},
+          'embeddings': <String, dynamic>{},
+        },
       );
 
       expect(encrypted, contains('AES-256-GCM'));
@@ -34,10 +43,12 @@ void main() {
         encryptedJson: encrypted,
         password: 'correct horse battery staple',
       );
-      expect(restored.schemaVersion, 2);
+      expect(restored.schemaVersion, 3);
       expect(restored.settings['theme'], 'dark');
       expect(restored.chats.single['id'], 'c1');
       expect(restored.prompts.single['id'], 'prompt-1');
+      expect(restored.skills.single['id'], 'skill-1');
+      expect(restored.documentIndex['schemaVersion'], 2);
     });
 
     test('wrong password and ciphertext corruption fail authentication',
