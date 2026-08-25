@@ -1,61 +1,71 @@
 # PocketLLM Lite v1.0.36 Product Audit
 
-Audit started 2026-08-25 from clean commit `f6d779a` on Flutter 3.41.9 / Dart 3.11.5. Baseline: `flutter analyze` PASS in 99.7s; `flutter test` PASS, 78 tests. Passing baseline tests do not validate production truth where noted below.
+Audit date: 2026-08-25. Baseline commit: `f6d779a`. Baseline verification: Flutter 3.41.9 / Dart 3.11.5, `flutter analyze` passed, and 78 tests passed. A passing baseline test did not establish that a user-facing feature performed real work.
 
-| Feature | UI | Service | Real runtime | Persistence | Tests | Initial status | Required repair |
-|---|---|---|---|---|---|---|---|
-| Chat / local inference | Yes | Cactus + Ollama | Partial | Chats yes | Ollama unit tests | Disconnected subsystems | Route through GenerationPipeline |
-| Tool loop | Yes | XML and typed services | Partial | History partial | Shallow typed tests | Duplicate/inconsistent | Canonical JSON registry, validation, real handlers |
-| Calculator | Yes | String split | No for precedence | No | Basic only | Misleading | Safe parser and structured divide-by-zero |
-| System info | Yes | Typed service | No | No | No | Canned values | Native/platform telemetry |
-| Memory | Inspector | In-memory singleton | No restart survival | No | In-memory test | Misleading persistence claim | Versioned persistent store and chat integration |
-| Hybrid retrieval | Indirect | Keyword overlap | No embeddings/BM25 | No | Tests simulation | Misnamed algorithms | Real embeddings, BM25, fusion, MMR |
-| Documents/RAG | Yes | Two overlapping services | Partial | Metadata partial | Keyword tests | Incoherent | Stable chunks, embeddings, citations, persistence |
-| OCR | Indirect | `LocalOcrService` | No; fixed invoice | No | None | False success | Real input OCR or unavailable error |
-| Audio files | Yes | `AudioTranscriptionService` | No; fixed 14s transcript | No | Test expects canned data | False success | Cactus Whisper or unavailable error |
-| Backup | Settings path | SHA-256 checksum JSON | No encryption/restore | File only | Test expects checksum | Security claim false | Password KDF + AEAD + atomic restore |
-| OpenAI server | Settings route | Embedded HTTP | Fixed response/model/key | Logs memory only | None | False success/insecure default | Pipeline, real models/embeddings/SSE, random key |
-| Strict Offline | Yes | Policy evaluator | Partial | Setting yes | Evaluator tests | Bypassable | Central gateway and migrate all HTTP/Dio |
-| Device profile | Comparison UI | Estimated constants | No | Cached memory | Recommendation-only | Invented | Native measurements and unknown states |
-| Model catalog | Yes | Cactus + hardcoded registry | Partial | Downloads yes | Recommendation tests | Claims unverified | Runtime/trusted manifests and dated metadata |
-| Mobile actions | Indirect | Pending/executed lists | No native action | No | None | False success | Implement supported handlers or disable |
-| README | Yes | N/A | N/A | N/A | No truth test | Stale v1.0.29 and absolute offline claims | Rewrite from verified release state |
+Status meanings: **Verified** has direct automated or emulator evidence; **Implemented** has a real runtime path but lacks representative device evidence; **Constrained** is deliberately unavailable unless capability is confirmed; **Removed** means a misleading path was deleted.
 
-## Baseline false-success evidence
+| Feature | UI | Real service/runtime | Persistence | Test evidence | Final status / failure behavior |
+|---|---|---|---|---|---|
+| New chat, history, edit, regenerate | Yes | Shared `GenerationPipeline` | Hive CE | Unit/widget and integration persistence flow | Verified; backend failures become visible assistant errors |
+| Model selection and switching | Yes | Local GGUF, Ollama, configured OpenAI-compatible providers | Settings/session | Provider deadline test and final release emulator check | Verified; unreachable discovery is bounded and unavailable providers are not selectable |
+| Local model load/unload and streaming | Yes | Cactus context adapter | Manifest and app model directory | Adapter/pipeline integration harness | Implemented; no physical-model performance claim |
+| Stop generation | Yes | Shared cancellation token | N/A | Pipeline cancellation tests | Verified for cooperative backends |
+| Markdown, code, copy, share, delete, stars, tags | Yes | Flutter presentation/storage services | Hive CE | Existing widget/storage tests | Implemented |
+| Personas, prompts, skills | Yes | `PromptComposer` injects enabled context | Hive CE | Pipeline and storage tests | Verified for prompt composition; skill bodies do not grant undeclared native access |
+| Image attachments | Capability-gated | Passed only to a model/provider declaring vision support | Chat session | Provider encoding tests | Constrained; control disabled and send fails closed when vision is unverified |
+| Text-file attachments | Yes | Bounded TXT/MD/JSON/CSV/log content injection | Chat session | Chat/storage tests | Implemented; 200 KB limit |
+| Voice dictation and TTS | Yes | Platform speech and TTS plugins | Settings | Existing tests/build | Implemented; platform engine availability varies |
+| Context budgeting and long chats | Indirect | Family-aware estimator, explicit response reservation, local rolling summary | Versioned summary setting | Boundary and oversized-input tests | Verified; an oversized newest message is rejected instead of silently truncated |
+| Prompt Lab and model comparison | Yes | Shared generation pipeline and actual runtime metrics where returned | Local run history | Pipeline tests | Implemented; estimated rates are labeled `≈` |
+| Tool registry/parser | Tool cards/toggle | Canonical JSON, strict schema, multi-call parsing, legacy XML adapter | Tool events in chat | Parser/validation/multi-round tests | Verified; malformed, unknown, or extra arguments are rejected |
+| Tool loop | Yes | Inside `GenerationPipeline`, maximum five rounds, cancellation and tool events | Chat history | Calculator end-to-end integration flow | Verified |
+| Calculator | Via tools | Precedence-aware safe parser | N/A | Unary, parentheses, decimal, divide-by-zero tests | Verified |
+| System information | Via tools/settings | Android native RAM/storage/ABI/cores/battery/thermal; unknown elsewhere | Benchmark records | Native service and emulator integration | Verified on Android emulator; unavailable values remain unknown |
+| Clipboard | Confirmation dialog | Real platform clipboard write | OS clipboard | Adapter/confirmation unit test | Implemented; denied calls do not execute |
+| Notes | Confirmation dialog | Real app-private note record | Hive CE and encrypted backup | Restart/backup test | Verified; no separate notes manager UI in this release |
+| Reminders | Confirmation + OS permission | Timezone-aware local notification, inexact scheduling, reboot receiver | OS pending notifications | Schema/denial tests and release manifest build | Implemented; representative device delivery not run |
+| Draft email | Confirmation dialog | Opens system `mailto` composer; never sends | External composer only | Adapter/confirmation tests | Implemented; fails if no composer exists |
+| Open URL | Confirmation dialog | HTTP(S)-only external browser launch after network-policy evaluation | Audit log | Policy tests | Implemented; Strict Offline blocks before launch |
+| Web search | Toggle/tool card | Tavily through central gateway | Secure key storage, audit log | Gateway/policy/tool tests | Verified pre-I/O controls; requires configured key |
+| Offline knowledge search | No | No selected local corpus | N/A | Regression assertion | Removed; canned answers deleted |
+| Memory extraction | Inspector/settings | Structured local-model JSON extraction with validation | Versioned Hive settings payload | Persistence/sensitivity/extraction tests | Verified with test backend; requires a capable selected runtime |
+| Memory update/deduplication | Inspector | Exact/semantic dedupe, subject supersession, confidence and stale handling | Persistent | Restart, duplicate, contradiction tests | Verified |
+| Memory retrieval in prompts | Debug inspector/chat | Query embedding when available plus lexical fallback | Last-used metadata | Pipeline injection tests | Verified; fallback is not called embedding similarity |
+| PDF/TXT/Markdown/CSV ingestion | Document workspace | Syncfusion PDF page extraction and structure-aware paragraph chunks | Document archive and vector index | Generated two-page PDF integration flow | Verified for text PDFs and listed text formats |
+| Scanned-PDF OCR | No misleading control | Not connected | N/A | Error-path test | Not supported; no-text PDFs report an actionable error |
+| Dense/lexical/hybrid retrieval | RAG toggle | Persisted vectors, cosine, Okapi BM25, normalized fusion, MMR | Versioned vector archive with backup | Unit and document integration tests | Verified with deterministic test embeddings; production embedding depends on selected backend |
+| Source metadata/citations | Chat context | Stable document, page, chunk metadata | Vector archive | Correct page-2 citation integration assertion | Verified |
+| Android OCR | Service/integration surface | Actual input bytes through bundled ML Kit Latin recognizer | No fabricated result cache | Generated-image emulator integration | Verified on Android emulator |
+| iOS OCR / additional scripts / table extraction | No false success | Not implemented | N/A | Unsupported-path tests | Not supported |
+| Audio-file transcription | Audio workspace | Actual selected file passed to installed Cactus Whisper context | Result in current view/exported text | Input propagation unit test | Implemented; no model fixture/device transcription run |
+| Audio timestamps, diarization, summary/tasks | No controls | Current SDK returns only transcript text and metrics | N/A | Empty-SRT regression test | Constrained; no timestamps, speakers, summary, or tasks are invented |
+| Model discovery/import/download | Yes | Hugging Face API, LFS metadata, GGUF header/SHA/storage validation | App model directory + manifest | Download/storage tests | Implemented; Cactus public discovery/implicit download disabled |
+| Download progress/retry/resume | Yes | Dio range/resume path and explicit errors | Partial file | Service tests | Implemented; gated repositories require a user token |
+| Model metadata/capabilities/licenses | Catalog/detail | `ModelManifest` from backend or source evidence | Versioned registry | Serialization/truth tests | Constrained; unknown fields stay unknown and load success marks compatibility |
+| Hardcoded catalog/benchmarks/router profiles | No | Deleted | N/A | Regression search/test | Removed; no filename-based capability or speed claims |
+| Ollama | Settings/chat | Official chat, embeddings, pull stream, and final token stats endpoints | Endpoint setting | HTTP/service tests | Verified with mock server; remote hosts obey policy |
+| Generic OpenAI-compatible providers | Privacy/network UI | Secure registry, endpoint model confirmation, chat/vision/embeddings | Secure storage | Live mock endpoint tests | Verified; capabilities are user-configured, not inferred |
+| Embedded OpenAI server | Privacy/network UI | Authenticated models, chat, SSE and embeddings through PocketLLM runtimes | Secure generated key | Live localhost socket tests | Verified; loopback default and explicit LAN warning |
+| Server concurrency/rate/cancellation/audit | UI/log | Concurrency cap, rate limit, disconnect cancellation, request log | Current process | Service tests | Implemented; no trusted-host/CORS allowlist yet |
+| Strict Offline | Privacy/network UI | Central gateway and preflight for app-owned HTTP/Dio/URL launch | Setting + audit log | Every-purpose pre-I/O denial tests | Verified at app boundary; loopback intentionally allowed |
+| Tavily/provider/server secrets | Settings | Flutter secure storage | OS keystore/keychain | Migration tests | Verified; legacy Tavily plaintext is deleted |
+| OTA update | Dialog/settings | Manual/automatic policy split, APK plus published SHA-256 requirement | Preferences | Metadata/hash and merged-manifest tests | Verified fail-closed metadata path; installer UX remains OS-controlled |
+| Backup export/encryption | Settings | PBKDF2-HMAC-SHA256 (600,000) + AES-256-GCM, schema 3 | `.pllm` archive | Round-trip/tamper/plaintext tests | Verified |
+| Backup restore/migration | Settings | Full validation, wrong-password rejection, storage/document rollback | Hive + document index | Fault-injection and integration restore tests | Verified application-level atomic rollback |
+| Android permissions | OS | Required manifest; legacy storage and privileged `INSTALL_PACKAGES` removed; user-consent `REQUEST_INSTALL_PACKAGES` retained for verified OTA handoff | N/A | Merged release manifest and final APK permission dump | Verified |
+| Version/docs/release artifact | Repository | v1.0.36+36 | Git/artifacts | 127 tests, six Android flows, clean release builds, hash, install, launch, UI, and signer inspection | Engineering candidate verified; production publication blocked by debug signing |
 
-- `local_ocr_service.dart` ignores bytes and returns invoice `#1029` with confidence `0.96`.
-- `audio_transcription_service.dart` ignores the file and returns a fixed 14-second meeting with invented speakers and tasks.
-- `backup_migration_service.dart` stores readable JSON plus an unkeyed SHA-256 checksum and performs no restore.
-- `openai_server_service.dart` lists a fixed model, uses a fixed default key, and echoes a canned completion.
-- `hybrid_retrieval_service.dart` names keyword overlap `computeSimulatedEmbedding`.
-- `device_spec_service.dart` returns fixed RAM, storage, GPU, and thermal values.
-- `typed_tool_calling_service.dart` returns `PocketLLM Native Core` and generic success for unimplemented tools.
-- HTTP clients in Hugging Face, model download, Tavily, update, and skill installation paths can bypass a central transport boundary.
+## False-success paths found and disposition
 
-## Audit status
+- Fixed invoice OCR was replaced with real Android input processing.
+- The fixed 14-second meeting transcript and invented metadata were removed.
+- Checksum-only plaintext backup was replaced with authenticated encryption and rollback.
+- The OpenAI echo server was connected to real inference and secured with a generated key.
+- Simulated embedding/BM25 names were replaced by real algorithms and persistent vectors.
+- Fixed hardware and benchmark values were replaced by measurements, labeled estimates, or unknown states.
+- Duplicate XML/typed tool systems were unified; inert mobile actions and canned knowledge were deleted.
+- Hardcoded model profiles and task routing were removed because the repository lacked verified metadata to support them.
 
-The false-success paths above were repaired or removed on branch `Mr-dark-debug/v1.0.36-truth-integration`.
+## Release boundary
 
-| Area | Final disposition | Evidence boundary |
-|---|---|---|
-| Chat / inference | Repaired | Chat and Prompt Lab call `GenerationPipeline`; Cactus/Ollama adapters return actual streams or errors |
-| Tool calls | Repaired with architectural follow-up | Canonical JSON, validation, safe calculator, bounded Chat loop, real handlers; tool execution is not yet centralized inside `GenerationPipeline` |
-| Memory / retrieval | Repaired | Versioned persistence and restart tests; BM25, cosine for supplied vectors, and MMR tests; lexical fallback is labeled |
-| Documents / RAG | Existing partial capability | Existing ingestion/vector-store paths remain; end-to-end source citation quality was not device-verified in this release |
-| OCR | Repaired on Android | Actual input bytes reach bundled ML Kit recognizer; iOS returns unsupported |
-| Audio files | Repaired | Actual selected file reaches Cactus Whisper; summaries, speakers, tasks, and timestamps are no longer invented |
-| Backup | Repaired and UI-connected | `.pllm` export/import uses authenticated encryption; restore record writes are not one atomic Hive transaction |
-| OpenAI server | Repaired service, UI gap | Live localhost tests cover authenticated models/chat/SSE/embeddings; no in-app control screen |
-| Strict Offline | Repaired for application-owned I/O | Gateway protects HTTP clients and model downloads evaluate policy before Dio I/O; OS/SDK behavior outside app-owned transport is not claimed |
-| Device profile | Repaired on Android | Native RAM/storage/ABI/core/battery/thermal measurements; unsupported values are unknown |
-| Model catalog | Claims sanitized | Runtime discovery replaces displayed benchmark/capability claims after scan; no dated signed model manifest yet |
-| Mobile actions | False success removed | Typed actions require a registered real handler or return unavailable |
-| Documentation | Rewritten | README, changelog, release notes, decisions, limitations, competitor research, and verification matrix describe measured scope |
-
-## Release blockers and deferred work
-
-- A production Android signing key is not configured. A release-mode build may use the repository's debug-signing fallback and must not be published as a production release.
-- Physical-device Cactus inference, Whisper performance, OCR accuracy, thermal behavior, and upgrade testing were not available in this environment.
-- The developer API needs an in-app start/stop/configuration screen before it should be advertised as a general user feature.
-- Tool execution should move from Chat into `GenerationPipeline` so non-Chat clients share one agent loop.
-- Cactus Flutter is an archived upstream dependency; a maintained backend contingency is required.
+A separately managed production signing identity is absent. Release-mode artifacts may use Gradle's debug-signing fallback for engineering verification, but must not be tagged or published as a production release. Physical-device local-model performance, Whisper quality, reminder delivery, and iOS-specific paths remain explicit limitations.

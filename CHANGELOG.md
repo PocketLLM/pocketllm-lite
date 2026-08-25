@@ -16,34 +16,53 @@ We use a specific versioning pattern:
 
 ### Added
 
-- Authenticated `.pllm` backups using PBKDF2-HMAC-SHA256 and AES-256-GCM, connected to the Export and Import dialogs.
-- Persistent local memory records with sensitivity filtering and retrieval into generation context.
-- Android device telemetry for RAM, storage, ABI, CPU cores, battery, and thermal status.
-- Android on-device text recognition using the bundled ML Kit Latin recognizer.
-- Real Cactus Whisper file transcription and authenticated OpenAI-compatible service routes.
-- Application-owned network gateway and auditable policy decisions for model, search, skill, update, font, and Ollama requests.
+- One `GenerationPipeline` for Chat, Prompt Enhancer, Prompt Lab, model comparison, and the embedded API, including context, memory, document retrieval, tools, cancellation, metrics, and bounded continuation.
+- Persistent structured memories with sensitivity filtering, duplicate/contradiction handling, query retrieval, inspector controls, and restart coverage.
+- Structure-aware PDF/TXT/Markdown/CSV ingestion, persistent numeric vectors, Okapi BM25, cosine fusion, MMR, and stable page citations.
+- Structured `ModelManifest` records, Hugging Face LFS size/SHA evidence, storage/GGUF validation, resumable downloads, and secure generic OpenAI-compatible providers.
+- Real Android ML Kit OCR, Android RAM/storage/ABI/core/battery/thermal telemetry, and actual selected-file Cactus Whisper transcription.
+- Authenticated `.pllm` schema 3 backups using PBKDF2-HMAC-SHA256 and AES-256-GCM with storage/document rollback.
+- Confirmation-gated clipboard, persistent note, notification reminder, email-draft, and HTTP(S) browser tools.
+- In-app authenticated OpenAI server controls and real models, chat, SSE, embeddings, rate/concurrency limits, cancellation, and request logs.
+- Application-owned network gateway and auditable policy decisions for model, search, skill, update, font, remote inference, and external navigation.
+- Android integration coverage for local pipeline persistence, calculator continuation, memory restart/Strict Offline, generated PDF RAG/citation, encrypted restore, and real OCR.
 
 ### Changed
 
-- Routed Chat and Prompt Lab through the shared Cactus/Ollama generation pipeline.
-- Replaced keyword-overlap labels with real BM25, cosine scoring when vectors exist, and MMR diversification.
-- Replaced XML-first tool instructions with canonical JSON calls, strict argument validation, safe arithmetic, timeouts, and real-handler requirements.
-- Replaced fixed hardware, OCR, transcript, latency, benchmark, and success values with measurements, explicit estimates, or unavailable states.
-- Rewrote privacy, onboarding, model help, README, and release copy to describe local-first behavior and optional network use precisely.
+- Unified XML-first and typed tool systems around canonical JSON, strict schemas, multiple calls, structured errors, risk scopes, confirmation, timeouts, and a five-round agent limit; XML remains only as a legacy adapter.
+- Reserved requested response tokens during context fitting, added local rolling summaries, and reject a newest message that cannot fit safely.
+- Changed image attachment, model capability, compatibility, benchmark, speed, and accelerator labels to require manifest/runtime evidence or display unknown/estimated states.
+- Changed Cactus use to installed local files only; telemetry, public discovery, and unmanaged Whisper/model download paths are disabled.
+- Migrated the Tavily key from plaintext Hive settings to platform secure storage.
+- Updated OTA behavior to distinguish manual checks from automatic opt-in and require a paired published SHA-256 before direct APK installation.
+- Rewrote README, release notes, audit, decisions, competitor research, limitations, and verification records around measured scope.
 
 ### Fixed
 
-- Applied saved Ollama endpoints at service creation and blocked disallowed remote inference before HTTP I/O.
-- Disabled Cactus telemetry before initializing the runtime.
-- Replaced the fixed OpenAI server key with a generated secret stored in secure storage.
-- Removed false-success mobile action, offline knowledge, OCR, transcription, and Prompt Lab responses.
+- Replaced fixed invoice OCR, canned meeting transcripts, simulated embedding/BM25, fixed hardware, echo API responses, and checksum-only backup security with real runtime paths.
+- Applied saved Ollama endpoints, policy-gated non-loopback use before I/O, official embedding/chat APIs, pull progress, and final token metrics.
+- Fixed prompt-enhancer model clearing and routed local/Ollama/remote enhancement through the shared pipeline without hidden-reasoning instructions.
+- Fixed document deletion/index persistence, backup corruption/wrong-password handling, atomic rollback, and page-aware citation retrieval.
+- Fixed chat stop behavior, tool event rendering, update preference duplication, theme-token violations, and misleading audio/model/server/settings copy.
+
+### Security
+
+- Stores Tavily, remote-provider, and embedded-server credentials in platform secure storage and does not include plaintext secrets in normal settings exports.
+- Enforces Strict Offline before all non-loopback application-owned transports and external browser launches while retaining audited loopback access.
+- Hardened the Android manifest by removing inherited legacy external-storage and privileged install permissions and the stale exported installer receiver.
+- Requires one-shot user confirmation before every supported side-effect tool and denies those tools in headless requests without a confirmer.
+
+### Removed
+
+- Removed inert `MobileActionService`, canned offline knowledge, duplicate typed-tool service, fake document workspace, hardcoded model catalog/benchmark data, filename-based family/capability inference, automatic task router, and model-profile registry.
+- Removed unsupported audio timestamp/diarization/summary/task claims and Whisper first-use download messaging.
 
 ### Known limitations
 
 - OCR is Android-only in this release.
-- Encrypted restore validates the whole archive before import, but individual Hive writes are not transactional as one atomic database operation.
-- The OpenAI-compatible service is covered by live localhost tests but has no in-app start/stop screen yet.
-- Physical-device model, OCR, Whisper, and accelerator performance remains device-dependent.
+- Scanned-PDF OCR, native Qwen/LFM tool templates, and trusted-host/CORS server controls are not enabled.
+- Physical-device model/Whisper/reminder performance and production-signed upgrade preservation remain unverified.
+- Cactus Flutter 1.3 was archived upstream in July 2026 and remains a maintenance risk.
 
 ## [1.0.35] - 2026-08-04
 
@@ -51,7 +70,7 @@ We use a specific versioning pattern:
 - **Typed Tool-Calling Engine & JSON Schema Validation**: Structured tool execution parser (`TypedToolCallingService`) validating JSON payloads `{"tool": "...", "arguments": {...}}` with JSON schema enforcement, execution timeouts, parameter rejection, and execution history tracking.
 - **Skill Permission Manifest & Inspector**: Granular permission declaration system (`SkillPermissionManifest`) parsing SKILL.md YAML frontmatter permissions (`network`, `filesystem`, `device`, `risk`) with pre-installation risk warnings.
 - **Agentic Mobile Action Engine**: Native device action scheduler (`MobileActionService`) supporting `scheduleReminder`, `createNote`, `draftEmail`, and `copyToClipboard` with user confirmation prompts.
-- **Offline Audio Transcription Workspace**: Dedicated audio workspace (`AudioTranscriptionScreen` & `AudioTranscriptionService`) providing timestamped transcriptions, meeting summaries, task extractions, and `.txt`/`.md`/`.srt` export capabilities.
+- **Offline Audio Transcription Workspace**: Added the first audio-workspace prototype. The v1.0.36 audit later found that its timestamp, summary, and task outputs were canned rather than runtime-derived; those claims and outputs are removed in v1.0.36.
 - **Prompt Lab & Parameter Benchmarking Workspace**: Engineering environment (`PromptLabScreen`) for system prompt editing, dynamic variable replacements `{{variable}}`, sampling parameter sliders (Temperature, Top P, Top K, Repeat Penalty), and side-by-side prompt benchmarks.
 - **Embedded OpenAI-Compatible Local Server**: Local HTTP server (`OpenAiServerService`) exposing `/v1/chat/completions`, `/v1/models`, and `/v1/embeddings` bound to `localhost` with bearer token security and live request audit logs.
 - **Encrypted Local Backup & Data Migration**: Archive export and restore service (`BackupMigrationService`) generating password-protected `.pllm` JSON archives containing chats, settings, personas, skills, and memories with SHA-256 integrity verification.

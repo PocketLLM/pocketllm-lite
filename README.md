@@ -16,12 +16,13 @@ PocketLLM Lite is a Flutter assistant for running supported models on your devic
 - Streaming local chat through Cactus and loopback/LAN Ollama adapters.
 - Persistent chat history, personas, prompts, skills, tags, settings, and local memories.
 - PDF, TXT, Markdown, and CSV document ingestion with source-aware retrieval.
-- Canonical JSON tool calls with strict argument validation, bounded execution, safe arithmetic, system time information, and policy-gated Tavily search.
+- Canonical JSON tool calls with strict validation, bounded continuation, safe arithmetic, measured system information, and policy-gated Tavily search.
+- User-confirmed clipboard, persistent-note, reminder, email-draft, and HTTP(S) browser tools with visible execution cards.
 - Hugging Face GGUF search, gated-repository token storage, file selection, and model downloads.
 - On-device Android OCR using ML Kit Latin text recognition.
-- On-device Whisper transcription through Cactus; the model is downloaded on first use when policy permits.
-- Password-derived AES-256-GCM backups that reject wrong passwords and corruption.
-- An authenticated, loopback-first OpenAI-compatible server for models, chat completions, SSE streaming, and embeddings.
+- On-device Whisper transcription through an already-installed Cactus model; unmanaged automatic downloads are disabled.
+- Password-derived AES-256-GCM backups that reject wrong passwords/corruption and roll storage plus document indexes back on restore failure.
+- An authenticated, loopback-first OpenAI-compatible server with in-app host, port, key, start/stop, models, chat, SSE, embeddings, and request logs.
 - Strict Offline controls and a network audit log for app-owned update, discovery, download, skill, search, and remote-inference paths.
 - Material 3 light/dark themes and six localization resource sets.
 
@@ -41,9 +42,9 @@ Strict Offline blocks non-loopback requests before application-owned HTTP I/O. L
 
 ## Model setup
 
-### Cactus on-device models
+### Local GGUF with Cactus
 
-Open the model browser, choose a model returned by the installed Cactus runtime, download it, and load it. Capability labels come from runtime metadata; model availability may change upstream.
+Import a local GGUF or select a GGUF file discovered through Hugging Face. PocketLLM verifies the file header, available storage, and a published SHA-256 when source metadata provides one, then records a `ModelManifest`. A successful Cactus load confirms that exact file on the current backend/device; unknown vision, tool, reasoning, and embedding capabilities remain unknown.
 
 ### Ollama
 
@@ -54,7 +55,7 @@ Open the model browser, choose a model returned by the installed Cactus runtime,
 
 ### Custom GGUF
 
-Import a GGUF file from the model screen. PocketLLM validates the `GGUF` header before copying it into the app model directory. A valid header does not guarantee the installed backend supports that model architecture.
+Import a GGUF file from the model screen. PocketLLM validates the `GGUF` header before copying it into the app model directory. A valid header does not guarantee the installed backend supports that model architecture. Image input stays disabled unless the manifest or configured provider explicitly confirms vision support.
 
 ## Development
 
@@ -77,12 +78,14 @@ flutter build apk --split-per-abi --release
 
 - Android OCR is implemented; iOS OCR is not enabled in this release.
 - Cactus 1.3 transcription returns text and performance metrics, but not verified word/segment timestamps or speaker diarization. PocketLLM does not invent them.
-- Cactus model downloads are supplied by the upstream runtime. Availability and compatibility depend on that catalog and the device.
+- Audio transcription requires an already-installed `whisper-tiny` Cactus model. The current API does not expose verified segments, timestamps, or diarization.
+- The Cactus Flutter repository was archived upstream in July 2026. PocketLLM disables its telemetry and unmanaged download paths, but long-term backend maintenance remains a risk.
 - Android does not expose one reliable cross-vendor GPU/NPU capability probe, so accelerator status may be unknown.
 - Large models can still exhaust memory. Hardware recommendations are conservative when measurements are unavailable.
 - Physical-device inference, OCR quality, and Whisper speed vary by device and model and are not represented by invented benchmark numbers.
-- Encrypted archives are authenticated before import, but the subsequent per-record Hive writes are not one atomic database transaction.
-- The OpenAI-compatible server service has verified localhost routes but no in-app start/stop screen in v1.0.36.
+- Restore is validated before mutation and rolls app storage and document indexes back on failure; an OS kill cannot provide database-wide ACID guarantees.
+- The OpenAI-compatible server has in-app controls but not trusted-host or configurable CORS allowlists; keep it on loopback unless LAN exposure is understood.
+- Tool-created notes have no separate manager screen, and reminder delivery varies with device/OEM background restrictions.
 
 See [the v1.0.36 audit](docs/V1_0_36_PRODUCT_AUDIT.md), [verification matrix](docs/V1_0_36_VERIFICATION.md), [known limitations](docs/KNOWN_LIMITATIONS.md), and [security policy](SECURITY.md) for details.
 

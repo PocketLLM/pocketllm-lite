@@ -74,9 +74,7 @@
 
 ## Final execution status
 
-- Tasks 1, 4, and 5 completed with source, negative-path tests, and release/device evidence.
-- Task 2 completed for shared inference, memory preparation, canonical tools, and Chat's bounded loop. Central tool execution for non-Chat clients remains deferred and documented.
-- Task 3 completed for persistent memories and real retrieval algorithms. Existing document storage/RAG paths remain, but universal citation quality is not claimed.
-- Task 6 removed displayed invented metadata and retained runtime discovery. A dated signed model manifest remains deferred.
-- Task 7 completed automated coverage and an Android emulator install/launch/visual pass. Physical-device inference, OCR, Whisper, and exhaustive button traversal were unavailable.
-- Task 8 completed documentation, clean format, zero-issue analysis, 96 tests, obfuscated universal/split release builds, checksum, package inspection, and emulator smoke. Production tag/release publication is blocked because the repository has no production signing configuration and the artifact verifies as Android Debug signed.
+- Tasks 1-7 are complete for the supported v1.0.36 scope. The final system uses one generation pipeline, canonical tools, persistent structured memory, real hybrid retrieval, stable document citations, central network policy, Android ML Kit OCR, selected-file Whisper input, authenticated backups, measured model manifests, and honest unsupported states.
+- Final verification passed `flutter analyze`, 127 unit/widget/regression tests, and six Android integration flows. The obfuscated universal and split release APKs built, and the exact universal artifact passed checksum, package/version, installation, clean-start, UI, and log inspection.
+- Physical-device local-model performance, Whisper quality, reminder wake/reboot delivery, iOS OCR, and scanned-PDF OCR remain explicitly unverified or unsupported.
+- Task 8 is complete through an engineering release candidate. Production tag/release publication is blocked because `android/key.properties` is absent and `apksigner` identifies the artifact as Android Debug signed. The debug-signed APK must not be published as the production release.
