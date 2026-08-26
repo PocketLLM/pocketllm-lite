@@ -4,11 +4,11 @@ class LegalConstants {
 
 **Effective Date: August 03, 2026**
 
-PocketLLM Lite performs AI inference locally by default and does not include behavioral analytics or advertising trackers. Chats remain on the device when using local inference. Optional online features, including model downloads, web search, update checks, remote Ollama servers, and GitHub skill installation, connect to external services only as described in the application’s Privacy & Network settings.
+PocketLLM Lite performs AI inference locally by default and does not include behavioral analytics, advertising trackers, or remote crash reporting. Chats remain on the device when using local inference. Configured providers and optional online actions connect to external services as described below and in the application’s Privacy & Network settings.
 
 #### 1. Local Data Storage & Inference
 - **Chat History & Personas:** All messages, prompt templates, personas, custom skills, and attached files are stored locally in sandbox Hive databases on your device.
-- **Local Model Processing:** On-device GGUF inference and local Ollama server calls (`127.0.0.1:11434`) process all prompt content on your machine without transmitting text to external servers.
+- **Local Model Processing:** A compatible installed GGUF runs through the on-device backend. Loopback Ollama calls (`127.0.0.1` or `localhost`) remain on the Android device; a LAN or Internet endpoint sends request content to that configured host.
 
 #### 2. Optional External Connections & User Consent
 The application includes optional network capabilities, which are disabled or subject to explicit consent:
@@ -17,10 +17,12 @@ The application includes optional network capabilities, which are disabled or su
 - **Tavily Web Search:** Real-time search query execution via `api.tavily.com`. Sends the search query and user API key only when web search is enabled.
 - **GitHub Skill Installation:** Downloading skill Markdown manifests from `raw.githubusercontent.com` upon user request.
 - **Remote Ollama Endpoints:** Connecting to external or LAN-hosted Ollama servers. A prominent warning dialog requires explicit user confirmation before connecting to remote hosts.
+- **OpenAI-Compatible Providers:** Sends model identifiers, prompts, relevant history, and requested attachments or embedding text to endpoints you explicitly configure.
+- **External Links:** A user action can open documentation, source, release, or chat links in another application after the network policy records and allows the destination.
 
 #### 3. Voice and Image Processing
-- **Image Processing:** Uploaded images for vision models are processed in-memory or converted locally to base64 strings attached to your local chat session.
-- **Voice Features:** Speech-to-text and text-to-speech run via platform system services or local engines.
+- **Image Processing:** OCR input stays in the Android ML Kit path. Chat images are sent only to a selected model/provider whose capability is explicitly configured; remote providers receive the image content.
+- **Voice Features:** Speech-to-text and text-to-speech can use platform system services whose offline/network behavior depends on the installed platform engine. Audio-file transcription uses an already-installed local Cactus Whisper model.
 
 #### 4. Locally Stored Diagnostic Logs
 - Crash reports, Flutter UI errors, and activity logs are stored locally in `error_logs` and `activity_logs` Hive boxes. No telemetry or log data is uploaded automatically.
@@ -35,9 +37,11 @@ When optional online features are activated, PocketLLM Lite may communicate with
 - `api.tavily.com` (Web search)
 - `raw.githubusercontent.com` (Skill manifests)
 - User-configured remote Ollama IPs/domains (Remote inference)
+- User-configured OpenAI-compatible domains (Remote inference and embeddings)
+- User-selected HTTP(S) destinations opened in another application
 
 #### 7. User Controls & Strict Offline Mode
-In **Settings > Privacy & Network Centre**, you can toggle **Strict Offline Mode** to block all non-loopback connections at application level.
+In **Settings > Privacy & Network Centre**, you can toggle **Strict Offline Mode** to block all non-loopback application-owned requests and policy-aware HTTP(S) link handoffs. Loopback is allowed. The setting is not a device firewall and cannot control another app after a confirmed handoff such as an email draft or package installation.
 ''';
 
   static const String aboutApp = '''
@@ -50,7 +54,7 @@ In **Settings > Privacy & Network Centre**, you can toggle **Strict Offline Mode
 PocketLLM Lite is an open-source, auditable local AI workspace featuring transparent networking, local-by-default inference, private memory, document intelligence, and permission-controlled agent tools.
 
 #### Core Principles
-- **Local-First:** Runs local GGUF models and local Ollama servers without sending chat data to the cloud.
+- **Local-First:** Compatible GGUF models can run on-device; loopback Ollama remains on the device, while configured LAN/remote providers receive the request content they need.
 - **Transparent Privacy:** Detailed audit logging of every external request, Strict Offline Mode, and granular feature toggles.
 - **No Trackers:** Zero advertising SDKs, analytics tracking packages, or remote crash reporting services.
 ''';

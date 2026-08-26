@@ -1,10 +1,16 @@
 import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:file_picker/file_picker.dart';
+
+import '../../../core/domain/background_task.dart';
 import '../../../core/widgets/m3_app_bar.dart';
 import '../../../core/widgets/m3_empty_state.dart';
+import '../../../core/widgets/m3_section_header.dart';
+import '../domain/document.dart';
+import '../domain/rag_models.dart';
 import '../providers/rag_provider.dart';
 
 class DocumentManagerScreen extends ConsumerWidget {
@@ -13,196 +19,350 @@ class DocumentManagerScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(ragDocumentsProvider);
-    final theme = Theme.of(context);
-
+    final setup = state.setup;
+    final ready = setup?.ready ?? false;
     return Scaffold(
       appBar: M3AppBar(
-        title: 'RAG Documents',
-        onBack: () {
-          if (GoRouter.of(context).canPop()) {
-            context.pop();
-          } else {
-            context.go('/settings');
-          }
-        },
+        title: 'Knowledge Base',
+        onBack: () =>
+            context.canPop() ? context.pop() : context.go('/settings'),
       ),
-      body: state.isLoading && state.documents.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : state.error != null
-              ? Center(
-                  child: Text(
-                    'Error: ${state.error}',
-                    style: TextStyle(color: theme.colorScheme.error),
-                  ),
-                )
-              : state.documents.isEmpty
-                  ? const M3EmptyState(
-                      icon: Icons.library_books,
-                      title: 'No documents added yet',
-                      description:
-                          'Add PDF, TXT, Markdown, or CSV files to build your local knowledge base.',
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16.0),
-                      itemCount: state.documents.length,
-                      itemBuilder: (context, index) {
-                        final doc = state.documents[index];
-                        final sizeMB = doc.sizeBytes / (1024 * 1024);
-
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12.0),
-                          elevation: 0,
-                          color: theme.colorScheme.surfaceContainerHighest
-                              .withValues(
-                            alpha: 0.3,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
-                                color: theme.colorScheme.outlineVariant),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                              vertical: 8.0,
-                            ),
-                            leading: Icon(
-                              Icons.description,
-                              color: theme.colorScheme.primary,
-                              size: 32,
-                            ),
-                            title: Text(
-                              doc.title,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${sizeMB.toStringAsFixed(2)} MB • ${doc.totalChunks} chunks',
-                                ),
-                                Text(
-                                  'Added: ${doc.ingestedAt.toLocal().toString().split(' ')[0]}',
-                                ),
-                              ],
-                            ),
-                            trailing: IconButton(
-                              icon: Icon(
-                                Icons.delete_outline,
-                                color: theme.colorScheme.error,
-                              ),
-                              onPressed: () async {
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: const Text('Delete Document?'),
-                                    content: Text(
-                                      'Are you sure you want to delete "${doc.title}" from your knowledge base?',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(ctx, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      FilledButton(
-                                        onPressed: () =>
-                                            Navigator.pop(ctx, true),
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor:
-                                              theme.colorScheme.error,
-                                          foregroundColor:
-                                              theme.colorScheme.onError,
-                                        ),
-                                        child: const Text('Delete'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-
-                                if (confirm == true) {
-                                  ref
-                                      .read(ragDocumentsProvider.notifier)
-                                      .deleteDocument(doc.id);
-                                }
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(ragDocumentsProvider),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 96),
+          children: [
+            _SetupCard(setup: setup, isLoading: state.isLoading),
+            if (state.error != null) _ErrorCard(message: state.error!),
+            if (state.tasks.isNotEmpty) ...[
+              const M3SectionHeader(
+                title: 'Indexing tasks',
+                icon: Icons.pending_actions,
+              ),
+              ...state.tasks.take(5).map((task) => _TaskCard(task: task)),
+            ],
+            const M3SectionHeader(
+              title: 'Documents',
+              icon: Icons.library_books_outlined,
+            ),
+            if (state.isLoading && state.documents.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(40),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (state.documents.isEmpty)
+              M3EmptyState(
+                icon: Icons.description_outlined,
+                title: ready ? 'No documents yet' : 'Finish setup first',
+                description: ready
+                    ? 'Add a PDF, TXT, Markdown, or CSV file. Processing and retrieval stay on this device.'
+                    : 'Choose a retrieval mode and install any required local embedding model before adding files.',
+              )
+            else
+              ...state.documents.map(
+                (document) => _DocumentCard(document: document),
+              ),
+          ],
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: state.isLoading
-            ? null
-            : () async {
-                final result = await FilePicker.platform.pickFiles(
-                  type: FileType.custom,
-                  allowedExtensions: ['pdf', 'txt', 'md', 'csv'],
-                );
+        onPressed: ready && !state.isLoading
+            ? () => _pickDocument(context, ref)
+            : null,
+        icon: const Icon(Icons.add),
+        label: const Text('Add document'),
+      ),
+    );
+  }
 
-                if (result != null && result.files.single.path != null) {
-                  final file = File(result.files.single.path!);
+  Future<void> _pickDocument(BuildContext context, WidgetRef ref) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'txt', 'md', 'csv'],
+    );
+    final path = result?.files.single.path;
+    if (path == null) return;
+    await ref.read(ragDocumentsProvider.notifier).ingestFile(File(path));
+    if (!context.mounted) return;
+    final error = ref.read(ragDocumentsProvider).error;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          error == null
+              ? 'Document indexed and ready for retrieval.'
+              : 'Document indexing stopped: $error',
+        ),
+      ),
+    );
+  }
+}
 
-                  // Show loading snackbar
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: theme.colorScheme.inversePrimary,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Ingesting document... this may take a moment.',
-                            ),
-                          ],
+class _SetupCard extends ConsumerWidget {
+  final RagSetupStatus? setup;
+  final bool isLoading;
+
+  const _SetupCard({required this.setup, required this.isLoading});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final mode = setup?.mode ?? RagRetrievalMode.keyword;
+    final selectedModel = setup?.embeddingModelId;
+    return Card.filled(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.tune, color: theme.colorScheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Retrieval setup',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                _StatusBadge(ready: setup?.ready ?? false),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SegmentedButton<RagRetrievalMode>(
+              segments: RagRetrievalMode.values
+                  .map(
+                    (value) => ButtonSegment(
+                      value: value,
+                      label: Text(value.label),
+                    ),
+                  )
+                  .toList(growable: false),
+              selected: {mode},
+              showSelectedIcon: false,
+              onSelectionChanged: isLoading
+                  ? null
+                  : (selection) {
+                      final next = selection.single;
+                      ref.read(ragDocumentsProvider.notifier).configure(
+                            mode: next,
+                            embeddingModelId: next.requiresEmbedding
+                                ? selectedModel ??
+                                    supportedEmbeddingModels.first.id
+                                : null,
+                          );
+                    },
+            ),
+            const SizedBox(height: 12),
+            Text(mode.description, style: theme.textTheme.bodyMedium),
+            if (mode.requiresEmbedding) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue:
+                    selectedModel ?? supportedEmbeddingModels.first.id,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Embedding model',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(28)),
+                  ),
+                ),
+                items: supportedEmbeddingModels
+                    .map(
+                      (model) => DropdownMenuItem(
+                        value: model.id,
+                        child: Text(
+                          '${model.name} · ${model.catalogSizeMb} MB',
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        duration: const Duration(
-                          seconds: 10,
-                        ), // Will be hidden manually or replaced
                       ),
-                    );
-                  }
+                    )
+                    .toList(growable: false),
+                onChanged: isLoading
+                    ? null
+                    : (modelId) {
+                        if (modelId != null) {
+                          ref.read(ragDocumentsProvider.notifier).configure(
+                                mode: mode,
+                                embeddingModelId: modelId,
+                              );
+                        }
+                      },
+              ),
+              if (!(setup?.embeddingModelInstalled ?? false)) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'This model is not installed. Download it in Model Store before indexing.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.tonalIcon(
+                  onPressed: () => context.push('/settings/model-catalog'),
+                  icon: const Icon(Icons.download_outlined),
+                  label: const Text('Open Model Store'),
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
 
+class _StatusBadge extends StatelessWidget {
+  final bool ready;
+  const _StatusBadge({required this.ready});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Flexible(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: ready ? colors.primaryContainer : colors.errorContainer,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          ready ? 'Ready' : 'Setup needed',
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color:
+                    ready ? colors.onPrimaryContainer : colors.onErrorContainer,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TaskCard extends StatelessWidget {
+  final BackgroundTask task;
+  const _TaskCard({required this.task});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card.outlined(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(task.title, style: theme.textTheme.titleSmall),
+            const SizedBox(height: 4),
+            Text(task.phase),
+            if (task.progress != null) ...[
+              const SizedBox(height: 10),
+              LinearProgressIndicator(value: task.progress),
+            ],
+            if (task.failure != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${task.failure!.message} ${task.failure!.action}',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DocumentCard extends ConsumerWidget {
+  final IngestedDocument document;
+  const _DocumentCard({required this.document});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final pageCount = document.metadata['pageCount'] as int?;
+    final mode = RagRetrievalMode.parse(
+      document.metadata['retrievalMode'] as String?,
+    );
+    return Card.outlined(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: ListTile(
+        minVerticalPadding: 12,
+        leading: Icon(Icons.description, color: theme.colorScheme.primary),
+        title: Text(document.title, overflow: TextOverflow.ellipsis),
+        subtitle: Text(
+          '${pageCount ?? 1} page${pageCount == 1 ? '' : 's'} · '
+          '${document.totalChunks} chunks · ${mode.label}',
+        ),
+        onTap: () => _showDetails(context, ref),
+      ),
+    );
+  }
+
+  Future<void> _showDetails(BuildContext context, WidgetRef ref) async {
+    final theme = Theme.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(document.title, style: theme.textTheme.headlineSmall),
+              const SizedBox(height: 12),
+              Text('File: ${document.filename}'),
+              Text('Size: ${document.sizeBytes} bytes'),
+              Text('Pages: ${document.metadata['pageCount'] ?? 1}'),
+              Text('Chunks: ${document.totalChunks}'),
+              Text('Mode: ${document.metadata['retrievalMode'] ?? 'legacy'}'),
+              if (document.metadata['embeddingModelId'] != null)
+                Text(
+                  'Embedding model: ${document.metadata['embeddingModelId']}',
+                ),
+              Text('Indexed: ${document.ingestedAt.toLocal()}'),
+              const SizedBox(height: 20),
+              FilledButton.tonalIcon(
+                onPressed: () async {
+                  Navigator.pop(sheetContext);
                   await ref
                       .read(ragDocumentsProvider.notifier)
-                      .ingestFile(file);
+                      .deleteDocument(document.id);
+                },
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Delete local index'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    final error = ref.read(ragDocumentsProvider).error;
-                    if (error == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Document successfully added!'),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Failed to add: $error',
-                            style: TextStyle(
-                              color: theme.colorScheme.onError,
-                            ),
-                          ),
-                          backgroundColor: theme.colorScheme.error,
-                        ),
-                      );
-                    }
-                  }
-                }
-              },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Document'),
+class _ErrorCard extends StatelessWidget {
+  final String message;
+  const _ErrorCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card.filled(
+      color: colors.errorContainer,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          '$message\nReview setup or retry the last task.',
+          style: TextStyle(color: colors.onErrorContainer),
+        ),
       ),
     );
   }

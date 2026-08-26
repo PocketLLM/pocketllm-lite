@@ -1,21 +1,31 @@
-# Security Policy 🛡️
+# Security Policy
 
-## Reporting a Vulnerability
+## Supported version
 
-We take the security of PocketLLM Lite seriously. If you discover a security vulnerability within this project, please **do not** open a public issue. Instead, please report it privately.
+Security fixes target the latest published PocketLLM Lite release. Older builds may not receive fixes.
 
-### How to Report
-Please send an email to **prashantc592114@gmail.com** (replace with your actual email) with the following details:
-- **Type of vulnerability** (e.g., SQL injection, Buffer overflow).
-- **Steps to reproduce** the issue.
-- **Potential impact** of the vulnerability.
-- **Any suggested fixes** (if available).
+## Report a vulnerability privately
 
-We will acknowledge your report within 48 hours and provide a timeline for a fix.
+Do not open a public issue for an unpatched vulnerability. Email **prashantc592114@gmail.com** with:
 
-## Security Practices
-- **Local Storage**: All data is stored in the device's sandbox.
-- **No Cloud Sync**: We do not send your chat history to any external servers.
-- **Dependency Audits**: we regularly update and audit our dependencies to minimize supply chain risks.
+- the affected version and platform;
+- reproducible steps or a minimal proof of concept;
+- the expected impact and any known preconditions; and
+- a safe way to contact you about remediation.
 
-Thank you for helping keep the community safe!
+Please avoid accessing other people's data, disrupting services, or publishing exploit details before a fix is available. Receipt will normally be acknowledged within 48 hours, but remediation time depends on severity and reproducibility.
+
+## Product security boundaries
+
+PocketLLM Lite is local-first, not network-free:
+
+- chats, settings, imported documents, indexes, memories, and local notes are stored in the application sandbox;
+- provider API keys and embedded-server keys use platform secure storage;
+- encrypted exports use AES-256-GCM with a PBKDF2-derived key and are validated before an import replaces local data;
+- local inference stays on the device, while configured Ollama or OpenAI-compatible providers receive the prompt and context needed for a request;
+- explicit model/update downloads, Tavily search, GitHub skill installation, and external links contact their displayed destinations; and
+- Strict Offline Mode centrally blocks non-loopback app-managed HTTP clients and policy-aware external navigation. It cannot prevent another app from using the network after the user intentionally hands content to it, such as an email composer.
+
+The optional embedded OpenAI-compatible server requires an API key. Binding it beyond loopback exposes the service to the selected network; use a trusted LAN and firewall because v1.0.36 does not provide TLS, trusted-host, or CORS allowlists.
+
+Downloaded models and third-party skills remain third-party content. Review their source, license, checksum, requested capabilities, and output before relying on them.

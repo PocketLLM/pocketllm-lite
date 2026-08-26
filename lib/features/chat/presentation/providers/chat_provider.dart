@@ -16,6 +16,8 @@ import '../../../../models/local_model.dart';
 import '../../../../services/generation_pipeline.dart';
 import '../../../../core/navigation.dart';
 
+const Object _chatStateUnset = Object();
+
 class ThinkingParseResult {
   final String thinking;
   final String mainContent;
@@ -89,6 +91,7 @@ class ChatState {
   final String? currentSessionId;
   final String selectedModel;
   final String? systemPrompt;
+  final String? systemPromptId;
   final double temperature;
   final double topP;
   final int topK;
@@ -109,6 +112,7 @@ class ChatState {
     this.currentSessionId,
     this.selectedModel = 'llama3',
     this.systemPrompt,
+    this.systemPromptId,
     this.temperature = 0.7,
     this.topP = 0.9,
     this.topK = 40,
@@ -129,7 +133,8 @@ class ChatState {
     bool? isModelLoading,
     String? currentSessionId,
     String? selectedModel,
-    String? systemPrompt,
+    Object? systemPrompt = _chatStateUnset,
+    Object? systemPromptId = _chatStateUnset,
     double? temperature,
     double? topP,
     int? topK,
@@ -149,7 +154,12 @@ class ChatState {
       isModelLoading: isModelLoading ?? this.isModelLoading,
       currentSessionId: currentSessionId ?? this.currentSessionId,
       selectedModel: selectedModel ?? this.selectedModel,
-      systemPrompt: systemPrompt ?? this.systemPrompt,
+      systemPrompt: identical(systemPrompt, _chatStateUnset)
+          ? this.systemPrompt
+          : systemPrompt as String?,
+      systemPromptId: identical(systemPromptId, _chatStateUnset)
+          ? this.systemPromptId
+          : systemPromptId as String?,
       temperature: temperature ?? this.temperature,
       topP: topP ?? this.topP,
       topK: topK ?? this.topK,
@@ -203,6 +213,7 @@ class ChatNotifier extends Notifier<ChatState> {
     state = state.copyWith(
       activePersonaId: persona.id,
       systemPrompt: persona.systemPrompt,
+      systemPromptId: null,
       temperature: persona.temperature,
     );
     if (persona.modelId != null) {
@@ -221,6 +232,7 @@ class ChatNotifier extends Notifier<ChatState> {
         state = state.copyWith(
           selectedModel: model,
           systemPrompt: settings['systemPrompt'],
+          systemPromptId: null,
           temperature: (settings['temperature'] as num?)?.toDouble() ?? 0.7,
           topP: (settings['topP'] as num?)?.toDouble() ?? 0.9,
           topK: (settings['topK'] as num?)?.toInt() ?? 40,
@@ -233,12 +245,14 @@ class ChatNotifier extends Notifier<ChatState> {
 
   void updateSettings({
     String? systemPrompt,
+    String? systemPromptId,
     double? temperature,
     double? topP,
     int? topK,
   }) {
     state = state.copyWith(
       systemPrompt: systemPrompt,
+      systemPromptId: systemPromptId,
       temperature: temperature,
       topP: topP,
       topK: topK,
@@ -251,6 +265,7 @@ class ChatNotifier extends Notifier<ChatState> {
       currentSessionId: session.id,
       selectedModel: session.model,
       systemPrompt: session.systemPrompt,
+      systemPromptId: session.systemPromptId,
       temperature: session.temperature ?? 0.7,
       topP: session.topP ?? 0.9,
       topK: session.topK ?? 40,
@@ -718,6 +733,7 @@ class ChatNotifier extends Notifier<ChatState> {
       messages: state.messages,
       createdAt: DateTime.now(),
       systemPrompt: state.systemPrompt,
+      systemPromptId: state.systemPromptId,
       temperature: state.temperature,
       topP: state.topP,
       topK: state.topK,

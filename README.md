@@ -7,11 +7,11 @@
 **Local-first AI. Offline when you want it. Network access only when you allow it.**
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.41-02569B?logo=flutter)](https://flutter.dev)
-[![Version](https://img.shields.io/badge/version-1.0.36-6750A4)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.37-6750A4)](CHANGELOG.md)
 
 PocketLLM Lite is a Flutter assistant for running supported models on your device with Cactus, or connecting to an Ollama server you control. Chats, preferences, personas, skills, and memories are stored locally. Optional model discovery, downloads, updates, GitHub skill installs, and Tavily search use the network only when their privacy controls allow it.
 
-## What works in v1.0.36
+## What works in v1.0.37
 
 - Streaming local chat through Cactus and loopback/LAN Ollama adapters.
 - Persistent chat history, personas, prompts, skills, tags, settings, and local memories.
@@ -87,7 +87,7 @@ flutter build apk --split-per-abi --release
 - The OpenAI-compatible server has in-app controls but not trusted-host or configurable CORS allowlists; keep it on loopback unless LAN exposure is understood.
 - Tool-created notes have no separate manager screen, and reminder delivery varies with device/OEM background restrictions.
 
-See [the v1.0.36 audit](docs/V1_0_36_PRODUCT_AUDIT.md), [verification matrix](docs/V1_0_36_VERIFICATION.md), [known limitations](docs/KNOWN_LIMITATIONS.md), and [security policy](SECURITY.md) for details.
+See [the v1.0.36 foundation audit](docs/V1_0_36_PRODUCT_AUDIT.md), [v1.0.37 verification](docs/V1_0_37_VERIFICATION.md), [known limitations](docs/KNOWN_LIMITATIONS.md), and [security policy](SECURITY.md) for details.
 
 ## License status
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
@@ -9,9 +8,7 @@ import '../../core/widgets/m3_app_bar.dart';
 import '../../../../core/constants/legal_constants.dart';
 import '../../core/utils/url_validator.dart';
 
-import '../../core/constants/app_constants.dart';
 import '../../core/providers.dart';
-import '../chat/presentation/providers/models_provider.dart';
 import 'presentation/screens/settings_category_screens.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -22,36 +19,12 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  late TextEditingController _urlController;
   String _version = 'Loading...';
-  bool _isConnecting = false;
-  bool? _isConnected;
 
   @override
   void initState() {
     super.initState();
-    final storage = ref.read(storageServiceProvider);
-    final url = storage.getSetting(
-      AppConstants.ollamaBaseUrlKey,
-      defaultValue: AppConstants.defaultOllamaBaseUrl,
-    );
-    _urlController = TextEditingController(text: url);
     _loadVersion();
-    _checkConnection();
-
-    Future.delayed(Duration.zero, () {
-      _refreshModels();
-    });
-  }
-
-  Future<void> _refreshModels() async {
-    ref.invalidate(modelsProvider);
-  }
-
-  @override
-  void dispose() {
-    _urlController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadVersion() async {
@@ -59,43 +32,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) {
       setState(() => _version = '${info.version} (${info.buildNumber})');
     }
-  }
-
-  Future<void> _checkConnection() async {
-    setState(() => _isConnecting = true);
-    final connected = await ref.read(ollamaServiceProvider).checkConnection();
-    if (mounted) {
-      setState(() {
-        _isConnected = connected;
-        _isConnecting = false;
-      });
-    }
-  }
-
-  Future<void> _saveUrl() async {
-    final url = _urlController.text.trim();
-
-    if (!UrlValidator.isHttpUrlString(url)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Invalid URL: Must start with http:// or https://',
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-
-    final storage = ref.read(storageServiceProvider);
-    await storage.saveSetting(AppConstants.ollamaBaseUrlKey, url);
-    ref.read(ollamaServiceProvider).updateBaseUrl(url);
-
-    await _checkConnection();
-    ref.invalidate(modelsProvider);
   }
 
   @override
@@ -124,8 +60,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _buildConnectionSection(theme),
-            const SizedBox(height: 24),
             _buildCategoryNavList(theme),
             const SizedBox(height: 24),
             _buildAboutSection(theme),
@@ -141,6 +75,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader('Configuration Categories'),
+        ListTile(
+          title: const Text('Model Store'),
+          subtitle: const Text(
+            'Discover, download, import, and inspect on-device models',
+          ),
+          leading: Icon(Icons.storefront, color: theme.colorScheme.primary),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push('/settings/model-catalog'),
+        ),
+        const Divider(height: 1, indent: 56),
         ListTile(
           title: const Text('Prompts & Templates'),
           subtitle: const Text(
@@ -159,9 +103,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         const Divider(height: 1, indent: 56),
         ListTile(
-          title: const Text('Models & Inference'),
+          title: const Text('Providers & Ollama'),
           subtitle: const Text(
-              'Manage local GGUF catalog models and configure active Ollama models'),
+              'Connection state, configured host models, and inference settings'),
           leading: Icon(Icons.memory_rounded, color: theme.colorScheme.primary),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
@@ -175,18 +119,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         const Divider(height: 1, indent: 56),
         ListTile(
-          title: const Text('Knowledge Base & Web Search'),
+          title: const Text('Knowledge Base'),
           subtitle: const Text(
-              'Configure RAG documents and real-time search engine settings'),
+              'Retrieval setup, documents, indexing tasks, and citations'),
           leading: Icon(Icons.library_books, color: theme.colorScheme.primary),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             HapticFeedback.lightImpact();
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const KnowledgeSearchSettingsScreen()),
-            );
+            context.push('/document-manager');
           },
         ),
         const Divider(height: 1, indent: 56),
@@ -302,147 +242,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildConnectionSection(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('Ollama Connection'),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.3,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: theme.colorScheme.outlineVariant),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Status'),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: (_isConnected ?? false)
-                          ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                          : theme.colorScheme.error.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.circle,
-                          size: 8,
-                          color: (_isConnected ?? false)
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.error,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          (_isConnected ?? false)
-                              ? 'Connected'
-                              : 'Disconnected',
-                          style: TextStyle(
-                            color: (_isConnected ?? false)
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.error,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Endpoint URL',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _urlController,
-                decoration: InputDecoration(
-                  hintText: 'http://localhost:11434',
-                  filled: true,
-                  fillColor: theme.colorScheme.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                ),
-                onSubmitted: (_) => _saveUrl(),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isConnecting
-                          ? null
-                          : () async {
-                              await _saveUrl();
-                              await _refreshModels();
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: theme.colorScheme.onPrimary,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: _isConnecting
-                          ? SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: theme.colorScheme.onPrimary,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text('Test Connection'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () async {
-                        await _saveUrl();
-                        await _refreshModels();
-                      },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('Connect'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildAboutSection(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -543,12 +342,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 onTapLink: (text, href, title) async {
                   if (href != null) {
-                    final uri = Uri.parse(href);
-                    if (UrlValidator.isSecureUrl(uri) &&
-                        await canLaunchUrl(uri)) {
-                      await launchUrl(
-                        uri,
-                        mode: LaunchMode.externalApplication,
+                    final uri = Uri.tryParse(href);
+                    if (uri == null || !UrlValidator.isSecureUrl(uri)) return;
+                    try {
+                      await ref
+                          .read(externalNavigationServiceProvider)
+                          .openHttpUrl(
+                            uri,
+                            trigger: 'legal_document_link',
+                          );
+                    } catch (error) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(error.toString())),
                       );
                     }
                   }

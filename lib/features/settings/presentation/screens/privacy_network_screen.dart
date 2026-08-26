@@ -502,33 +502,26 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                     children: [
                       const Icon(Icons.dns_rounded),
                       const SizedBox(width: 8),
-                      const Text('Inference Endpoint Status',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
-                      const Spacer(),
-                      Chip(
-                        avatar: Icon(
-                          isOllamaLocal
-                              ? Icons.verified_user_rounded
-                              : Icons.cell_tower_rounded,
-                          size: 16,
-                          color: isOllamaLocal
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.error,
+                      Expanded(
+                        child: Text(
+                          'Ollama destination',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        label: Text(
-                          isOllamaLocal ? 'Local Loopback' : 'Remote Network',
-                          style: TextStyle(
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          isOllamaLocal ? 'On device' : 'Network host',
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelMedium?.copyWith(
                             color: isOllamaLocal
                                 ? theme.colorScheme.primary
                                 : theme.colorScheme.error,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        backgroundColor: (isOllamaLocal
-                                ? theme.colorScheme.primaryContainer
-                                : theme.colorScheme.errorContainer)
-                            .withValues(alpha: 0.7),
                       ),
                     ],
                   ),
@@ -799,7 +792,12 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
           // ── External Connection Audit History ──
           Row(
             children: [
-              Text('Connection Audit Log', style: theme.textTheme.titleMedium),
+              Expanded(
+                child: Text(
+                  'Network audit',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
               const Spacer(),
               TextButton.icon(
                 icon: const Icon(Icons.refresh_rounded, size: 16),
@@ -807,6 +805,12 @@ class _PrivacyNetworkScreenState extends ConsumerState<PrivacyNetworkScreen> {
                 onPressed: () => setState(() {}),
               ),
             ],
+          ),
+          Text(
+            'Allowed and blocked connection attempts only. General app actions are recorded separately in Activity History.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 8),
           StreamBuilder<List<NetworkAuditEntry>>(

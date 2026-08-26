@@ -1,68 +1,115 @@
-# PocketLLM Lite v1.0.36 — Truth & Integration
+# PocketLLM Lite v1.0.37 — Durable Local Workspaces
 
 ## Highlights
 
-This release connects previously separate AI paths to one generation pipeline and replaces demonstration results with real execution or an honest unavailable state. It focuses on data safety, runtime evidence, and predictable failure behavior.
+v1.0.37 turns Knowledge, Audio, model acquisition, and conversation settings
+into durable workflows. It keeps the v1.0.36 truth-and-integration foundation:
+one generation pipeline, central Strict Offline enforcement, real local data,
+and honest unavailable states instead of simulated success.
 
-## Local inference and models
+## Knowledge Base
 
-- Chat, Prompt Enhancer, Prompt Lab, model comparison, and the developer API now share context, memory, retrieval, tools, cancellation, and backend selection.
-- Installed local models are real GGUF files with structured manifests. Hugging Face discovery uses published LFS size/SHA metadata when present; downloads check space, checksum, and the GGUF header.
-- Ollama supports chat, embeddings, pull progress, and runtime token statistics through its documented APIs.
-- Generic OpenAI-compatible providers can be configured and stored securely. Endpoint model discovery must succeed before a remote model becomes selectable.
-- Hardcoded model benchmarks, filename-derived capabilities, automatic task routing, and unverified model profiles were removed.
+- First-run setup now comes before file import.
+- Keyword mode uses real BM25 and needs no embedding model.
+- Semantic mode uses real local embeddings and cosine similarity.
+- Hybrid mode combines BM25 and cosine scores before MMR selection.
+- The two embedding entries verified in the pinned Cactus catalog are offered:
+  Qwen3 0.6B Embed and Nomic2 Embed 300M.
+- PDF, TXT, Markdown, and CSV processing reports real page/chunk work through a
+  persistent task and commits the index only after the entire job succeeds.
+- Document details preserve source name, page count, chunk count, mode, model,
+  size, and indexing time.
+- Responses use stable filename/page citations; retrieval diagnostics retain the
+  actual keyword, semantic, fused, and selected scores.
 
-## Memory and documents
+## Audio Workspace
 
-- Structured memories persist across restarts, reject common secret patterns, merge duplicates, supersede contradictory facts, and enter chat context only when enabled and relevant.
-- PDF, TXT, Markdown, and CSV files produce persistent structure-aware chunks with stable document/page metadata.
-- Retrieval uses numeric cosine similarity, Okapi BM25, normalized fusion, and MMR. A generated two-page PDF integration test verifies the correct page citation.
-- Image-only/scanned PDFs report that no extractable text was found; scanned-page OCR is not claimed.
+- Record or Upload audio.
+- Recording supports start, pause, resume, stop, cancel, elapsed time, measured
+  amplitude, 16 kHz mono WAV save, playback, rename, and replace.
+- Whisper model readiness is checked before transcription.
+- Auto Detect plus English, Spanish, Chinese, Japanese, Korean, Hindi, German,
+  and French selections persist and are passed to the local Whisper prompt.
+- Transcription jobs and successful whole-text results persist as durable tasks.
+- Cactus 1.3 does not return verified segment timing, so PocketLLM does not
+  invent timestamps, speakers, summaries, or SRT cues.
 
-## Tools and agent execution
+## Model Store
 
-- Canonical JSON tool calls use strict schemas, structured errors, timeouts, multiple calls, a five-round limit, cancellation, and visible call/result cards.
-- Calculator and measured system information run locally.
-- Clipboard writes, persistent local notes, local notification reminders, email drafts, and HTTP(S) browser launches require one-shot confirmation.
-- Reminder scheduling requests OS notification permission, survives reboot through registered receivers, and does not request exact-alarm privileges.
-- Tavily web search is explicit, secure-key backed, and blocked by Strict Offline before transport. Canned offline knowledge responses were removed.
+- One Model Store presents the live policy-gated Cactus on-device and Whisper
+  catalogs, live Hugging Face GGUF search, installed models, and Browse Files.
+- Search and runtime filters distinguish chat/embedding models from speech
+  models. Managed models always mean files in private on-device app storage;
+  Ollama host models remain separate.
+- Model details show exact catalog ID, source, catalog size, quantization, and
+  declared capabilities. Missing license metadata is shown as missing rather
+  than guessed.
+- Download tasks survive navigation and app restart. Exact byte progress is
+  persisted. Cancellation retains partial data only when the server proves
+  byte-range support and provides an ETag or Last-Modified validator.
+- ZIP extraction rejects traversal paths and symbolic links, validates that a
+  GGUF exists, and atomically publishes a fully extracted model folder.
+- Hugging Face downloads continue to validate published LFS size/SHA metadata
+  and the GGUF header when those values are available.
 
-## Privacy, security, and recovery
+## Chat, providers, and privacy
 
-- Cactus telemetry is disabled. Its unmanaged public discovery and model-download paths are not used.
-- Tavily and remote-provider secrets use platform secure storage; a legacy plaintext Tavily value is migrated and deleted.
-- `.pllm` backup schema 3 uses PBKDF2-HMAC-SHA256 (600,000 iterations) and AES-256-GCM with random salt/nonce. Wrong passwords, tampering, and malformed archives fail before restore.
-- Restore covers chats, settings, prompts, personas, skills, memories, local notes, and the document/vector archive, with rollback after injected failure.
-- Strict Offline covers app-owned HTTP, Dio downloads, and external URL launches. Loopback remains available for same-device Ollama and the embedded API.
-- Direct OTA installation now requires a release APK paired with a valid published SHA-256 checksum. Legacy storage and privileged install permissions were removed.
+- Each chat now stores both system prompt ID and content. Existing chats are
+  migrated by exact content match, and reopening/restarting/switching chats
+  restores the correct prompt selection used by the central generation path.
+- Ollama shows checking, connected, or disconnected behavior. Reachability is
+  checked before its model list is requested, with endpoint-aware retry copy.
+- Settings now exposes clear Model Store, Providers & Ollama, Knowledge Base,
+  Audio Workspace, Privacy & Network, and System destinations.
+- Privacy & Network uses responsive endpoint labels and explicitly identifies
+  its Network Audit as connection attempts, separate from Activity History.
+- Strict Offline still blocks catalogs, remote providers, downloads, search,
+  updates, skills, fonts, and external browser links before transport. Local
+  files, recording, keyword retrieval, installed inference, and loopback remain
+  available.
 
-## Voice and vision
+## Complete capability summary
 
-- Android OCR processes the supplied image through bundled ML Kit Latin recognition. The emulator integration fixture verifies expected text.
-- Audio transcription passes the selected file to an already-installed Cactus Whisper model. Automatic model download is disabled because the SDK path bypasses central network policy.
-- PocketLLM no longer invents OCR confidence, invoice fields, transcript timestamps, speakers, summaries, tasks, or SRT cues.
-- Chat image input is disabled unless the selected manifest/provider explicitly confirms vision capability.
-
-## Developer API
-
-The Privacy & Network screen controls the authenticated embedded service: host, port, generated key, start/stop, and logs. `/v1/models`, `/v1/chat/completions` (JSON and SSE), and `/v1/embeddings` invoke real configured PocketLLM runtimes. Loopback is the default; LAN mode shows a warning.
+- Local GGUF chat through the pinned Cactus runtime, user-configured Ollama, and
+  generic OpenAI-compatible providers.
+- Streaming chat, persisted history, per-chat sampling/system prompts, personas,
+  templates, prompt enhancement, Prompt Lab, comparison, cancellation, and
+  measured runtime metrics.
+- Persistent structured memory with sensitivity filtering and contradiction
+  handling.
+- Real local document retrieval and citations.
+- Typed schema-validated calculator, system, clipboard, note, reminder, email,
+  URL, and optional Tavily web-search tools with risk-based confirmation.
+- Android ML Kit image OCR without fabricated confidence or fields.
+- Authenticated PBKDF2/AES-256-GCM portable backups with rollback.
+- Authenticated embedded OpenAI-compatible models/chat/SSE/embeddings server.
+- Material 3 light/dark UI, localization resources, responsive compact layouts,
+  network controls, activity/error logs, statistics, benchmarks, and verified
+  checksum-gated OTA handoff.
 
 ## Upgrade notes
 
-- Version: `1.0.36+36`.
-- Existing chats/settings are preserved. Legacy plaintext JSON remains import-only; new portable backups are encrypted `.pllm` schema 3 archives and require at least eight password characters.
-- Models without confirmed vision metadata no longer show an image-input control.
-- The previous automatic router/profile UI and simulated mobile-action state were removed. Real supported actions now execute through confirmation-gated tools.
-- Audio transcription requires an existing `whisper-tiny` model directory; there is no first-use automatic download.
+- Version: `1.0.37+37`.
+- Existing Hive data is preserved. Chat prompt identity is an additive field;
+  old prompt content remains authoritative if no exact template match exists.
+- New durable task records normalize unfinished processes to Interrupted after
+  restart and provide an honest retry action.
+- Android now requests microphone permission only when recording is started.
+- `record` 6.2 is used because Cactus Flutter 1.3 constrains the compatible
+  package major version.
 
 ## Known limitations
 
-- Production Android publication is blocked until the project supplies its existing production signing identity and completes physical-device upgrade validation.
+- Production Android signing material is not stored in the repository. A build
+  made without it is debug-certificate signed and cannot replace an installed
+  production-signed app.
+- Physical-device microphone quality, large-model performance, reminder wake
+  delivery, and production-certificate upgrade preservation require hardware
+  and signing evidence outside this repository.
 - Android OCR is Latin-script only; iOS OCR and scanned-PDF OCR are not enabled.
-- Physical-device local-model inference, Whisper accuracy/performance, and notification delivery were not verified in this environment.
-- The archived Cactus Flutter dependency is a maintenance risk.
+- Cactus Flutter 1.3 was archived upstream and remains a maintenance risk.
 - The embedded server has no trusted-host or configurable CORS allowlist.
-- Model-family-native Qwen/LFM tool templates are not enabled without authoritative installed-model metadata.
+- Cactus catalog responses do not provide complete upstream license metadata.
 
 ## Release build
 
@@ -70,4 +117,5 @@ The Privacy & Network screen controls the authenticated embedded service: host, 
 flutter build apk --split-per-abi --release
 ```
 
-Exact artifact, checksum, signer, test, emulator, and publication status are recorded in `docs/V1_0_36_VERIFICATION.md`.
+Exact artifact, checksum, signer, test, and publication truth is recorded in
+`docs/V1_0_37_VERIFICATION.md`.

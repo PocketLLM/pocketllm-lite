@@ -31,10 +31,62 @@ class UnifiedModel {
   });
 }
 
-final modelsProvider = FutureProvider<List<OllamaModel>>((ref) async {
+enum OllamaConnectionPhase { connected, disconnected }
+
+class OllamaConnectionSnapshot {
+  final OllamaConnectionPhase phase;
+  final String endpoint;
+  final List<OllamaModel> models;
+  final String? message;
+
+  const OllamaConnectionSnapshot({
+    required this.phase,
+    required this.endpoint,
+    this.models = const [],
+    this.message,
+  });
+
+  bool get isConnected => phase == OllamaConnectionPhase.connected;
+}
+
+final ollamaConnectionProvider = FutureProvider<OllamaConnectionSnapshot>((
+  ref,
+) async {
   final ollama = ref.watch(ollamaServiceProvider);
   final timeout = ref.watch(modelDiscoveryTimeoutProvider);
-  return ollama.listModels().timeout(timeout);
+  final connected = await ollama.checkConnection().timeout(
+        timeout,
+        onTimeout: () => false,
+      );
+  if (!connected) {
+    return OllamaConnectionSnapshot(
+      phase: OllamaConnectionPhase.disconnected,
+      endpoint: ollama.baseUrl,
+      message: 'Ollama is not reachable. Start the host or check the endpoint.',
+    );
+  }
+  try {
+    final models = await ollama.listModels().timeout(timeout);
+    return OllamaConnectionSnapshot(
+      phase: OllamaConnectionPhase.connected,
+      endpoint: ollama.baseUrl,
+      models: models,
+    );
+  } catch (error) {
+    return OllamaConnectionSnapshot(
+      phase: OllamaConnectionPhase.disconnected,
+      endpoint: ollama.baseUrl,
+      message: 'Connected, but the Ollama model list failed: $error',
+    );
+  }
+});
+
+final modelsProvider = FutureProvider<List<OllamaModel>>((ref) async {
+  final connection = await ref.watch(ollamaConnectionProvider.future);
+  if (!connection.isConnected) {
+    throw StateError(connection.message ?? 'Ollama is disconnected.');
+  }
+  return connection.models;
 });
 
 final unifiedModelsProvider = FutureProvider<List<UnifiedModel>>((ref) async {
@@ -88,6 +140,11 @@ Future<List<UnifiedModel>> _discoverOllamaModels(
   Duration timeout,
 ) async {
   try {
+    final connected = await ollama.checkConnection().timeout(
+          timeout,
+          onTimeout: () => false,
+        );
+    if (!connected) return const [];
     final List<OllamaModel> ollamaModels =
         await ollama.listModels().timeout(timeout);
     return [

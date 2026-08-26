@@ -42,18 +42,19 @@ Status meanings: **Verified** has direct automated or emulator evidence; **Imple
 | Model discovery/import/download | Yes | Hugging Face API, LFS metadata, GGUF header/SHA/storage validation | App model directory + manifest | Download/storage tests | Implemented; Cactus public discovery/implicit download disabled |
 | Download progress/retry/resume | Yes | Dio range/resume path and explicit errors | Partial file | Service tests | Implemented; gated repositories require a user token |
 | Model metadata/capabilities/licenses | Catalog/detail | `ModelManifest` from backend or source evidence | Versioned registry | Serialization/truth tests | Constrained; unknown fields stay unknown and load success marks compatibility |
+| Device-aware model recommendation | Installed-model details | Actual current RAM/thermal measurements, file-size lower bound, explicit backend/load status, no invented speed or RAM formula | Manifest load result | Six simulated-hardware evidence tests | Verified; incomplete metadata stays Experimental and positive labels require a prior exact-device load |
 | Hardcoded catalog/benchmarks/router profiles | No | Deleted | N/A | Regression search/test | Removed; no filename-based capability or speed claims |
 | Ollama | Settings/chat | Official chat, embeddings, pull stream, and final token stats endpoints | Endpoint setting | HTTP/service tests | Verified with mock server; remote hosts obey policy |
 | Generic OpenAI-compatible providers | Privacy/network UI | Secure registry, endpoint model confirmation, chat/vision/embeddings | Secure storage | Live mock endpoint tests | Verified; capabilities are user-configured, not inferred |
 | Embedded OpenAI server | Privacy/network UI | Authenticated models, chat, SSE and embeddings through PocketLLM runtimes | Secure generated key | Live localhost socket tests | Verified; loopback default and explicit LAN warning |
 | Server concurrency/rate/cancellation/audit | UI/log | Concurrency cap, rate limit, disconnect cancellation, request log | Current process | Service tests | Implemented; no trusted-host/CORS allowlist yet |
-| Strict Offline | Privacy/network UI | Central gateway and preflight for app-owned HTTP/Dio/URL launch | Setting + audit log | Every-purpose pre-I/O denial tests | Verified at app boundary; loopback intentionally allowed |
+| Strict Offline | Privacy/network UI | Central gateway and preflight for app-owned HTTP/Dio/HTTP(S) link launch | Setting + audit log | Every-purpose pre-I/O denial, external-launch, and bypass-regression tests | Verified at app boundary; loopback intentionally allowed; confirmed `mailto:` handoff remains outside the browser policy |
 | Tavily/provider/server secrets | Settings | Flutter secure storage | OS keystore/keychain | Migration tests | Verified; legacy Tavily plaintext is deleted |
 | OTA update | Dialog/settings | Manual/automatic policy split, APK plus published SHA-256 requirement | Preferences | Metadata/hash and merged-manifest tests | Verified fail-closed metadata path; installer UX remains OS-controlled |
 | Backup export/encryption | Settings | PBKDF2-HMAC-SHA256 (600,000) + AES-256-GCM, schema 3 | `.pllm` archive | Round-trip/tamper/plaintext tests | Verified |
 | Backup restore/migration | Settings | Full validation, wrong-password rejection, storage/document rollback | Hive + document index | Fault-injection and integration restore tests | Verified application-level atomic rollback |
 | Android permissions | OS | Required manifest; legacy storage and privileged `INSTALL_PACKAGES` removed; user-consent `REQUEST_INSTALL_PACKAGES` retained for verified OTA handoff | N/A | Merged release manifest and final APK permission dump | Verified |
-| Version/docs/release artifact | Repository | v1.0.36+36 | Git/artifacts | 127 tests, six Android flows, clean release builds, hash, install, launch, UI, and signer inspection | Engineering candidate verified; production publication blocked by debug signing |
+| Version/docs/release artifact | Repository | v1.0.36+36 | Git/artifacts | 135 tests, six Android flows, clean release builds, hash, install, launch, responsive/theme/accessibility UI matrix, and signer inspection | Engineering candidate verified; production publication blocked by debug signing |
 
 ## False-success paths found and disposition
 
@@ -65,6 +66,7 @@ Status meanings: **Verified** has direct automated or emulator evidence; **Imple
 - Fixed hardware and benchmark values were replaced by measurements, labeled estimates, or unknown states.
 - Duplicate XML/typed tool systems were unified; inert mobile actions and canned knowledge were deleted.
 - Hardcoded model profiles and task routing were removed because the repository lacked verified metadata to support them.
+- Stale website/privacy/onboarding copy that claimed ads, analytics, universal offline voice, open-source/MIT licensing, Android Ollama support, or absolute privacy was replaced with the repository and runtime truth.
 
 ## Release boundary
 

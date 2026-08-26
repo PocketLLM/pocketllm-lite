@@ -1,1 +1,4 @@
-f580d64397934c68b13aee4b49c35247c4486f28d41311849a64546371e61820  PocketLLM-Lite-v1.0.36-android.apk
+0333ee2524eddea66e890831ecd4036a45cb65bac28ca2b26b8dcc2b6bea587b  PocketLLM-Lite-v1.0.37-android.apk
+f2fa43211bf1e6fe3502348150c38ca98cf2fec754eb9ff0b47134a283d94f0e  PocketLLM-Lite-v1.0.37-arm64-v8a.apk
+d23a77198551441d8191d5e1add0a0622c3c07f694b77feca5bba7a63af327f9  PocketLLM-Lite-v1.0.37-armeabi-v7a.apk
+0884c328b3cdf7b1b3526c24b4ab8546219c3810f88f8f8fa87aaf2799b0e8cf  PocketLLM-Lite-v1.0.37-x86_64.apk

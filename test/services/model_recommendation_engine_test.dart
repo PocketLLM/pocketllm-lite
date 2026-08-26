@@ -1,78 +1,104 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pocketllm_lite/models/model_manifest.dart';
 import 'package:pocketllm_lite/services/device_spec_service.dart';
 import 'package:pocketllm_lite/services/model_recommendation_engine.dart';
 
 void main() {
-  late ModelRecommendationEngine engine;
+  const engine = ModelRecommendationEngine();
 
-  setUp(() {
-    engine = ModelRecommendationEngine();
-  });
-
-  test('small model is recommended on typical mobile hardware', () {
-    const profile = DeviceHardwareProfile(
-      totalRamGB: 8.0,
-      availableRamGB: 4.5,
-      cpuArchitecture: 'arm64',
+  DeviceHardwareProfile profile({
+    double? totalRamGB = 8,
+    double? availableRamGB = 4.5,
+    String? thermalState = 'none',
+  }) {
+    return DeviceHardwareProfile(
+      totalRamGB: totalRamGB,
+      availableRamGB: availableRamGB,
+      cpuArchitecture: 'arm64-v8a',
       cpuCores: 8,
-      hasGpuAcceleration: true,
-      availableStorageGB: 32.0,
-      thermalState: 'normal',
+      hasGpuAcceleration: null,
+      availableStorageGB: 32,
+      thermalState: thermalState,
     );
+  }
 
-    final result = engine.evaluateModel(
-      profile: profile,
-      parameterCountB: 1.7,
+  ModelManifest manifest({
+    int fileSizeBytes = 2 * 1024 * 1024 * 1024,
+    ModelSupportStatus status = ModelSupportStatus.installedUntested,
+  }) {
+    return ModelManifest(
+      id: 'fixture',
+      displayName: 'Fixture Q4',
+      source: 'test',
       quantization: 'Q4_K_M',
-      contextLength: 8192,
+      fileSizeBytes: fileSizeBytes,
+      backendCompatibility: const ['Cactus folder runtime'],
+      status: status,
+      lastVerified: DateTime.utc(2026, 8, 25),
     );
+  }
 
-    expect(result.badge, equals(RecommendationBadge.recommended));
-    expect(result.compatibilityScore, greaterThanOrEqualTo(0.75));
-    expect(result.estimatedRamUsageGB, lessThan(4.5));
+  test('untested model remains experimental even with ample RAM', () {
+    final result = engine.evaluate(profile: profile(), manifest: manifest());
+
+    expect(result.badge, RecommendationBadge.experimental);
+    expect(result.loadTestedOnDevice, isFalse);
+    expect(result.evidence.join(' '), contains('not completed a load test'));
   });
 
-  test('oversized model returns tooLarge badge', () {
-    const profile = DeviceHardwareProfile(
-      totalRamGB: 4.0,
-      availableRamGB: 1.8,
-      cpuArchitecture: 'arm64',
-      cpuCores: 4,
-      hasGpuAcceleration: false,
-      availableStorageGB: 10.0,
-      thermalState: 'normal',
+  test('a tested small model with measured headroom is recommended', () {
+    final result = engine.evaluate(
+      profile: profile(),
+      manifest: manifest(
+        fileSizeBytes: 1024 * 1024 * 1024,
+        status: ModelSupportStatus.tested,
+      ),
     );
 
-    final result = engine.evaluateModel(
-      profile: profile,
-      parameterCountB: 14.0,
-      quantization: 'Q8_0',
-      contextLength: 16384,
+    expect(result.badge, RecommendationBadge.recommended);
+    expect(result.loadTestedOnDevice, isTrue);
+    expect(result.evidence.join(' '), contains('previously completed'));
+  });
+
+  test('weight-file lower bound can trigger high memory risk', () {
+    final result = engine.evaluate(
+      profile: profile(totalRamGB: 4, availableRamGB: 1.8),
+      manifest: manifest(fileSizeBytes: 3 * 1024 * 1024 * 1024),
     );
 
-    expect(result.badge, equals(RecommendationBadge.tooLarge));
-    expect(result.compatibilityScore, lessThan(0.50));
+    expect(result.badge, RecommendationBadge.highMemoryRisk);
+    expect(result.evidence.join(' '), contains('weight file alone'));
   });
 
   test('unknown memory never produces a confident recommendation', () {
-    const profile = DeviceHardwareProfile(
-      totalRamGB: null,
-      availableRamGB: null,
-      cpuArchitecture: 'unknown',
-      cpuCores: 4,
-      hasGpuAcceleration: null,
-      availableStorageGB: null,
-      thermalState: null,
+    final result = engine.evaluate(
+      profile: profile(totalRamGB: null, availableRamGB: null),
+      manifest: manifest(status: ModelSupportStatus.tested),
     );
 
-    final result = engine.evaluateModel(
-      profile: profile,
-      parameterCountB: 1,
-      quantization: 'Q4_K_M',
-      contextLength: 4096,
+    expect(result.badge, RecommendationBadge.experimental);
+    expect(result.evidence.join(' '), contains('could not be measured'));
+  });
+
+  test('explicit backend incompatibility is unsupported', () {
+    final result = engine.evaluate(
+      profile: profile(),
+      manifest: manifest(status: ModelSupportStatus.backendUnsupported),
     );
 
-    expect(result.badge, RecommendationBadge.riskOfCrash);
-    expect(result.estimatedSpeed, 'Not benchmarked on this device');
+    expect(result.badge, RecommendationBadge.unsupported);
+  });
+
+  test('severe thermal state prevents a positive label', () {
+    final result = engine.evaluate(
+      profile: profile(thermalState: 'severe'),
+      manifest: manifest(
+        fileSizeBytes: 512 * 1024 * 1024,
+        status: ModelSupportStatus.tested,
+      ),
+    );
+
+    expect(result.badge, RecommendationBadge.highMemoryRisk);
+    expect(result.evidence.join(' '), contains('thermal state is severe'));
   });
 }

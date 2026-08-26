@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../services/external_navigation_service.dart';
 import '../../services/update_service.dart';
 
 /// Dialog to show update information and download progress
@@ -191,8 +191,14 @@ class _UpdateDialogState extends State<UpdateDialog>
   Future<void> _openReleasePage() async {
     final url = Uri.parse(_updateService.getLatestReleaseUrl());
     HapticFeedback.lightImpact();
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+    try {
+      await ExternalNavigationService().openHttpUrl(
+        url,
+        trigger: 'update_dialog_release_page',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.toString());
     }
   }
 

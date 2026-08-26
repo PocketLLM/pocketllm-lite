@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/utils/url_validator.dart';
 import '../../../../core/utils/markdown_handlers.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
+import '../../../../services/external_navigation_service.dart';
 
 class Docs extends StatefulWidget {
   const Docs({super.key});
@@ -28,13 +28,19 @@ class _DocsState extends State<Docs> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  Future<void> _launchUrl(String url) async {
-    // Validate URL scheme
+  Future<void> _openExternalLink(String url) async {
     if (!UrlValidator.isSecureUrlString(url)) return;
-
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      await ExternalNavigationService().openHttpUrl(
+        uri,
+        trigger: 'in_app_documentation_link',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -47,260 +53,99 @@ class _DocsState extends State<Docs> with SingleTickerProviderStateMixin {
     const termuxDocs = '''
 # Termux Setup Guide
 
-## What is Termux?
-Termux is an Android terminal emulator and Linux environment app that works directly with no rooting required. It provides a powerful command-line experience and allows you to run Linux tools on your Android device.
+## What Termux Is
+Termux provides an Android terminal and Linux package environment without requiring root. It is an advanced, separately maintained app; PocketLLM Lite does not install, update, or control it.
 
-## Installation Methods
+## Install from an Official Source
 
-### Method 1: F-Droid (Recommended)
-1. Visit [F-Droid website](https://f-droid.org)
-2. Download and install F-Droid
-3. Search for "Termux" in F-Droid
-4. Install the latest version
-
-### Method 2: GitHub Release
-If F-Droid is not accessible:
-1. Go to [Termux GitHub releases](https://github.com/termux/termux-app/releases)
-2. Download `termux-app_v0.119.0-beta.1+apt-android-7-github-debug_arm64-v8a.apk`
-3. Install the downloaded APK
+- Use the [Termux F-Droid listing](https://f-droid.org/packages/com.termux/) or [official GitHub releases](https://github.com/termux/termux-app/releases).
+- Follow the current release notes instead of an APK filename copied from this guide.
+- Install Termux and every Termux plugin from the same source. Their signing keys differ across sources and mixed installations are incompatible.
+- Android 7 or newer is required for current package support.
 
 ## Initial Setup
 
-1. **Grant Storage Permission**
-   ```bash
-   termux-setup-storage
-   ```
-   - This will prompt for storage access permission
-   - Required for accessing device storage
+Update the package index after installation:
 
-2. **Update Package Repository**
-   ```bash
-   pkg update
-   pkg upgrade
-   ```
-   - Always run this after fresh installation
-   - Type 'y' when prompted
+```bash
+pkg update
+pkg upgrade
+```
 
-3. **Install Essential Packages**
-   ```bash
-   pkg install git cmake golang
-   ```
-   These are required for building Ollama
+Only request shared-storage access if you need it:
 
-## Basic Termux Usage
+```bash
+termux-setup-storage
+```
 
-### Package Management
-- Install package: `pkg install <package-name>`
-- Update packages: `pkg upgrade`
+This grants Termux access to shared device storage; it is not required merely to connect PocketLLM Lite to a server.
+
+## Useful Commands
+
+- Install a package: `pkg install <package-name>`
 - Search packages: `pkg search <query>`
-- Remove package: `pkg remove <package-name>`
+- Update installed packages: `pkg upgrade`
+- Check storage: `df -h`
+- Change mirrors if repository access fails: `termux-change-repo`
 
-### File Navigation
-- Current directory: `pwd`
-- List files: `ls`
-- Change directory: `cd <directory>`
-- Create directory: `mkdir <name>`
-- Remove directory: `rm -r <directory>`
+## Important Boundary
 
-### Text Editing
-- Nano editor: `pkg install nano`
-- Vim editor: `pkg install vim`
-- Edit file: `nano <filename>` or `vim <filename>`
+Ollama's official documentation lists macOS, Windows, and Linux. It does not document Android or Termux as a supported platform. Any Termux build is therefore a community or experimental setup whose commands and compatibility may change. PocketLLM Lite can connect to a working HTTP endpoint, but it does not certify a Termux Ollama build.
 
-## Tips & Best Practices
+## More Information
 
-1. **Performance**
-   - Keep packages updated
-   - Remove unused packages
-   - Clear package cache: `pkg clean`
-
-2. **Usability**
-   - Enable extra keys row in settings
-   - Use a monospace font
-   - Create aliases for common commands
-   - Use tab completion
-
-3. **Storage**
-   - Regular cleanup of downloaded files
-   - Monitor storage usage: `df -h`
-   - Use `termux-setup-storage` for external storage
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Package Installation Fails**
-   ```bash
-   pkg update
-   pkg upgrade
-   ```
-   If still failing, try:
-   ```bash
-   termux-change-repo
-   ```
-
-2. **Storage Access Issues**
-   - Check app permissions in Android settings
-   - Run `termux-setup-storage`
-   - Restart Termux
-
-3. **Performance Issues**
-   - Clear package cache
-   - Remove unused packages
-   - Check storage space
-
-## Additional Resources
-- [Official Termux Wiki](https://wiki.termux.com)
-- [Termux GitHub](https://github.com/termux)
-- [Termux Community Forum](https://termux.com/community)
+- [Official Termux app repository](https://github.com/termux/termux-app)
+- [Termux packages repository](https://github.com/termux/termux-packages)
 ''';
 
     const ollamaDocs = '''
-# Ollama Setup Guide
+# Connect to Ollama
 
-## What is Ollama?
-Ollama is an open-source tool that allows you to run large language models locally. On Android, it can be run through Termux, enabling you to use AI models directly on your device without cloud dependencies.
+## Supported Host Platforms
 
-## Prerequisites
-- Termux installed and configured
-- Git, CMake, and Golang installed
-- Sufficient storage space (varies by model)
-- Android device with good processing power
+Ollama's official quickstart supports macOS, Windows, and Linux. Install it on a trusted computer from the [official Ollama documentation](https://docs.ollama.com/quickstart), start it, and verify the host can list its installed models:
 
-## Installation Steps
-
-### 1. Prepare Environment
-Ensure you have the required packages:
 ```bash
-pkg upgrade
-pkg install git cmake golang
-```
-
-### 2. Build from Source
-```bash
-# Clone Ollama repository
-git clone --depth 1 https://github.com/ollama/ollama.git
-
-# Navigate to ollama directory
-cd ollama
-
-# Generate and build
-go generate ./...
-go build .
-```
-
-### 3. Start Ollama Server
-```bash
-# Run server in background
-./ollama serve &
-```
-
-## Using Ollama
-
-### Basic Commands
-- Start server: `./ollama serve &`
-- Run model: `./ollama run <model-name>`
-- List models: `./ollama list`
-- Remove model: `./ollama rm <model-name>`
-- Pull model: `./ollama pull <model-name>`
-
-### Model Management
-
-#### Recommended Models for Mobile
-1. **Small Models (Best for phones)**
-   - deepseek-r1:1.5b
-   - phi-2
-   - neural-chat:3b
-   - mistral:7b
-
-2. **Model Size Categories**
-   - 1.5B-3B: Good performance on phones
-   - 7B-13B: May be slow but usable
-   - >30B: Not recommended for mobile use
-
-### Performance Optimization
-
-1. **Device Preparation**
-   - Close background apps
-   - Ensure sufficient free RAM
-   - Connect to power source
-   - Use in a cool environment
-
-2. **Model Selection**
-   - Start with smaller models
-   - Test performance before heavy use
-   - Monitor resource usage
-
-3. **Usage Tips**
-   - Run server in background
-   - Use offline when possible
-   - Monitor temperature
-   - Keep sessions reasonable length
-
-## Installation Options
-
-### Option 1: Basic Installation
-```bash
-./ollama serve &
-./ollama run <model-name>
-```
-
-### Option 2: System-wide Installation
-```bash
-# Move to bin for system-wide access
-cp ollama/ollama /data/data/com.termux/files/usr/bin/
-```
-
-## Cleanup and Maintenance
-
-### Remove Build Files
-```bash
-# Clean up Go directory
-chmod -R 700 ~/go
-rm -r ~/go
-```
-
-### Model Management
-```bash
-# Remove unused models
 ollama list
-ollama rm <model-name>
-
-# Update models
-ollama pull <model-name>
 ```
+
+PocketLLM Lite discovers the models actually returned by your chosen endpoint. It does not hardcode a recommended catalog because model availability, memory needs, formats, and capabilities change.
+
+## Connect PocketLLM Lite
+
+1. Open **Settings > Providers > Ollama**.
+2. Enter the base URL, normally `http://HOST_IP:11434`.
+3. Use the connection test before starting a chat.
+4. Refresh models and choose one returned by the endpoint.
+
+`localhost` and `127.0.0.1` refer to the Android device itself. Use the computer's private LAN address when Ollama runs on another machine.
+
+## Allow LAN Access Carefully
+
+Ollama binds to `127.0.0.1:11434` by default. Its official FAQ documents `OLLAMA_HOST` for network exposure. Restrict access with your operating-system firewall and use only a trusted network; the plain HTTP endpoint is not an Internet-safe authentication boundary.
+
+PocketLLM Lite sends prompts, conversation context, and requested embedding text to the endpoint you configure. These requests appear in the app's network audit. **Strict Offline Mode blocks non-loopback Ollama endpoints**, including private LAN hosts.
+
+## Model and Resource Guidance
+
+- Inspect installed models with `ollama list`; add or remove models using current Ollama documentation.
+- Model size alone does not predict whether a model will run well. Context length, quantization, available RAM, backend support, and thermal limits all matter.
+- Begin with a small quantized model that fits the host, then verify output quality and latency on your own hardware.
+- Ollama may offer cloud features. Consult its current privacy and local-only settings if you require a local-only host.
 
 ## Troubleshooting
 
-### Common Issues
+- Confirm Ollama is running on the host.
+- Confirm the phone and host can reach each other on the selected network.
+- Check the host firewall and bind address.
+- Do not use `localhost` for a server running on another device.
+- Temporarily review Strict Offline Mode and the network audit; do not disable it without understanding the connection.
 
-1. **Build Failures**
-   - Check Go installation
-   - Update all packages
-   - Clear Go cache
-   - Ensure sufficient storage
+## More Information
 
-2. **Performance Issues**
-   - Try smaller models
-   - Check RAM usage
-   - Monitor CPU temperature
-   - Close background apps
-
-3. **Connection Issues**
-   - Check if server is running
-   - Verify localhost access
-   - Check port availability
-
-### Best Practices
-- Regular cleanup of unused models
-- Monitor device temperature
-- Keep models updated
-- Regular maintenance of Termux environment
-
-## Additional Resources
-- [Ollama GitHub](https://github.com/ollama/ollama)
-- [Ollama Models Library](https://ollama.com/library)
-- [Ollama Documentation](https://ollama.ai/docs)
+- [Ollama quickstart](https://docs.ollama.com/quickstart)
+- [Ollama API reference](https://docs.ollama.com/api/introduction)
+- [Ollama networking FAQ](https://docs.ollama.com/faq)
 ''';
 
     final theme = Theme.of(context);
@@ -395,7 +240,7 @@ ollama pull <model-name>
         p: TextStyle(color: theme.colorScheme.onSurface),
       ),
       onTapLink: (text, url, title) {
-        if (url != null) _launchUrl(url);
+        if (url != null) _openExternalLink(url);
       },
     );
   }

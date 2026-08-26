@@ -47,7 +47,9 @@ void main() {
     );
 
     final stopwatch = Stopwatch()..start();
-    expect(await result.future, isA<TimeoutException>());
+    final error = await result.future;
+    expect(error, isA<StateError>());
+    expect(error.toString(), contains('not reachable'));
 
     expect(stopwatch.elapsed, lessThan(const Duration(seconds: 1)));
   });

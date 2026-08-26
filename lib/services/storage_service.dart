@@ -90,6 +90,7 @@ class StorageService {
         for (final prompt in initialPrompts) prompt.id: prompt,
       });
     }
+    await _migrateChatSystemPromptIds();
 
     // Seed personas if empty
     if (_personaBox.isEmpty) {
@@ -154,6 +155,22 @@ class StorageService {
         _cachedSessions!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       }
     }
+  }
+
+  Future<void> _migrateChatSystemPromptIds() async {
+    final promptsByContent = <String, String>{
+      for (final prompt in _systemPromptBox.values) prompt.content: prompt.id,
+    };
+    for (final key in _chatBox.keys.toList(growable: false)) {
+      final session = _chatBox.get(key);
+      if (session == null || session.systemPromptId != null) continue;
+      final content = session.systemPrompt;
+      final matchedId = content == null ? null : promptsByContent[content];
+      if (matchedId != null) {
+        await _chatBox.put(key, session.copyWith(systemPromptId: matchedId));
+      }
+    }
+    _cachedSessions = null;
   }
 
   ValueListenable<Box<ChatSession>> get chatBoxListenable =>
@@ -1155,6 +1172,7 @@ class StorageService {
       'messages': session.messages.map((m) => _chatMessageToJson(m)).toList(),
       'createdAt': session.createdAt.toIso8601String(),
       'systemPrompt': session.systemPrompt,
+      'systemPromptId': session.systemPromptId,
       'temperature': session.temperature,
       'topP': session.topP,
       'topK': session.topK,
@@ -1193,6 +1211,9 @@ class StorageService {
       case AppConstants.profileNameKey:
       case AppConstants.profileBioKey:
       case AppConstants.profileAvatarImageKey:
+      case AppConstants.ragRetrievalModeKey:
+      case AppConstants.ragEmbeddingModelKey:
+      case AppConstants.audioLanguageKey:
         return value is String;
       case AppConstants.autoSaveChatsKey:
       case AppConstants.hapticFeedbackKey:
@@ -1264,6 +1285,9 @@ class StorageService {
       AppConstants.autoMemoryExtractionKey,
       AppConstants.modelManifestRegistryKey,
       AppConstants.localNotesKey,
+      AppConstants.ragRetrievalModeKey,
+      AppConstants.ragEmbeddingModelKey,
+      AppConstants.audioLanguageKey,
     };
   }
 
@@ -1477,6 +1501,7 @@ class StorageService {
           .toList(),
       createdAt: DateTime.parse(json['createdAt']),
       systemPrompt: json['systemPrompt'],
+      systemPromptId: json['systemPromptId'],
       temperature: json['temperature']?.toDouble(),
       topP: json['topP']?.toDouble(),
       topK: json['topK']?.toInt(),

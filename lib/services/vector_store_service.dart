@@ -19,15 +19,15 @@ class VectorStoreService {
   Future<void> storeDocument(
     IngestedDocument doc,
     List<DocumentChunk> chunks,
-    List<List<double>> embeddings,
+    List<List<double>>? embeddings,
   ) async {
     await init();
-    if (chunks.length != embeddings.length) {
+    if (embeddings != null && chunks.length != embeddings.length) {
       throw ArgumentError(
-        'Every document chunk must have one real embedding vector.',
+        'Every semantic document chunk must have one real embedding vector.',
       );
     }
-    if (embeddings.any((vector) => vector.isEmpty)) {
+    if (embeddings?.any((vector) => vector.isEmpty) ?? false) {
       throw ArgumentError('Document embeddings cannot be empty.');
     }
 
@@ -35,12 +35,13 @@ class VectorStoreService {
     try {
       for (int i = 0; i < chunks.length; i++) {
         final chunk = chunks[i];
-        final embedding = embeddings[i];
         await _chunksBox.put(chunk.id, chunk.toJson());
-        await _embeddingsBox.put(chunk.id, {
-          'vector': embedding,
-          'schemaVersion': 2,
-        });
+        if (embeddings != null) {
+          await _embeddingsBox.put(chunk.id, {
+            'vector': embeddings[i],
+            'schemaVersion': 2,
+          });
+        }
         writtenIds.add(chunk.id);
       }
       // The document record is the commit marker and is written last.
@@ -101,15 +102,21 @@ class VectorStoreService {
       if (chunk.id != entry.key || !documentIds.contains(chunk.documentId)) {
         throw const FormatException('Document chunk metadata is inconsistent.');
       }
+      final document = IngestedDocument.fromJson(documents[chunk.documentId]!);
+      final keywordOnly = document.metadata['retrievalMode'] == 'keyword';
       final embedding = embeddings[entry.key];
-      if (embedding == null ||
-          embedding['vector'] is! List ||
-          (embedding['vector'] as List).isEmpty) {
-        throw const FormatException('A document chunk has no embedding.');
-      }
-      for (final value in embedding['vector'] as List) {
-        if (value is! num) {
-          throw const FormatException('Embedding values must be numeric.');
+      if (!keywordOnly) {
+        if (embedding == null ||
+            embedding['vector'] is! List ||
+            (embedding['vector'] as List).isEmpty) {
+          throw const FormatException(
+            'A semantic document chunk has no embedding.',
+          );
+        }
+        for (final value in embedding['vector'] as List) {
+          if (value is! num) {
+            throw const FormatException('Embedding values must be numeric.');
+          }
         }
       }
     }
@@ -201,13 +208,62 @@ class VectorStoreService {
       final similarity = _cosineSimilarity(queryEmbedding, vector);
 
       if (similarity >= minimumSimilarity) {
-        results.add(DocumentSearchResult(chunk, similarity));
+        results.add(
+          DocumentSearchResult(
+            chunk,
+            similarity,
+            semanticScore: similarity,
+          ),
+        );
       }
     }
 
     // Sort descending by similarity
     results.sort((a, b) => b.similarity.compareTo(a.similarity));
 
+    return results.take(topK).toList(growable: false);
+  }
+
+  Future<List<DocumentSearchResult>> searchKeyword({
+    required String queryText,
+    int topK = 5,
+    String? filterDocId,
+  }) async {
+    await init();
+    final queryTerms = _terms(queryText);
+    if (queryTerms.isEmpty) return const [];
+    final chunks = _chunksBox.values
+        .map((map) => DocumentChunk.fromJson(Map<String, dynamic>.from(map)))
+        .where(
+          (chunk) => filterDocId == null || chunk.documentId == filterDocId,
+        )
+        .toList(growable: false);
+    if (chunks.isEmpty) return const [];
+    final corpus = chunks.map((chunk) => _terms(chunk.content)).toList();
+    final averageLength = corpus.fold<int>(
+          0,
+          (sum, terms) => sum + terms.length,
+        ) /
+        max(1, corpus.length);
+    final results = <DocumentSearchResult>[];
+    for (var index = 0; index < chunks.length; index++) {
+      final score = _normalizedBm25(
+        queryTerms: queryTerms,
+        documentTerms: corpus[index],
+        corpus: corpus,
+        averageDocumentLength: averageLength,
+      );
+      if (score > 0) {
+        results.add(
+          DocumentSearchResult(
+            chunks[index],
+            score,
+            keywordScore: score,
+          ),
+        );
+      }
+    }
+    results.sort((left, right) => right.similarity.compareTo(left.similarity));
     return results.take(topK).toList(growable: false);
   }
 
@@ -268,6 +324,8 @@ class VectorStoreService {
       );
       candidate.relevance =
           (denseWeight * dense) + ((1 - denseWeight) * lexical);
+      candidate.dense = dense;
+      candidate.lexical = lexical;
     }
 
     final selected = <_DocumentCandidate>[];
@@ -283,8 +341,13 @@ class VectorStoreService {
     return selected
         .where((candidate) => candidate.relevance > 0)
         .map(
-          (candidate) =>
-              DocumentSearchResult(candidate.chunk, candidate.relevance),
+          (candidate) => DocumentSearchResult(
+            candidate.chunk,
+            candidate.relevance,
+            keywordScore: candidate.lexical,
+            semanticScore: candidate.dense,
+            fusedScore: candidate.relevance,
+          ),
         )
         .toList(growable: false);
   }
@@ -360,16 +423,29 @@ class _DocumentCandidate {
   final DocumentChunk chunk;
   final List<double> embedding;
   double relevance;
+  double dense;
+  double lexical;
 
   _DocumentCandidate({
     required this.chunk,
     required this.embedding,
-  }) : relevance = 0;
+  })  : relevance = 0,
+        dense = 0,
+        lexical = 0;
 }
 
 class DocumentSearchResult {
   final DocumentChunk chunk;
   final double similarity;
+  final double keywordScore;
+  final double semanticScore;
+  final double fusedScore;
 
-  const DocumentSearchResult(this.chunk, this.similarity);
+  const DocumentSearchResult(
+    this.chunk,
+    this.similarity, {
+    this.keywordScore = 0,
+    this.semanticScore = 0,
+    this.fusedScore = 0,
+  });
 }

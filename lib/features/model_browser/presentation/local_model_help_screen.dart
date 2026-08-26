@@ -24,7 +24,7 @@ class LocalModelHelpScreen extends StatelessWidget {
             icon: Icons.memory_rounded,
             title: 'What is GGUF & Cactus?',
             description:
-                'GGUF (GPT-Generated Unified Format) is a file format designed for quick loading and high performance of large language models on consumer hardware. We leverage the Cactus AI engine (powered by llama.cpp) to run these models directly on your device, providing a self-contained offline execution environment.',
+                'GGUF is a model file format used by llama.cpp and related runtimes. PocketLLM Lite uses its Cactus adapter to attempt on-device inference with compatible installed models. A valid GGUF header proves the file format, not architecture support, memory fit, chat-template correctness, or working vision/tool capabilities.',
           ),
           const SizedBox(height: 20),
 
@@ -40,10 +40,10 @@ class LocalModelHelpScreen extends StatelessWidget {
             icon: Icons.file_open_rounded,
             title: 'How to Import Custom GGUF Models?',
             description:
-                '1. Download any GGUF quantized model (e.g., from Hugging Face or LM Studio) in your web browser.\n'
-                '2. Ensure the filename ends with `.gguf`.\n'
-                '3. Open the Local GGUF Catalog settings in this app, tap "Browse Files" under GGUF Imports, and select your downloaded file.\n'
-                '4. The file will be validated, copied securely to your app sandbox to protect scoped storage token permissions, and made ready to run offline!',
+                '1. Obtain a GGUF from a trusted publisher and review its license, source, size, checksum, architecture, and template requirements.\n'
+                '2. Open the Local GGUF Catalog, tap "Browse Files", and select the `.gguf` file.\n'
+                '3. PocketLLM validates the header and copies the file into its app sandbox.\n'
+                '4. Attempt a real load and generation. Compatibility and advanced capabilities remain unknown until the installed runtime proves them.',
           ),
           const SizedBox(height: 20),
 
@@ -53,9 +53,9 @@ class LocalModelHelpScreen extends StatelessWidget {
             icon: Icons.tune_rounded,
             title: 'Optimizer Settings & Hardware Tips',
             description:
-                '• Context Window (n_ctx): Defines the maximum token history. For mobile, 2048 tokens is ideal. Higher values consume significantly more RAM.\n'
-                '• Thread Counts: The engine automatically balances between physical high-efficiency cores and performance cores to optimize thermal throttling and battery drainage.\n'
-                '• On-device Execution: The Cactus SDK handles memory management and inference execution automatically, selecting the best available hardware acceleration on your device.',
+                '• Context Window: Higher values consume more memory. Use the smallest context that fits your task and the model/runtime limit; no one value is ideal for every phone.\n'
+                '• Quantization and model size: Smaller files often need less memory, but architecture and runtime support still matter.\n'
+                '• Device conditions: Monitor free RAM, storage, battery, and temperature. PocketLLM does not claim a GPU or NPU path unless runtime evidence identifies it.',
           ),
           const SizedBox(height: 32),
         ],
@@ -166,9 +166,10 @@ class LocalModelHelpScreen extends StatelessWidget {
               children: [
                 _buildTableCell('Setup', theme),
                 _buildTableCell(
-                    'None. Standalone and fully self-contained.', theme),
+                    'Import and successfully load a compatible GGUF.', theme),
                 _buildTableCell(
-                    'Requires Ollama running in Termux or on a PC.', theme),
+                    'Requires a reachable Ollama host. Official support covers macOS, Windows, and Linux; Android/Termux is experimental.',
+                    theme),
               ],
             ),
             TableRow(
@@ -178,7 +179,7 @@ class LocalModelHelpScreen extends StatelessWidget {
                     'Inference can run offline after a compatible model is available locally.',
                     theme),
                 _buildTableCell(
-                    'Requires local socket connections to background daemon.',
+                    'Uses HTTP to the configured host. Same-device loopback can stay local; LAN or remote hosts use a network connection.',
                     theme),
               ],
             ),
@@ -186,10 +187,10 @@ class LocalModelHelpScreen extends StatelessWidget {
               children: [
                 _buildTableCell('Imports', theme),
                 _buildTableCell(
-                    'Easy. Import any GGUF file directly with the file picker.',
+                    'Imports GGUF files, but runtime compatibility must be proven by a successful load.',
                     theme),
                 _buildTableCell(
-                    'Requires building a Modelfile and calling ollama compile.',
+                    'Uses models returned by the host API; manage them with current Ollama tools.',
                     theme),
               ],
             ),
@@ -200,7 +201,7 @@ class LocalModelHelpScreen extends StatelessWidget {
                     'Performance varies by model, quantization, device, and thermal state.',
                     theme),
                 _buildTableCell(
-                    'Subject to local socket latency or HTTP overheads.',
+                    'Depends on host hardware, model, context, and network path.',
                     theme),
               ],
             ),

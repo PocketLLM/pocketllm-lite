@@ -12,6 +12,41 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.37] - 2026-08-26
+
+### Added
+
+- Added a first-run Knowledge Base setup with real Keyword, Semantic, and Hybrid retrieval modes, compatible embedding-model selection, resource checks, and persistent configuration.
+- Added durable Hive-backed task records shared by document indexing, model downloads, and audio transcription, including truthful progress, actionable failures, restart interruption recovery, cancellation, and safe retry metadata.
+- Added staged document indexing with page/chunk progress, atomic commit, document details, real score diagnostics, and stable citations without exposing partial indexes.
+- Added the Audio Workspace Record and Upload flows with microphone permission handling, pause/resume/stop/cancel, timer, measured amplitude, WAV save, playback, rename, language selection, and persistent transcription jobs.
+- Added a central Model Store with live policy-gated Cactus and Whisper catalogs, live Hugging Face GGUF discovery, capability/runtime filters, details, installed-state detection, local Browse Files import, and durable bundle downloads.
+- Added safe catalog-bundle extraction with path traversal rejection, private staging directories, GGUF validation, atomic folder commit, cancellation, and byte-range resumption only when the server supplies range support and a validator.
+- Added persistent per-conversation system prompt identity alongside prompt content, including automatic exact-content migration for existing chats.
+
+### Changed
+
+- Made Keyword retrieval the no-download default; Semantic and Hybrid modes fail closed until the selected local embedding model is installed.
+- Reorganized Settings around Model Store, Providers & Ollama, Knowledge Base, Audio Workspace, Privacy & Network, and System destinations.
+- Changed Ollama model discovery to show an explicit checking/connected/disconnected state and verify reachability before requesting a model list.
+- Simplified the Privacy & Network endpoint presentation, made its destination label responsive, and clearly separated the network audit from general Activity History.
+- Updated the release version to `1.0.37+37` and added foreground microphone permissions for Android and iOS.
+
+### Fixed
+
+- Fixed the Knowledge Base flow that previously opened a picker before revealing its missing embedding-model requirement.
+- Fixed system prompt selection being lost when reopening, restarting, or switching chat conversations; selecting None now also clears the prompt correctly.
+- Fixed model download state being bound only to a dialog and deleted on every interruption; supported partial downloads can now resume from verified server state.
+- Fixed the audio workspace exposing only file upload and an English-forced backend prompt; recording and explicit persisted language choices now reach the real local transcription call.
+- Fixed compact endpoint status layout overflow by using flexible theme-token layout.
+
+### Known limitations
+
+- Cactus Flutter 1.3 returns whole-text Whisper output and does not expose verified segment timing, so v1.0.37 does not create SRT cues or pretend to know speaker/timestamp boundaries.
+- Recording is foreground-only. Android emulators do not provide trustworthy microphone validation; physical-device microphone quality remains device dependent.
+- Catalog responses do not include complete upstream model license metadata. The Model Store discloses this and requires users to review upstream terms before redistribution.
+- Production-signed Android upgrade publication still requires the project's existing private signing identity.
+
 ## [1.0.36] - 2026-08-25
 
 ### Added
@@ -32,10 +67,13 @@ We use a specific versioning pattern:
 - Unified XML-first and typed tool systems around canonical JSON, strict schemas, multiple calls, structured errors, risk scopes, confirmation, timeouts, and a five-round agent limit; XML remains only as a legacy adapter.
 - Reserved requested response tokens during context fitting, added local rolling summaries, and reject a newest message that cannot fit safely.
 - Changed image attachment, model capability, compatibility, benchmark, speed, and accelerator labels to require manifest/runtime evidence or display unknown/estimated states.
+- Replaced the test-only formula-based model scorer with an installed-model compatibility card using measured RAM/thermal state, file-size lower bounds, explicit backend status, and prior exact-device load evidence.
 - Changed Cactus use to installed local files only; telemetry, public discovery, and unmanaged Whisper/model download paths are disabled.
 - Migrated the Tavily key from plaintext Hive settings to platform secure storage.
 - Updated OTA behavior to distinguish manual checks from automatic opt-in and require a paired published SHA-256 before direct APK installation.
 - Rewrote README, release notes, audit, decisions, competitor research, limitations, and verification records around measured scope.
+- Replaced stale Android/Termux Ollama build instructions and hardcoded model recommendations with current official platform guidance, endpoint discovery, and explicit experimental boundaries.
+- Updated the website, in-app privacy text, security policy, onboarding, model help, and community-submission drafts to remove absolute privacy/offline, licensing, ads, analytics, and compatibility claims contradicted by the product.
 
 ### Fixed
 
@@ -44,12 +82,16 @@ We use a specific versioning pattern:
 - Fixed prompt-enhancer model clearing and routed local/Ollama/remote enhancement through the shared pipeline without hidden-reasoning instructions.
 - Fixed document deletion/index persistence, backup corruption/wrong-password handling, atomic rollback, and page-aware citation retrieval.
 - Fixed chat stop behavior, tool event rendering, update preference duplication, theme-token violations, and misleading audio/model/server/settings copy.
+- Fixed documentation, legal, chat, skill, update, and release-page HTTP(S) links that could previously launch outside the central Strict Offline decision and network audit.
+- Fixed the compact chat composer at 360dp and large text by grouping secondary actions, bounding message height, and keeping the send control and disclaimer visible.
+- Fixed compact onboarding privacy controls by using adaptive spacing and a scrollable content region above the navigation footer.
 
 ### Security
 
 - Stores Tavily, remote-provider, and embedded-server credentials in platform secure storage and does not include plaintext secrets in normal settings exports.
 - Enforces Strict Offline before all non-loopback application-owned transports and external browser launches while retaining audited loopback access.
-- Hardened the Android manifest by removing inherited legacy external-storage and privileged install permissions and the stale exported installer receiver.
+- Adds regression coverage that rejects direct browser-launch calls outside the policy service; the only separate launcher is a confirmed `mailto:` composer handoff.
+- Hardened the Android manifest by removing inherited legacy external-storage access, privileged `INSTALL_PACKAGES`, and the stale exported installer receiver; user-consent `REQUEST_INSTALL_PACKAGES` remains for verified OTA handoff.
 - Requires one-shot user confirmation before every supported side-effect tool and denies those tools in headless requests without a confirmer.
 
 ### Removed
