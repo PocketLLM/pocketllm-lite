@@ -12,6 +12,65 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.38] - 2026-08-29
+
+### Added
+
+- Added a reusable Material 3 prerequisite dialog for document embeddings and
+  local transcription. It shows the exact catalog model, source, approximate
+  size, and upstream weight license, with Download now, Choose another, Not
+  now, retry, progress, and cancellation actions.
+- Added automatic continuation after a required model finishes installing:
+  document import resumes after embedding setup, and the selected audio file
+  resumes transcription after Whisper setup.
+- Added MIT licensing, a contributor guide, community code of conduct, issue
+  forms, pull-request template, and Flutter verification workflow.
+- Added regression coverage for partial catalog availability and for servers
+  that ignore a resumed Range request and return a full HTTP 200 body.
+
+### Changed
+
+- Model Store search now includes IDs, capabilities, sources, and license text,
+  and supports a prefilled query when opened from a prerequisite flow.
+- Cactus on-device and speech catalogs now fail independently, so one healthy
+  catalog remains usable when the other endpoint is temporarily unavailable.
+- Known upstream license information is displayed for the two verified
+  embedding entries and Whisper Tiny while still distinguishing that evidence
+  from the Cactus bundle catalog metadata.
+- Installed model discovery now ignores staging/quarantine folders and requires
+  valid GGUF headers before a model appears ready or is handed to Cactus.
+- Updated the release version to `1.0.38+38` and refreshed product, website,
+  release, and contributor documentation.
+
+### Fixed
+
+- Fixed the red, post-action “model not installed” dead end in Knowledge Base
+  and Audio Workspace with guided setup and resumable original actions.
+- Fixed resume corruption when a server advertises byte ranges but answers a
+  resumed request with HTTP 200; PocketLLM now discards the appended body and
+  restarts once from byte zero.
+- Fixed catalog ZIP installation accepting any file with a `.gguf` suffix;
+  every discovered GGUF must now contain the real `GGUF` magic header before
+  the staging directory is published atomically.
+- Fixed a broken managed-model folder being deleted immediately; it is moved to
+  a hidden quarantine folder before a clean installation is attempted.
+- Fixed the website treating GitHub's production-only `releases/latest` result
+  as the newest engineering release.
+- Fixed the new Linux CI job using a page-transition class that moved libraries
+  across Flutter stable releases; the shared transition map now analyzes on
+  both the release toolchain and current GitHub runner toolchain.
+
+### Known limitations
+
+- The pinned Cactus Flutter 1.3 repository is archived. The live catalog and
+  three required bundle routes were reachable during v1.0.38 verification, but
+  upstream availability can change.
+- Full embedding and Whisper bundles are hundreds of megabytes; automated tests
+  use deterministic transport fixtures rather than downloading those complete
+  third-party weights.
+- Production signing and physical-device inference/audio verification still
+  require project hardware and the existing private signing identity.
+
 ## [1.0.37] - 2026-08-26
 
 ### Added

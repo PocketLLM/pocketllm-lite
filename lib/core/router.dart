@@ -66,7 +66,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'model-catalog',
-            builder: (context, state) => const ModelStoreScreen(),
+            builder: (context, state) => ModelStoreScreen(
+              initialQuery: state.uri.queryParameters['query'] ?? '',
+            ),
           ),
           GoRoute(
             path: 'local-models',

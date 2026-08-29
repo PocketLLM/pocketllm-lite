@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../core/domain/background_task.dart';
 import 'background_task_service.dart';
+import 'model_storage_service.dart';
 
 class AudioTranscriptionError implements Exception {
   final String message;
@@ -105,7 +106,7 @@ class CactusWhisperTranscriber implements AudioTranscriber {
     final documents = await getApplicationDocumentsDirectory();
     final modelDirectory =
         Directory(path.join(documents.path, 'models', modelId));
-    if (!await modelDirectory.exists()) {
+    if (!await _containsValidGguf(modelDirectory)) {
       throw const AudioTranscriptionError(
         'The offline Whisper model is not installed. Automatic Cactus '
         'downloads are disabled because that SDK path bypasses the network '
@@ -133,6 +134,25 @@ class CactusWhisperTranscriber implements AudioTranscriber {
     } finally {
       CactusContext.freeContext(handle);
     }
+  }
+
+  Future<bool> _containsValidGguf(Directory directory) async {
+    if (!await directory.exists()) return false;
+    final files = await directory
+        .list(recursive: true, followLinks: false)
+        .where(
+          (entity) =>
+              entity is File && entity.path.toLowerCase().endsWith('.gguf'),
+        )
+        .cast<File>()
+        .toList();
+    if (files.isEmpty) return false;
+    final validation = await Future.wait(
+      files.map(
+        (file) => ModelStorageService.instance.isValidGGUFFile(file.path),
+      ),
+    );
+    return validation.every((valid) => valid);
   }
 
   String _whisperPrompt(String language) {
@@ -165,9 +185,21 @@ class AudioTranscriptionService {
       path.join(documents.path, 'models', CactusWhisperTranscriber.modelId),
     );
     if (!await modelDirectory.exists()) return false;
-    return modelDirectory
+    final files = await modelDirectory
         .list(recursive: true, followLinks: false)
-        .any((entity) => entity is File && entity.path.endsWith('.gguf'));
+        .where(
+          (entity) =>
+              entity is File && entity.path.toLowerCase().endsWith('.gguf'),
+        )
+        .cast<File>()
+        .toList();
+    if (files.isEmpty) return false;
+    final validation = await Future.wait(
+      files.map(
+        (file) => ModelStorageService.instance.isValidGGUFFile(file.path),
+      ),
+    );
+    return validation.every((valid) => valid);
   }
 
   Future<AudioTranscriptionResult> transcribeAudioFile({

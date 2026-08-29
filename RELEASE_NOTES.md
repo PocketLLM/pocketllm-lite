@@ -1,11 +1,11 @@
-# PocketLLM Lite v1.0.37 — Durable Local Workspaces
+# PocketLLM Lite v1.0.38 — Guided Model Setup
 
 ## Highlights
 
-v1.0.37 turns Knowledge, Audio, model acquisition, and conversation settings
-into durable workflows. It keeps the v1.0.36 truth-and-integration foundation:
-one generation pipeline, central Strict Offline enforcement, real local data,
-and honest unavailable states instead of simulated success.
+v1.0.38 removes the “you needed a model” dead end from document and audio
+workflows. PocketLLM now explains the exact required model before work starts,
+downloads it through the audited Model Store, verifies the installation, and
+continues the action the user originally requested.
 
 ## Knowledge Base
 
@@ -15,6 +15,9 @@ and honest unavailable states instead of simulated success.
 - Hybrid mode combines BM25 and cosine scores before MMR selection.
 - The two embedding entries verified in the pinned Cactus catalog are offered:
   Qwen3 0.6B Embed and Nomic2 Embed 300M.
+- Missing Semantic/Hybrid prerequisites show Download now, Choose another, and
+  Not now instead of a raw red error. A successful download continues to the
+  document picker automatically.
 - PDF, TXT, Markdown, and CSV processing reports real page/chunk work through a
   persistent task and commits the index only after the entire job succeeds.
 - Document details preserve source name, page count, chunk count, mode, model,
@@ -27,7 +30,9 @@ and honest unavailable states instead of simulated success.
 - Record or Upload audio.
 - Recording supports start, pause, resume, stop, cancel, elapsed time, measured
   amplitude, 16 kHz mono WAV save, playback, rename, and replace.
-- Whisper model readiness is checked before transcription.
+- Missing Whisper Tiny opens the same guided setup with source, size, license,
+  progress, retry, and cancel controls. A successful install resumes the
+  selected audio transcription automatically.
 - Auto Detect plus English, Spanish, Chinese, Japanese, Korean, Hindi, German,
   and French selections persist and are passed to the local Whisper prompt.
 - Transcription jobs and successful whole-text results persist as durable tasks.
@@ -41,16 +46,28 @@ and honest unavailable states instead of simulated success.
 - Search and runtime filters distinguish chat/embedding models from speech
   models. Managed models always mean files in private on-device app storage;
   Ollama host models remain separate.
-- Model details show exact catalog ID, source, catalog size, quantization, and
-  declared capabilities. Missing license metadata is shown as missing rather
-  than guessed.
+- Model details show exact catalog ID, source, catalog size, quantization,
+  declared capabilities, and known upstream weight licenses. Unknown license
+  metadata remains explicitly unknown.
 - Download tasks survive navigation and app restart. Exact byte progress is
   persisted. Cancellation retains partial data only when the server proves
   byte-range support and provides an ETag or Last-Modified validator.
-- ZIP extraction rejects traversal paths and symbolic links, validates that a
-  GGUF exists, and atomically publishes a fully extracted model folder.
+- If a resumed Range request receives a full HTTP 200 response, the partial is
+  discarded and restarted once rather than corrupting the archive by appending.
+- ZIP extraction rejects traversal paths and symbolic links, validates every
+  GGUF header, quarantines a conflicting broken folder, and atomically publishes
+  a fully extracted model folder.
 - Hugging Face downloads continue to validate published LFS size/SHA metadata
   and the GGUF header when those values are available.
+
+## Open-source contributors
+
+- PocketLLM Lite is now explicitly licensed under MIT.
+- The repository includes focused bug and feature issue forms, a pull-request
+  checklist, a community code of conduct, and CI for formatting, analysis, and
+  tests.
+- The contribution guide calls out useful first contributions in localization,
+  accessibility, device evidence, documentation, tests, and model compatibility.
 
 ## Chat, providers, and privacy
 
@@ -89,7 +106,7 @@ and honest unavailable states instead of simulated success.
 
 ## Upgrade notes
 
-- Version: `1.0.37+37`.
+- Version: `1.0.38+38`.
 - Existing Hive data is preserved. Chat prompt identity is an additive field;
   old prompt content remains authoritative if no exact template match exists.
 - New durable task records normalize unfinished processes to Interrupted after
@@ -109,7 +126,8 @@ and honest unavailable states instead of simulated success.
 - Android OCR is Latin-script only; iOS OCR and scanned-PDF OCR are not enabled.
 - Cactus Flutter 1.3 was archived upstream and remains a maintenance risk.
 - The embedded server has no trusted-host or configurable CORS allowlist.
-- Cactus catalog responses do not provide complete upstream license metadata.
+- Cactus catalog responses do not provide complete upstream license metadata;
+  shown Qwen, Nomic, and Whisper licenses come from their upstream projects.
 
 ## Release build
 
@@ -118,4 +136,4 @@ flutter build apk --split-per-abi --release
 ```
 
 Exact artifact, checksum, signer, test, and publication truth is recorded in
-`docs/V1_0_37_VERIFICATION.md`.
+`docs/V1_0_38_VERIFICATION.md`.

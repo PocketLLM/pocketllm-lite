@@ -3,20 +3,19 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('v1.0.37 release metadata and documentation agree', () {
+  test('v1.0.38 release metadata and documentation agree', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final readme = File('README.md').readAsStringSync();
     final releaseNotes = File('RELEASE_NOTES.md').readAsStringSync();
     final changelog = File('CHANGELOG.md').readAsStringSync();
 
-    expect(pubspec, contains('version: 1.0.37+37'));
-    expect(readme, contains('version-1.0.37'));
-    expect(releaseNotes, contains('v1.0.37'));
-    expect(changelog, contains('## [1.0.37] - 2026-08-26'));
-
-    if (!File('LICENSE').existsSync()) {
-      expect(readme, isNot(contains('MIT License')));
-    }
+    expect(pubspec, contains('version: 1.0.38+38'));
+    expect(readme, contains('version-1.0.38'));
+    expect(releaseNotes, contains('v1.0.38'));
+    expect(changelog, contains('## [1.0.38] - 2026-08-29'));
+    expect(File('LICENSE').readAsStringSync(), startsWith('MIT License'));
+    expect(File('CONTRIBUTING.md').existsSync(), isTrue);
+    expect(File('CODE_OF_CONDUCT.md').existsSync(), isTrue);
   });
 
   test('shipping Dart source excludes known false-success fixtures', () {
@@ -76,7 +75,6 @@ void main() {
       'may display advertisements',
       'offline knowledge searches',
       'Offline STT & TTS',
-      'MIT licensed',
     ];
     final violations = <String>[];
 

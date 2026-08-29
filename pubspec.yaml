@@ -2,7 +2,7 @@ name: pocketllm_lite
 description: "A local-first AI chat application with explicit network controls"
 publish_to: "none"
 
-version: 1.0.37+37
+version: 1.0.38+38
 
 environment:
   sdk: ^3.6.0

@@ -12,7 +12,9 @@ import '../domain/model_store_model.dart';
 import '../providers/model_store_provider.dart';
 
 class ModelStoreScreen extends ConsumerStatefulWidget {
-  const ModelStoreScreen({super.key});
+  final String initialQuery;
+
+  const ModelStoreScreen({super.key, this.initialQuery = ''});
 
   @override
   ConsumerState<ModelStoreScreen> createState() => _ModelStoreScreenState();
@@ -21,6 +23,12 @@ class ModelStoreScreen extends ConsumerStatefulWidget {
 class _ModelStoreScreenState extends ConsumerState<ModelStoreScreen> {
   final _search = TextEditingController();
   ModelStoreRuntime? _runtime;
+
+  @override
+  void initState() {
+    super.initState();
+    _search.text = widget.initialQuery;
+  }
 
   @override
   void dispose() {
@@ -178,6 +186,13 @@ class _ModelStoreScreenState extends ConsumerState<ModelStoreScreen> {
                 ),
               ),
               data: (models) {
+                final service = ref.read(modelStoreServiceProvider);
+                final warnings = <String>[
+                  if (service.lastOnDeviceCatalogError != null)
+                    'Chat and embedding catalog unavailable: ${service.lastOnDeviceCatalogError}',
+                  if (service.lastSpeechCatalogError != null)
+                    'Speech catalog unavailable: ${service.lastSpeechCatalogError}',
+                ];
                 final query = _search.text.trim().toLowerCase();
                 final visible = models.where((model) {
                   if (_runtime != null && model.runtime != _runtime) {
@@ -186,35 +201,64 @@ class _ModelStoreScreenState extends ConsumerState<ModelStoreScreen> {
                   return query.isEmpty ||
                       model.name.toLowerCase().contains(query) ||
                       model.id.toLowerCase().contains(query) ||
+                      model.source.toLowerCase().contains(query) ||
+                      (model.license?.toLowerCase().contains(query) ?? false) ||
                       model.capabilities.any(
                         (value) => value.toLowerCase().contains(query),
                       );
                 }).toList(growable: false);
                 if (visible.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Text('No catalog models match these filters.'),
+                  return Column(
+                    children: [
+                      ...warnings.map(_CatalogSourceWarning.new),
+                      const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Text('No catalog models match these filters.'),
+                      ),
+                    ],
                   );
                 }
                 return Column(
-                  children: visible
-                      .map(
-                        (model) => _ModelCard(
-                          model: model,
-                          installed: installed.contains(model.id),
-                          onInstalled: () {
-                            ref.invalidate(installedStoreModelIdsProvider);
-                            ref
-                                .read(modelManagerProvider.notifier)
-                                .scanLocalModels();
-                          },
-                        ),
-                      )
-                      .toList(growable: false),
+                  children: [
+                    ...warnings.map(_CatalogSourceWarning.new),
+                    ...visible.map(
+                      (model) => _ModelCard(
+                        model: model,
+                        installed: installed.contains(model.id),
+                        onInstalled: () {
+                          ref.invalidate(installedStoreModelIdsProvider);
+                          ref
+                              .read(modelManagerProvider.notifier)
+                              .scanLocalModels();
+                        },
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CatalogSourceWarning extends StatelessWidget {
+  final String message;
+  const _CatalogSourceWarning(this.message);
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card.filled(
+      color: colors.tertiaryContainer,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: ListTile(
+        leading: Icon(Icons.warning_amber, color: colors.onTertiaryContainer),
+        title: Text(
+          message,
+          style: TextStyle(color: colors.onTertiaryContainer),
         ),
       ),
     );
@@ -267,8 +311,8 @@ class _ModelCard extends ConsumerWidget {
         content: Text(
           '${model.sizeMb} MB catalog size. The bundle downloads from the '
           'Cactus catalog and is extracted into private app storage.\n\n'
-          'License metadata is not supplied by this catalog response; review '
-          'the upstream model terms before redistribution.',
+          'License: ${model.license ?? 'not supplied by catalog metadata'}. '
+          'Review the linked upstream terms before redistribution.',
         ),
         actions: [
           TextButton(
@@ -319,7 +363,11 @@ class _ModelCard extends ConsumerWidget {
                 Text('Quantization: ${model.quantizationBits}-bit'),
                 Text('Capabilities: ${model.capabilities.join(', ')}'),
                 Text('Source: ${model.source}'),
-                const Text('License: not supplied by catalog metadata'),
+                Text(
+                  'License: ${model.license ?? 'not supplied by catalog metadata'}',
+                ),
+                if (model.licenseUrl != null)
+                  SelectableText('License source: ${model.licenseUrl}'),
               ],
             ),
           ),

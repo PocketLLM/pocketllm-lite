@@ -3,11 +3,11 @@
 ## Description
 This PR adds [PocketLLM Lite](https://github.com/PocketLLM/pocketllm-lite) to the **Mobile Apps** section of `awesome-ollama`.
 
-PocketLLM Lite is a source-available, local-first Android client for on-device inference and streaming connections to user-configured Ollama endpoints. The repository currently has no root license grant, so this submission must not call it open source.
+PocketLLM Lite is an MIT-licensed, local-first Android client for on-device inference and streaming connections to user-configured Ollama endpoints.
 
 ## Proposed Entry
 ```markdown
-* [PocketLLM Lite](https://github.com/PocketLLM/pocketllm-lite) - A local-first Android client for configured Ollama endpoints and compatible on-device GGUF models, with document RAG, SKILL.md extensions, and confirmation-gated agent tools.
+* [PocketLLM Lite](https://github.com/PocketLLM/pocketllm-lite) - An MIT-licensed local-first Android client for configured Ollama endpoints and compatible on-device GGUF models, with document RAG, SKILL.md extensions, and confirmation-gated agent tools.
 ```
 
 ## Features Highlight

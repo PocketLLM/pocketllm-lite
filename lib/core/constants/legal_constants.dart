@@ -2,7 +2,7 @@ class LegalConstants {
   static const String privacyPolicy = '''
 ### Privacy Policy for Pocket LLM Lite
 
-**Effective Date: August 03, 2026**
+**Effective Date: August 29, 2026**
 
 PocketLLM Lite performs AI inference locally by default and does not include behavioral analytics, advertising trackers, or remote crash reporting. Chats remain on the device when using local inference. Configured providers and optional online actions connect to external services as described below and in the application’s Privacy & Network settings.
 
@@ -22,7 +22,7 @@ The application includes optional network capabilities, which are disabled or su
 
 #### 3. Voice and Image Processing
 - **Image Processing:** OCR input stays in the Android ML Kit path. Chat images are sent only to a selected model/provider whose capability is explicitly configured; remote providers receive the image content.
-- **Voice Features:** Speech-to-text and text-to-speech can use platform system services whose offline/network behavior depends on the installed platform engine. Audio-file transcription uses an already-installed local Cactus Whisper model.
+- **Voice Features:** Speech-to-text and text-to-speech can use platform system services whose offline/network behavior depends on the installed platform engine. Audio-file transcription uses a local Cactus Whisper model; its guided installation contacts the displayed catalog destination only after the user chooses Download now.
 
 #### 4. Locally Stored Diagnostic Logs
 - Crash reports, Flutter UI errors, and activity logs are stored locally in `error_logs` and `activity_logs` Hive boxes. No telemetry or log data is uploaded automatically.
@@ -47,7 +47,7 @@ In **Settings > Privacy & Network Centre**, you can toggle **Strict Offline Mode
   static const String aboutApp = '''
 ### About Pocket LLM Lite
 
-**App Version: 1.0.36**
+**App Version: 1.0.38**
 **Developed By: Prashant Choudhary (Mr-Dark-debug on GitHub)**  
 **Developer Profile: https://github.com/Mr-Dark-debug**  
 
@@ -62,56 +62,16 @@ PocketLLM Lite is an open-source, auditable local AI workspace featuring transpa
   static const String license = '''
 ### License for Pocket LLM Lite
 
-**Pocket LLM Lite Non-Commercial Software License Agreement**
+**MIT License**
 
-This Non-Commercial Software License Agreement (the "Agreement") is between you (the "User" or "Licensee") and Prashant C (the "Developer" or "Licensor"), the sole owner and developer of Pocket LLM Lite (the "Software"). The Software includes the source code, executable files, documentation, and any related materials. By downloading, installing, or using the Software, you agree to be bound by this Agreement. If you do not agree, do not use the Software.
+Copyright (c) 2026 Prashant C
 
-#### 1. Scope
-This Agreement grants a license for non-commercial, personal use only. For commercial use, you must obtain explicit written permission from the Developer at prashantc592114@gmail.com.
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-#### 2. License Grant
-Subject to the terms herein, the Developer grants you a perpetual, free-of-charge, non-exclusive, non-transferable license to:
-- Install and use the Software for personal, educational, or non-commercial evaluation purposes on your devices.
-- Modify the source code for personal use and create derivative works, provided they are not distributed commercially.
-- Make one archival backup copy.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-#### 3. Restrictions
-You may **not**:
-- Use, distribute, or modify the Software for any commercial purpose (e.g., in a business, for profit, or in products/services that generate revenue) without prior written permission from the Developer.
-- Sell, lease, rent, sublicense, assign, or transfer the Software or any rights under this Agreement.
-- Reverse-engineer, decompile, disassemble, or attempt to derive the source code beyond what's provided in the open-source repository.
-- Remove or alter any copyright, trademark, or proprietary notices.
-- Use the Software in any outsourcing, service provider, or third-party access environment.
-- Compete with the Developer by using the Software as a basis for a similar commercial product.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-The Software is the intellectual property of Prashant C (prashantc592114@gmail.com). All rights not expressly granted are reserved.
-
-#### 4. Proprietary Rights and Confidentiality
-- **Ownership:** The Developer retains all title, ownership, and intellectual property rights in the Software, including copyrights, trademarks, and patents.
-- **Confidentiality:** You agree not to disclose any confidential aspects of the Software (e.g., internal code logic) without permission. Violations may result in legal action.
-
-#### 5. Disclaimer of Warranties
-The Software is provided "AS-IS" without any warranties, express or implied, including but not limited to merchantability, fitness for a particular purpose, or non-infringement. The Developer does not guarantee error-free operation or uninterrupted use.
-
-#### 6. Limitation of Liability
-In no event shall the Developer be liable for any direct, indirect, incidental, special, or consequential damages (including lost profits) arising from the use or inability to use the Software, even if advised of such possibility. Liability is limited to \$0, as no fees are charged.
-
-#### 7. Termination
-This Agreement terminates immediately if you breach any term. Upon termination, you must cease use, delete all copies, and certify compliance if requested.
-
-#### 8. Governing Law
-This Agreement is governed by the laws of India (as the Developer's jurisdiction), without regard to conflict of laws. Disputes shall be resolved in courts located in [Developer's City, e.g., Mumbai, India].
-
-#### 9. Other Terms
-- **Entire Agreement:** This is the full agreement; no modifications except in writing signed by the Developer.
-- **Severability:** Invalid provisions do not affect the rest.
-- **Export Compliance:** Comply with all applicable export laws.
-- **Contact for Commercial Licensing:** For commercial use, modifications, or permissions, email prashantc592114@gmail.com.
-
-© 2025 Prashant C. All rights reserved.
-
----
-
-This license ensures personal use is free, but commercial exploitation requires permission.
+Third-party libraries, models, skills, and services remain subject to their own licenses and terms.
 ''';
 }

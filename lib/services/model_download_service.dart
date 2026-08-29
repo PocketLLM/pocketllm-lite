@@ -31,13 +31,16 @@ class ModelDownloadService {
   final Dio _dio;
   final NetworkPolicyService _networkPolicy;
   final BackgroundTaskService? _tasks;
+  final ModelStorageService _storage;
   final Map<String, CancelToken> _managedTokens = {};
 
   ModelDownloadService({
     Dio? dio,
     NetworkPolicyService? networkPolicy,
     BackgroundTaskService? tasks,
+    ModelStorageService? storage,
   })  : _tasks = tasks,
+        _storage = storage ?? ModelStorageService.instance,
         _dio = dio ??
             Dio(
               BaseOptions(
@@ -74,7 +77,7 @@ class ModelDownloadService {
   }
 
   Future<String> getModelsDirectory() async {
-    return (await ModelStorageService.instance.getModelDirectory()).path;
+    return (await _storage.getModelDirectory()).path;
   }
 
   Future<String> downloadManagedBundle({
@@ -83,11 +86,20 @@ class ModelDownloadService {
     required String url,
     required String archiveFilename,
     required int catalogSizeMb,
+    void Function(ModelDownloadProgress progress, String phase)? onProgress,
+    void Function(String taskId)? onTaskCreated,
   }) async {
-    final modelsRoot = await ModelStorageService.instance.getModelDirectory();
+    final modelsRoot = await _storage.getModelDirectory();
     final finalDirectory = Directory(p.join(modelsRoot.path, modelId));
-    if (await finalDirectory.exists() && !await finalDirectory.list().isEmpty) {
-      return finalDirectory.path;
+    if (await finalDirectory.exists()) {
+      if (await _containsValidModel(finalDirectory)) return finalDirectory.path;
+      final quarantine = Directory(
+        p.join(
+          modelsRoot.path,
+          '.quarantine-$modelId-${DateTime.now().millisecondsSinceEpoch}',
+        ),
+      );
+      await finalDirectory.rename(quarantine.path);
     }
     final task = await _tasks?.create(
       type: BackgroundTaskType.modelDownload,
@@ -103,6 +115,7 @@ class ModelDownloadService {
       },
     );
     final taskId = task?.id ?? 'managed-$modelId';
+    onTaskCreated?.call(taskId);
     final cancelToken = CancelToken();
     _managedTokens[taskId] = cancelToken;
     final downloadDirectory = Directory(p.join(modelsRoot.path, '.downloads'));
@@ -116,8 +129,7 @@ class ModelDownloadService {
         await _tasks!.start(task.id, phase: 'Checking storage and server');
       }
       final estimatedBytes = catalogSizeMb * 1024 * 1024;
-      final freeBytes =
-          await ModelStorageService.instance.getAvailableDiskSpace();
+      final freeBytes = await _storage.getAvailableDiskSpace();
       if (freeBytes < estimatedBytes * 2) {
         throw StateError(
           'Not enough free storage to download and extract this model.',
@@ -166,7 +178,8 @@ class ModelDownloadService {
           },
         );
       }
-      await _dio.download(
+      var startedAt = DateTime.now();
+      var response = await _dio.download(
         url,
         partialFile.path,
         cancelToken: cancelToken,
@@ -174,20 +187,105 @@ class ModelDownloadService {
         fileAccessMode:
             existing > 0 ? FileAccessMode.append : FileAccessMode.write,
         onReceiveProgress: (received, total) {
-          if (task == null) return;
           final downloaded = existing + received;
           final effectiveTotal = total > 0 ? existing + total : 0;
-          unawaited(
-            _tasks!.report(
-              task.id,
-              phase: existing > 0 ? 'Resuming bundle' : 'Downloading bundle',
-              completedUnits: downloaded,
-              totalUnits: effectiveTotal > 0 ? effectiveTotal : null,
-              progress: effectiveTotal > 0 ? downloaded / effectiveTotal : null,
-            ),
+          final elapsedSeconds =
+              DateTime.now().difference(startedAt).inMilliseconds / 1000;
+          final speed = elapsedSeconds > 0
+              ? (received / 1024 / 1024) / elapsedSeconds
+              : 0.0;
+          final remainingBytes = effectiveTotal > 0
+              ? (effectiveTotal - downloaded).clamp(0, effectiveTotal)
+              : 0;
+          final progress = ModelDownloadProgress(
+            progress: effectiveTotal > 0
+                ? (downloaded / effectiveTotal).clamp(0, 1)
+                : 0,
+            networkSpeed: speed,
+            timeRemaining: speed > 0
+                ? Duration(
+                    seconds: (remainingBytes / 1024 / 1024 / speed).round(),
+                  )
+                : Duration.zero,
+            totalBytes: effectiveTotal,
+            downloadedBytes: downloaded,
           );
+          onProgress?.call(
+            progress,
+            existing > 0 ? 'Resuming bundle' : 'Downloading bundle',
+          );
+          if (task != null) {
+            unawaited(
+              _tasks!.report(
+                task.id,
+                phase: existing > 0 ? 'Resuming bundle' : 'Downloading bundle',
+                completedUnits: downloaded,
+                totalUnits: effectiveTotal > 0 ? effectiveTotal : null,
+                progress: effectiveTotal > 0 ? progress.progress : null,
+              ),
+            );
+          }
         },
       );
+      if (existing > 0 && response.statusCode != 206) {
+        // A server is allowed to ignore Range or If-Range and return the full
+        // resource with HTTP 200. Appending that body corrupts the bundle, so
+        // discard it and retry once from byte zero.
+        await partialFile.delete();
+        existing = 0;
+        startedAt = DateTime.now();
+        if (task != null) {
+          await _tasks!.report(
+            task.id,
+            phase: 'Server changed; restarting safely',
+            completedUnits: 0,
+            progress: 0,
+          );
+        }
+        response = await _dio.download(
+          url,
+          partialFile.path,
+          cancelToken: cancelToken,
+          options: Options(headers: const {}),
+          fileAccessMode: FileAccessMode.write,
+          onReceiveProgress: (received, total) {
+            final elapsedSeconds =
+                DateTime.now().difference(startedAt).inMilliseconds / 1000;
+            final speed = elapsedSeconds > 0
+                ? (received / 1024 / 1024) / elapsedSeconds
+                : 0.0;
+            final progress = ModelDownloadProgress(
+              progress: total > 0 ? (received / total).clamp(0, 1) : 0,
+              networkSpeed: speed,
+              timeRemaining: speed > 0 && total > 0
+                  ? Duration(
+                      seconds:
+                          ((total - received) / 1024 / 1024 / speed).round(),
+                    )
+                  : Duration.zero,
+              totalBytes: total > 0 ? total : 0,
+              downloadedBytes: received,
+            );
+            onProgress?.call(progress, 'Restarting bundle download');
+            if (task != null) {
+              unawaited(
+                _tasks!.report(
+                  task.id,
+                  phase: 'Restarting bundle download',
+                  completedUnits: received,
+                  totalUnits: total > 0 ? total : null,
+                  progress: total > 0 ? progress.progress : null,
+                ),
+              );
+            }
+          },
+        );
+      }
+      if (response.statusCode != 200 && response.statusCode != 206) {
+        throw StateError(
+          'Model server returned HTTP ${response.statusCode}.',
+        );
+      }
       if (task != null) {
         await _tasks!.report(task.id, phase: 'Verifying and extracting bundle');
       }
@@ -196,15 +294,10 @@ class ModelDownloadService {
       }
       await stagingDirectory.create(recursive: true);
       await _extractBundleSafely(partialFile, stagingDirectory);
-      final ggufFiles = await stagingDirectory
-          .list(recursive: true, followLinks: false)
-          .where(
-            (entity) =>
-                entity is File && entity.path.toLowerCase().endsWith('.gguf'),
-          )
-          .toList();
-      if (ggufFiles.isEmpty) {
-        throw StateError('The downloaded bundle contains no GGUF model file.');
+      if (!await _containsValidModel(stagingDirectory)) {
+        throw StateError(
+          'The downloaded bundle contains no valid GGUF model file.',
+        );
       }
       if (await finalDirectory.exists()) {
         await finalDirectory.delete(recursive: true);
@@ -256,6 +349,23 @@ class ModelDownloadService {
     _managedTokens[taskId]?.cancel('User cancelled model download');
     final task = _tasks?.find(taskId);
     if (task != null && !task.isTerminal) await _tasks!.cancel(taskId);
+  }
+
+  Future<bool> _containsValidModel(Directory directory) async {
+    if (!await directory.exists()) return false;
+    final files = await directory
+        .list(recursive: true, followLinks: false)
+        .where(
+          (entity) =>
+              entity is File && entity.path.toLowerCase().endsWith('.gguf'),
+        )
+        .cast<File>()
+        .toList();
+    if (files.isEmpty) return false;
+    final results = await Future.wait(
+      files.map((file) => _storage.isValidGGUFFile(file.path)),
+    );
+    return results.every((valid) => valid);
   }
 
   Future<void> _extractBundleSafely(
@@ -311,8 +421,7 @@ class ModelDownloadService {
     String? expectedSha256,
     Map<String, String>? headers,
   }) async {
-    final targetFilePath =
-        await ModelStorageService.instance.targetPathFor(expectedFilename);
+    final targetFilePath = await _storage.targetPathFor(expectedFilename);
     await File(targetFilePath).parent.create(recursive: true);
 
     // Show consent dialog
@@ -437,8 +546,7 @@ class ModelDownloadService {
       if (task != null) {
         await _tasks!.start(task.id, phase: 'Checking storage and server');
       }
-      final freeBytes =
-          await ModelStorageService.instance.getAvailableDiskSpace();
+      final freeBytes = await _storage.getAvailableDiskSpace();
       if (expectedSizeBytes > 0 && freeBytes < expectedSizeBytes * 1.15) {
         throw StateError(
           'Not enough free storage for this model and verification copy.',
@@ -502,7 +610,7 @@ class ModelDownloadService {
           },
         );
       }
-      final response = await _dio.download(
+      var response = await _dio.download(
         url,
         partialPath,
         cancelToken: cancelToken,
@@ -554,6 +662,68 @@ class ModelDownloadService {
         },
       );
 
+      if (existingBytes > 0 && response.statusCode != 206) {
+        // If-Range may legitimately fall back to a full HTTP 200 response.
+        // Never append that full body to the saved fragment.
+        await partialFile.delete();
+        existingBytes = 0;
+        lastUpdateBytes = 0;
+        lastUpdateTime = DateTime.now().millisecondsSinceEpoch;
+        if (task != null) {
+          await _tasks!.report(
+            task.id,
+            phase: 'Server changed; restarting safely',
+            completedUnits: 0,
+            totalUnits: expectedSizeBytes > 0 ? expectedSizeBytes : null,
+            progress: 0,
+          );
+        }
+        response = await _dio.download(
+          url,
+          partialPath,
+          cancelToken: cancelToken,
+          options: Options(headers: headers),
+          fileAccessMode: FileAccessMode.write,
+          onReceiveProgress: (received, total) {
+            final effectiveTotal =
+                expectedSizeBytes > 0 ? expectedSizeBytes : total;
+            final now = DateTime.now().millisecondsSinceEpoch;
+            final elapsed = now - lastUpdateTime;
+            if (elapsed <= 500) return;
+            final progress = effectiveTotal > 0
+                ? (received / effectiveTotal).clamp(0.0, 1.0)
+                : 0.0;
+            final bytesDiff = received - lastUpdateBytes;
+            final speed = (bytesDiff / 1024 / 1024) / (elapsed / 1000);
+            final bytesRemaining = effectiveTotal - received;
+            progressNotifier.value = ModelDownloadProgress(
+              progress: progress,
+              networkSpeed: speed,
+              timeRemaining: speed > 0 && bytesRemaining > 0
+                  ? Duration(
+                      seconds: (bytesRemaining / 1024 / 1024 / speed).round(),
+                    )
+                  : Duration.zero,
+              totalBytes: effectiveTotal,
+              downloadedBytes: received,
+            );
+            if (task != null) {
+              unawaited(
+                _tasks!.report(
+                  task.id,
+                  phase: 'Restarting download safely',
+                  completedUnits: received,
+                  totalUnits: effectiveTotal > 0 ? effectiveTotal : null,
+                  progress: effectiveTotal > 0 ? progress : null,
+                ),
+              );
+            }
+            lastUpdateTime = now;
+            lastUpdateBytes = received;
+          },
+        );
+      }
+
       // Close progress dialog
       if (context.mounted &&
           Navigator.of(context, rootNavigator: true).canPop()) {
@@ -572,7 +742,7 @@ class ModelDownloadService {
             throw StateError('Downloaded file checksum verification failed.');
           }
         }
-        if (!await ModelStorageService.instance.isValidGGUFFile(partialPath)) {
+        if (!await _storage.isValidGGUFFile(partialPath)) {
           throw StateError('Downloaded file is not a valid GGUF model.');
         }
         final target = File(targetFilePath);

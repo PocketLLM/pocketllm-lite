@@ -7,11 +7,12 @@
 **Local-first AI. Offline when you want it. Network access only when you allow it.**
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.41-02569B?logo=flutter)](https://flutter.dev)
-[![Version](https://img.shields.io/badge/version-1.0.37-6750A4)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.38-6750A4)](CHANGELOG.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2E7D32.svg)](LICENSE)
 
 PocketLLM Lite is a Flutter assistant for running supported models on your device with Cactus, or connecting to an Ollama server you control. Chats, preferences, personas, skills, and memories are stored locally. Optional model discovery, downloads, updates, GitHub skill installs, and Tavily search use the network only when their privacy controls allow it.
 
-## What works in v1.0.37
+## What works in v1.0.38
 
 - Streaming local chat through Cactus and loopback/LAN Ollama adapters.
 - Persistent chat history, personas, prompts, skills, tags, settings, and local memories.
@@ -20,7 +21,8 @@ PocketLLM Lite is a Flutter assistant for running supported models on your devic
 - User-confirmed clipboard, persistent-note, reminder, email-draft, and HTTP(S) browser tools with visible execution cards.
 - Hugging Face GGUF search, gated-repository token storage, file selection, and model downloads.
 - On-device Android OCR using ML Kit Latin text recognition.
-- On-device Whisper transcription through an already-installed Cactus model; unmanaged automatic downloads are disabled.
+- On-device Whisper transcription with guided, policy-gated installation of the required Cactus model; unmanaged SDK downloads remain disabled.
+- Guided prerequisites for Semantic/Hybrid document search and audio transcription show the exact model, catalog source, approximate size, and upstream license before downloading, then resume the interrupted action after verified installation.
 - Password-derived AES-256-GCM backups that reject wrong passwords/corruption and roll storage plus document indexes back on restore failure.
 - An authenticated, loopback-first OpenAI-compatible server with in-app host, port, key, start/stop, models, chat, SSE, embeddings, and request logs.
 - Strict Offline controls and a network audit log for app-owned update, discovery, download, skill, search, and remote-inference paths.
@@ -45,6 +47,13 @@ Strict Offline blocks non-loopback requests before application-owned HTTP I/O. L
 ### Local GGUF with Cactus
 
 Import a local GGUF or select a GGUF file discovered through Hugging Face. PocketLLM verifies the file header, available storage, and a published SHA-256 when source metadata provides one, then records a `ModelManifest`. A successful Cactus load confirms that exact file on the current backend/device; unknown vision, tool, reasoning, and embedding capabilities remain unknown.
+
+The central Model Store also exposes the current Cactus Flutter 1.3 catalog.
+Managed bundles download into resumable partial files only when the server proves
+range support and supplies an ETag or Last-Modified validator. PocketLLM safely
+extracts the archive, validates every GGUF header, and publishes the folder
+atomically. If a server ignores a resume request and returns a full HTTP 200
+body, PocketLLM restarts from byte zero instead of appending corrupt data.
 
 ### Ollama
 
@@ -78,7 +87,7 @@ flutter build apk --split-per-abi --release
 
 - Android OCR is implemented; iOS OCR is not enabled in this release.
 - Cactus 1.3 transcription returns text and performance metrics, but not verified word/segment timestamps or speaker diarization. PocketLLM does not invent them.
-- Audio transcription requires an already-installed `whisper-tiny` Cactus model. The current API does not expose verified segments, timestamps, or diarization.
+- Audio transcription requires `whisper-tiny`; the guided setup can install it from the live Cactus catalog. The current API does not expose verified segments, timestamps, or diarization.
 - The Cactus Flutter repository was archived upstream in July 2026. PocketLLM disables its telemetry and unmanaged download paths, but long-term backend maintenance remains a risk.
 - Android does not expose one reliable cross-vendor GPU/NPU capability probe, so accelerator status may be unknown.
 - Large models can still exhaust memory. Hardware recommendations are conservative when measurements are unavailable.
@@ -87,8 +96,13 @@ flutter build apk --split-per-abi --release
 - The OpenAI-compatible server has in-app controls but not trusted-host or configurable CORS allowlists; keep it on loopback unless LAN exposure is understood.
 - Tool-created notes have no separate manager screen, and reminder delivery varies with device/OEM background restrictions.
 
-See [the v1.0.36 foundation audit](docs/V1_0_36_PRODUCT_AUDIT.md), [v1.0.37 verification](docs/V1_0_37_VERIFICATION.md), [known limitations](docs/KNOWN_LIMITATIONS.md), and [security policy](SECURITY.md) for details.
+See [the v1.0.36 foundation audit](docs/V1_0_36_PRODUCT_AUDIT.md), [v1.0.38 verification](docs/V1_0_38_VERIFICATION.md), [known limitations](docs/KNOWN_LIMITATIONS.md), and [security policy](SECURITY.md) for details.
 
-## License status
+## Contributing
 
-This repository does not currently contain a license file. No open-source license grant is implied by this README.
+PocketLLM Lite is open source under the [MIT License](LICENSE). Bug reports,
+device/model compatibility evidence, translations, accessibility fixes,
+documentation, tests, and focused code contributions are welcome. Read
+[CONTRIBUTING.md](CONTRIBUTING.md), follow the
+[community code of conduct](CODE_OF_CONDUCT.md), or browse
+[open issues](https://github.com/PocketLLM/pocketllm-lite/issues).

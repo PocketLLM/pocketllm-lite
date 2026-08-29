@@ -60,13 +60,20 @@ class ModelManagerNotifier extends Notifier<ModelManagerState> {
       final discovered = <String, LocalModel>{};
       await for (final entity in modelDirectory.list(followLinks: false)) {
         if (entity is Directory) {
-          final files = await entity
+          if (p.basename(entity.path).startsWith('.')) continue;
+          final discoveredFiles = await entity
               .list(recursive: true, followLinks: false)
               .where((item) =>
                   item is File && item.path.toLowerCase().endsWith('.gguf'))
               .cast<File>()
               .toList();
-          if (files.isEmpty) continue;
+          final files = <File>[];
+          for (final file in discoveredFiles) {
+            if (await ModelStorageService.instance.isValidGGUFFile(file.path)) {
+              files.add(file);
+            }
+          }
+          if (files.isEmpty || files.length != discoveredFiles.length) continue;
           final id = p.basename(entity.path);
           final size = await _sumFileSizes(files);
           final manifest = persisted[id] ??
