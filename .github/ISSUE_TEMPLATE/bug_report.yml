@@ -1,0 +1,66 @@
+name: Bug report
+description: Report a reproducible PocketLLM Lite problem
+title: "[Bug]: "
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping us improve PocketLLM Lite. Do not include secrets or private documents.
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      placeholder: 1.0.38
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: Pixel 7, Android 16
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Inference path
+      options:
+        - Local Cactus model
+        - Ollama
+        - OpenAI-compatible provider
+        - No inference involved
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the exact model ID and source when the issue involves a model.
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and logs
+      description: Remove tokens, personal data, prompts, and document contents before sharing.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: I removed secrets and personal data from this report.
+          required: true

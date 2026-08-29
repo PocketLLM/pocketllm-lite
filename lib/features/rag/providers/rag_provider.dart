@@ -80,6 +80,8 @@ class RagDocumentsNotifier extends Notifier<RagDocumentsState> {
     }
   }
 
+  Future<void> refresh() => _loadDocuments();
+
   Future<void> configure({
     required RagRetrievalMode mode,
     String? embeddingModelId,

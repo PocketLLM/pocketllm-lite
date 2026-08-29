@@ -10,6 +10,7 @@ import '../../../../core/domain/background_task.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/widgets/m3_app_bar.dart';
 import '../../../../core/widgets/m3_section_header.dart';
+import '../../../../core/widgets/model_prerequisite_dialog.dart';
 import '../../../../services/audio_recording_service.dart';
 import '../../../../services/audio_transcription_service.dart';
 
@@ -75,10 +76,7 @@ class _AudioTranscriptionScreenState
 
   Future<void> _transcribe(String filePath) async {
     if (_modelInstalled != true) {
-      setState(() {
-        _error = 'Whisper Tiny is not installed. Open Model Store and install '
-            'the speech model before starting transcription.';
-      });
+      await _setupSpeechModel(resumeFilePath: filePath);
       return;
     }
     setState(() {
@@ -97,6 +95,27 @@ class _AudioTranscriptionScreenState
       if (mounted) setState(() => _error = error.toString());
     } finally {
       if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _setupSpeechModel({String? resumeFilePath}) async {
+    final result = await showModelPrerequisiteDialog(
+      context: context,
+      modelId: CactusWhisperTranscriber.modelId,
+      title: 'Set up local transcription',
+      explanation:
+          'PocketLLM needs Whisper Tiny to transcribe this audio on device. After the verified download, transcription resumes automatically.',
+    );
+    if (!mounted) return;
+    if (result == ModelPrerequisiteResult.installed) {
+      setState(() {
+        _modelInstalled = true;
+        _error = null;
+      });
+      if (resumeFilePath != null) await _transcribe(resumeFilePath);
+    } else if (result == ModelPrerequisiteResult.chooseAnother) {
+      await context.push('/settings/model-catalog?query=Speech');
+      await _refreshModelStatus();
     }
   }
 
@@ -133,6 +152,7 @@ class _AudioTranscriptionScreenState
             _SpeechModelCard(
               installed: _modelInstalled,
               onRefresh: _refreshModelStatus,
+              onSetup: _setupSpeechModel,
             ),
             const M3SectionHeader(title: 'Audio source', icon: Icons.mic),
             _SourceCard(
@@ -208,8 +228,13 @@ class _AudioTranscriptionScreenState
 class _SpeechModelCard extends StatelessWidget {
   final bool? installed;
   final VoidCallback onRefresh;
+  final Future<void> Function() onSetup;
 
-  const _SpeechModelCard({required this.installed, required this.onRefresh});
+  const _SpeechModelCard({
+    required this.installed,
+    required this.onRefresh,
+    required this.onSetup,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -229,9 +254,9 @@ class _SpeechModelCard extends StatelessWidget {
         ),
         trailing: installed == false
             ? IconButton.filledTonal(
-                onPressed: () => context.push('/settings/model-catalog'),
+                onPressed: onSetup,
                 icon: const Icon(Icons.download_outlined),
-                tooltip: 'Open Model Store',
+                tooltip: 'Download required model',
               )
             : IconButton(
                 onPressed: onRefresh,

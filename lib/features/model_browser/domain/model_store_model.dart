@@ -11,6 +11,7 @@ class ModelStoreModel {
   final Set<String> capabilities;
   final String source;
   final String? license;
+  final String? licenseUrl;
 
   const ModelStoreModel({
     required this.id,
@@ -23,6 +24,7 @@ class ModelStoreModel {
     required this.capabilities,
     required this.source,
     this.license,
+    this.licenseUrl,
   });
 
   bool get isEmbedding => capabilities.contains('Embeddings');

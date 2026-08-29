@@ -1,6 +1,6 @@
 # Known Limitations
 
-Applies to PocketLLM Lite v1.0.37.
+Applies to PocketLLM Lite v1.0.38.
 
 - Local model compatibility, quality, speed, and memory use depend on the exact file, quantization, context, backend, device, and thermal state. A valid GGUF header is not a compatibility guarantee.
 - Automatic task-based model routing and hardcoded model-family profiles were removed. Model switching is manual until verified manifests and measured load results can support reliable routing.
@@ -9,7 +9,7 @@ Applies to PocketLLM Lite v1.0.37.
 - Android OCR uses the bundled ML Kit Latin recognizer. iOS OCR, additional scripts, table reconstruction, and OCR of scanned PDF pages are not enabled.
 - Text PDFs, TXT, Markdown, and CSV are supported. Encrypted, malformed, or image-only PDFs return errors; layout/table preservation is best effort.
 - Keyword retrieval works without an embedding model. Semantic and hybrid retrieval require one of the verified Cactus embedding catalog entries to be installed; model compatibility and download availability still depend on the upstream catalog and device.
-- Model and embedding downloads retain validated partial files and durable task records across restart, but an interrupted transfer resumes when the user retries it; the app does not keep a background network worker alive after the process is terminated.
+- Model and embedding downloads retain validated partial files and durable task records across restart, but an interrupted transfer resumes when the user retries it; the app does not keep a background network worker alive after the process is terminated. Catalog size values are approximate, and a catalog route or model can still be removed upstream.
 - Audio transcription requires an installed compatible Cactus Whisper bundle. The current SDK path returns transcript text and runtime metrics but not verified segments, timestamps, diarization, summaries, or task extraction.
 - Cactus Flutter 1.3 is archived upstream as of July 2026. Telemetry is disabled and the dependency is isolated behind adapters, but maintenance and future Android/iOS compatibility are risks.
 - Tool reminders compile and schedule through the OS with permission and reboot receivers, but delivery varies with OEM background restrictions and was not verified on a physical device. Inexact scheduling may not fire at the exact second.
@@ -20,5 +20,5 @@ Applies to PocketLLM Lite v1.0.37.
 - Strict Offline is an application-level boundary, not a device firewall. Loopback is intentionally allowed. OS components invoked after an allowed action, such as the package installer, browser, or email composer, are outside PocketLLM's transport.
 - The embedded OpenAI-compatible server supports authenticated models, chat, SSE, and embeddings with in-app host/port/start controls. It does not yet implement trusted-host or configurable CORS allowlists; LAN mode therefore shows a warning.
 - Legacy plaintext JSON import remains for compatibility. New `.pllm` backups use authenticated encryption and application-level rollback, but an OS/process kill during low-level file replacement cannot provide a database-wide ACID guarantee.
-- No production Android signing key is configured in this checkout. A release-mode debug-signed artifact may be used for engineering verification only and must not be published as the production upgrade.
+- No production Android signing key is configured in this checkout. A release-mode debug-signed artifact may be used for engineering verification and an explicitly labeled GitHub pre-release only; it is not a production-signed upgrade.
 - Physical-phone local inference, Whisper quality, reminder delivery, Bluetooth/audio behavior, low-memory pressure, and upgrade preservation were not available for final verification.

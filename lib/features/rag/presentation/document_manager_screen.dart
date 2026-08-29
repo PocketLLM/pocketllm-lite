@@ -9,6 +9,7 @@ import '../../../core/domain/background_task.dart';
 import '../../../core/widgets/m3_app_bar.dart';
 import '../../../core/widgets/m3_empty_state.dart';
 import '../../../core/widgets/m3_section_header.dart';
+import '../../../core/widgets/model_prerequisite_dialog.dart';
 import '../domain/document.dart';
 import '../domain/rag_models.dart';
 import '../providers/rag_provider.dart';
@@ -67,13 +68,35 @@ class DocumentManagerScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: ready && !state.isLoading
-            ? () => _pickDocument(context, ref)
+        onPressed: !state.isLoading
+            ? () => _startAddDocument(context, ref, setup)
             : null,
         icon: const Icon(Icons.add),
         label: const Text('Add document'),
       ),
     );
+  }
+
+  Future<void> _startAddDocument(
+    BuildContext context,
+    WidgetRef ref,
+    RagSetupStatus? setup,
+  ) async {
+    if (setup?.ready == true) {
+      await _pickDocument(context, ref);
+      return;
+    }
+    final modelId =
+        setup?.embeddingModelId ?? supportedEmbeddingModels.first.id;
+    final result = await _showEmbeddingSetup(context, modelId);
+    if (!context.mounted) return;
+    if (result == ModelPrerequisiteResult.installed) {
+      await ref.read(ragDocumentsProvider.notifier).refresh();
+      if (context.mounted) await _pickDocument(context, ref);
+    } else if (result == ModelPrerequisiteResult.chooseAnother) {
+      await context.push('/settings/model-catalog?query=Embeddings');
+      ref.invalidate(ragDocumentsProvider);
+    }
   }
 
   Future<void> _pickDocument(BuildContext context, WidgetRef ref) async {
@@ -195,16 +218,30 @@ class _SetupCard extends ConsumerWidget {
               if (!(setup?.embeddingModelInstalled ?? false)) ...[
                 const SizedBox(height: 12),
                 Text(
-                  'This model is not installed. Download it in Model Store before indexing.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
+                  'A local embedding model is required for ${mode.label.toLowerCase()} retrieval. Install it now, choose a different compatible model, or use Keyword mode without a model.',
+                  style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 8),
-                FilledButton.tonalIcon(
-                  onPressed: () => context.push('/settings/model-catalog'),
-                  icon: const Icon(Icons.download_outlined),
-                  label: const Text('Open Model Store'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () => _downloadRequiredModel(
+                        context,
+                        ref,
+                        selectedModel ?? supportedEmbeddingModels.first.id,
+                      ),
+                      icon: const Icon(Icons.download_outlined),
+                      label: const Text('Download & continue'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => context.push(
+                        '/settings/model-catalog?query=Embeddings',
+                      ),
+                      child: const Text('Choose another'),
+                    ),
+                  ],
                 ),
               ],
             ],
@@ -213,6 +250,34 @@ class _SetupCard extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _downloadRequiredModel(
+    BuildContext context,
+    WidgetRef ref,
+    String modelId,
+  ) async {
+    final result = await _showEmbeddingSetup(context, modelId);
+    if (!context.mounted) return;
+    if (result == ModelPrerequisiteResult.installed) {
+      await ref.read(ragDocumentsProvider.notifier).refresh();
+    } else if (result == ModelPrerequisiteResult.chooseAnother) {
+      await context.push('/settings/model-catalog?query=Embeddings');
+      ref.invalidate(ragDocumentsProvider);
+    }
+  }
+}
+
+Future<ModelPrerequisiteResult?> _showEmbeddingSetup(
+  BuildContext context,
+  String modelId,
+) {
+  return showModelPrerequisiteDialog(
+    context: context,
+    modelId: modelId,
+    title: 'Set up document search',
+    explanation:
+        'PocketLLM needs this local embedding model to understand and search your documents. After verification, the interrupted document flow continues automatically.',
+  );
 }
 
 class _StatusBadge extends StatelessWidget {

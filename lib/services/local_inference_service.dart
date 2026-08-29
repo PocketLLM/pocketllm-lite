@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'error_log_service.dart';
 import 'inference_service.dart';
+import 'model_storage_service.dart';
 
 class LocalInferenceService implements InferenceService {
   final ErrorLogService? _errorLogService;
@@ -42,13 +43,22 @@ class LocalInferenceService implements InferenceService {
       final models = <LLMModel>[];
       await for (final entity in root.list(followLinks: false)) {
         if (entity is! Directory) continue;
-        final ggufFiles = await entity
+        if (p.basename(entity.path).startsWith('.')) continue;
+        final discoveredFiles = await entity
             .list(recursive: true, followLinks: false)
             .where((item) =>
                 item is File && item.path.toLowerCase().endsWith('.gguf'))
             .cast<File>()
             .toList();
-        if (ggufFiles.isEmpty) continue;
+        final ggufFiles = <File>[];
+        for (final file in discoveredFiles) {
+          if (await ModelStorageService.instance.isValidGGUFFile(file.path)) {
+            ggufFiles.add(file);
+          }
+        }
+        if (ggufFiles.isEmpty || ggufFiles.length != discoveredFiles.length) {
+          continue;
+        }
         var size = 0;
         for (final file in ggufFiles) {
           size += await file.length();
@@ -88,15 +98,24 @@ class LocalInferenceService implements InferenceService {
           'Model is not installed in the app model directory.',
         );
       }
-      final ggufFiles = await modelDirectory
+      final discoveredFiles = await modelDirectory
           .list(recursive: true, followLinks: false)
           .where((item) =>
               item is File && item.path.toLowerCase().endsWith('.gguf'))
           .cast<File>()
           .toList();
-      if (ggufFiles.isEmpty) {
+      final validation = await Future.wait(
+        discoveredFiles.map(
+          (file) => ModelStorageService.instance.isValidGGUFFile(file.path),
+        ),
+      );
+      final ggufFiles = <File>[
+        for (var index = 0; index < discoveredFiles.length; index++)
+          if (validation[index]) discoveredFiles[index],
+      ];
+      if (ggufFiles.isEmpty || ggufFiles.length != discoveredFiles.length) {
         throw const ModelCorruptedError(
-          'The model folder does not contain a GGUF file.',
+          'The model folder does not contain only valid GGUF model files.',
         );
       }
 

@@ -9,6 +9,8 @@ class ModelStoreService {
       : _network = network ?? NetworkGateway();
 
   final NetworkGateway _network;
+  Object? lastOnDeviceCatalogError;
+  Object? lastSpeechCatalogError;
 
   static const _catalogRoot = 'https://vlqqczxwyaodtcdmdmlw.supabase.co';
   static const _catalogKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
@@ -22,8 +24,14 @@ class ModelStoreService {
       };
 
   Future<List<ModelStoreModel>> fetchCatalog() async {
-    final responses = await Future.wait([
-      _network.get(
+    Object? modelCatalogError;
+    Object? speechCatalogError;
+    final models = <ModelStoreModel>[];
+    final speech = <ModelStoreModel>[];
+    lastOnDeviceCatalogError = null;
+    lastSpeechCatalogError = null;
+    try {
+      final response = await _network.get(
         Uri.parse(
           '$_catalogRoot/functions/v1/get-models?sdk_name=flutter&sdk_version=1.3.0',
         ),
@@ -31,32 +39,50 @@ class ModelStoreService {
         trigger: 'cactus_model_store_catalog',
         infoSent: 'SDK name and pinned runtime version; no user content',
         headers: _headers,
-      ),
-      _network.get(
+      );
+      if (response.statusCode != 200) {
+        throw StateError(
+          'On-device model catalog returned HTTP ${response.statusCode}.',
+        );
+      }
+      models.addAll(
+        (jsonDecode(response.body) as List)
+            .map((raw) => _model(Map<String, dynamic>.from(raw as Map))),
+      );
+    } catch (error) {
+      modelCatalogError = error;
+      lastOnDeviceCatalogError = error;
+    }
+    try {
+      final response = await _network.get(
         Uri.parse('$_catalogRoot/rest/v1/whisper?select=*'),
         purpose: ConnectionPurpose.modelSearch,
         trigger: 'cactus_speech_model_catalog',
         infoSent: 'Catalog request metadata; no user content',
         headers: {..._headers, 'Accept-Profile': 'cactus'},
-      ),
-    ]);
-    if (responses[0].statusCode != 200) {
+      );
+      if (response.statusCode != 200) {
+        throw StateError(
+          'Speech model catalog returned HTTP ${response.statusCode}.',
+        );
+      }
+      speech.addAll(
+        (jsonDecode(response.body) as List)
+            .map(
+              (raw) => _speechModel(Map<String, dynamic>.from(raw as Map)),
+            )
+            .where((model) => !model.id.contains('-pro')),
+      );
+    } catch (error) {
+      speechCatalogError = error;
+      lastSpeechCatalogError = error;
+    }
+    if (models.isEmpty && speech.isEmpty) {
       throw StateError(
-        'On-device model catalog returned HTTP ${responses[0].statusCode}. Retry when network model browsing is enabled.',
+        'Model catalogs are unavailable. On-device: $modelCatalogError '
+        'Speech: $speechCatalogError',
       );
     }
-    if (responses[1].statusCode != 200) {
-      throw StateError(
-        'Speech model catalog returned HTTP ${responses[1].statusCode}.',
-      );
-    }
-    final models = (jsonDecode(responses[0].body) as List)
-        .map((raw) => _model(Map<String, dynamic>.from(raw as Map)))
-        .toList();
-    final speech = (jsonDecode(responses[1].body) as List)
-        .map((raw) => _speechModel(Map<String, dynamic>.from(raw as Map)))
-        .where((model) => !model.id.contains('-pro'))
-        .toList();
     return [...models, ...speech]..sort((left, right) {
         if (left.runtime != right.runtime) {
           return left.runtime.index.compareTo(right.runtime.index);
@@ -76,6 +102,7 @@ class ModelStoreService {
         ..add('Embeddings');
     }
     final url = json['download_url'] as String;
+    final legal = _upstreamLegal(id);
     return ModelStoreModel(
       id: id,
       name: json['name'] as String? ?? id,
@@ -86,6 +113,8 @@ class ModelStoreService {
       quantizationBits: (json['quantization'] as num?)?.toInt() ?? 8,
       capabilities: capabilities,
       source: 'Cactus Flutter 1.3 catalog',
+      license: legal.$1,
+      licenseUrl: legal.$2,
     );
   }
 
@@ -108,6 +137,22 @@ class ModelStoreService {
       quantizationBits: 8,
       capabilities: const {'Speech to text'},
       source: 'Cactus Whisper catalog',
+      license: id == 'whisper-tiny' ? 'MIT (upstream weights)' : null,
+      licenseUrl: id == 'whisper-tiny'
+          ? 'https://github.com/openai/whisper/blob/main/LICENSE'
+          : null,
     );
   }
+
+  (String?, String?) _upstreamLegal(String id) => switch (id) {
+        'qwen3-0.6-embed' => (
+            'Apache-2.0 (upstream weights)',
+            'https://huggingface.co/Qwen/Qwen3-Embedding-0.6B',
+          ),
+        'nomic2-embed-300m' => (
+            'Apache-2.0 (upstream weights)',
+            'https://huggingface.co/nomic-ai/nomic-embed-text-v2-moe',
+          ),
+        _ => (null, null),
+      };
 }
