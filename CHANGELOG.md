@@ -56,6 +56,9 @@ We use a specific versioning pattern:
   a hidden quarantine folder before a clean installation is attempted.
 - Fixed the website treating GitHub's production-only `releases/latest` result
   as the newest engineering release.
+- Fixed the new Linux CI job using a page-transition class that moved libraries
+  across Flutter stable releases; the shared transition map now analyzes on
+  both the release toolchain and current GitHub runner toolchain.
 
 ### Known limitations
 
