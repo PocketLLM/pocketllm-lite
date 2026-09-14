@@ -108,6 +108,7 @@ const defaultSettings: AppSetting[] = [
   { key: "ragEmbeddingModel", value: "Xenova/all-MiniLM-L6-v2" },
   { key: "whisperModel", value: "Xenova/whisper-tiny.en" },
   { key: "language", value: "en" },
+  { key: "logRetentionDays", value: 30 },
   { key: "onboardingComplete", value: false },
 ];
 
