@@ -2,7 +2,7 @@ import { db } from "../db/db";
 import type { Citation, DocumentChunk } from "./types";
 import { cosine, embedText } from "./embeddings";
 
-function tokenize(text: string) {
+function tokenize(text: string): string[] {
   return text.toLowerCase().match(/[\p{L}\p{N}_-]+/gu) ?? [];
 }
 
