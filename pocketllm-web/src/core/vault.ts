@@ -4,6 +4,10 @@ const ITERATIONS = 600_000;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+function arrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
 type VaultEnvelope = {
   version: 1;
   salt: string;
@@ -27,7 +31,7 @@ function fromB64(value: string) {
 async function keyFor(passphrase: string, salt: Uint8Array) {
   const material = await crypto.subtle.importKey("raw", encoder.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", hash: "SHA-256", iterations: ITERATIONS, salt },
+    { name: "PBKDF2", hash: "SHA-256", iterations: ITERATIONS, salt: arrayBuffer(salt) },
     material,
     { name: "AES-GCM", length: 256 },
     false,
@@ -76,7 +80,7 @@ export function vaultGet(key: string) {
 }
 
 export async function vaultSet(key: string, value: string, passphrase: string) {
-  const values = unlocked ?? await unlockVault(passphrase).catch(() => ({}));
+  const values: Record<string, string> = unlocked ?? await unlockVault(passphrase).catch(() => ({} as Record<string, string>));
   values[key] = value;
   await save(passphrase, values);
 }
