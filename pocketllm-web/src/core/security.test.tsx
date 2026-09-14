@@ -12,7 +12,8 @@ describe("browser security boundaries", () => {
     );
     expect(container.querySelector("script")).toBeNull();
     expect(container.querySelector("img")?.getAttribute("onerror")).toBeNull();
-    expect(container.querySelector("a")?.getAttribute("href")).not.toMatch(/^javascript:/i);
+    const href = container.querySelector("a")?.getAttribute("href");
+    expect(href === null || href === undefined || !/^javascript:/i.test(href)).toBe(true);
   });
 
   it("refuses obvious secrets as automatic memory candidates", () => {
