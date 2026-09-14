@@ -10,6 +10,9 @@ import {
   listHuggingFaceGguf,
   removeBrowserModel,
   searchHuggingFace,
+  pauseDownload,
+  cancelDownload,
+  resumeDownload,
   type HuggingFaceFile,
   type HuggingFaceResult,
 } from "../../core/models";
@@ -31,7 +34,7 @@ export function ModelsPage() {
   const [testing, setTesting] = useState<string>();
   const [testResult, setTestResult] = useState<Record<string, string>>({});
 
-  const activeDownloads = useMemo(() => downloads.filter((task) => ["queued", "downloading", "verifying", "installing"].includes(task.state)), [downloads]);
+  const activeDownloads = useMemo(() => downloads.filter((task) => !["ready"].includes(task.state)).slice(0, 8), [downloads]);
 
   async function search() {
     setSearching(true);
@@ -105,6 +108,12 @@ export function ModelsPage() {
                 <strong>{task.fileName}</strong>
                 <span>{task.state} · {humanBytes(task.downloadedBytes)}{task.expectedBytes ? ` / ${humanBytes(task.expectedBytes)}` : ""}</span>
                 <progress max={task.expectedBytes ?? 1} value={task.downloadedBytes} />
+                {task.error && <small className="danger-text">{task.error}</small>}
+                <div className="download-actions">
+                  {task.state === "downloading" && <button className="text-action" onClick={() => void pauseDownload(task.id)}>Pause</button>}
+                  {["paused","failed","cancelled"].includes(task.state) && <button className="text-action" onClick={() => void resumeDownload(task.id).catch((error) => toast.push(error instanceof Error ? error.message : "Resume failed", "error"))}>Resume</button>}
+                  {!["cancelled","failed"].includes(task.state) && <button className="text-action danger-text" onClick={() => void cancelDownload(task.id)}>Cancel</button>}
+                </div>
               </div>
             </div>
           ))}
