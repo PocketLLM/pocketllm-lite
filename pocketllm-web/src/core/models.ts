@@ -13,6 +13,14 @@ type HfModel = {
   cardData?: { license?: string };
 };
 
+const activeDownloadControllers = new Map<string, AbortController>();
+const pauseRequested = new Set<string>();
+
+function hfHeaders() {
+  const token = sessionStorage.getItem("huggingface-token");
+  return token ? { Authorization: `Bearer ${token}` } : undefined;
+}
+
 type HfFile = {
   rfilename?: string;
   size?: number;
@@ -43,7 +51,7 @@ export async function searchHuggingFace(query: string): Promise<HuggingFaceResul
     limit: "25",
     full: "true",
   });
-  const response = await networkFetch(`https://huggingface.co/api/models?${params}`, {}, "huggingface-search");
+  const response = await networkFetch(`https://huggingface.co/api/models?${params}`, { headers: hfHeaders() }, "huggingface-search");
   if (!response.ok) throw new Error(`Hugging Face returned HTTP ${response.status}`);
   const rows = (await response.json()) as HfModel[];
   return rows.flatMap((row) => {
@@ -61,7 +69,7 @@ export async function searchHuggingFace(query: string): Promise<HuggingFaceResul
 }
 
 export async function listHuggingFaceGguf(repo: string): Promise<HuggingFaceFile[]> {
-  const response = await networkFetch(`https://huggingface.co/api/models/${encodeURIComponent(repo)}?blobs=true`, {}, "huggingface-search");
+  const response = await networkFetch(`https://huggingface.co/api/models/${encodeURIComponent(repo)}?blobs=true`, { headers: hfHeaders() }, "huggingface-search");
   if (!response.ok) throw new Error(`Hugging Face returned HTTP ${response.status}`);
   const data = (await response.json()) as { siblings?: HfFile[] };
   return (data.siblings ?? [])
@@ -124,6 +132,13 @@ export async function installHuggingFaceModel(
   file: HuggingFaceFile,
   metadata?: { license?: string; name?: string; onProgress?: (task: DownloadTask) => void; signal?: AbortSignal },
 ) {
+  if (file.size && file.size > 2 * 1024 * 1024 * 1024) {
+    throw new Error("This single GGUF file is larger than the 2 GB browser model limit. Choose a smaller or split model.");
+  }
+  const estimate = await navigator.storage?.estimate?.();
+  if (file.size && estimate?.quota && estimate?.usage && estimate.quota - estimate.usage < file.size * 1.08) {
+    throw new Error("This browser does not currently report enough free storage for the selected model.");
+  }
   const modelId = crypto.randomUUID();
   const path = `models/${modelId}/${file.name.replace(/\//g, "_")}`;
   const now = Date.now();
@@ -168,9 +183,10 @@ async function downloadTaskUnlocked(
     existing = 0;
   }
 
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...(hfHeaders() ?? {}) };
   if (existing > 0) headers.Range = `bytes=${existing}-`;
   if (existing > 0 && task.etag) headers["If-Range"] = task.etag;
+  else if (existing > 0 && task.lastModified) headers["If-Range"] = task.lastModified;
 
   await db.downloads.update(task.id, { state: "downloading", downloadedBytes: existing, updatedAt: Date.now(), error: undefined });
   await db.browserModels.update(model.id, { status: "downloading", updatedAt: Date.now() });
@@ -181,7 +197,7 @@ async function downloadTaskUnlocked(
   if (existing > 0 && response.status === 200) {
     await deleteOpfs(task.opfsPath).catch(() => undefined);
     offset = 0;
-    response = await networkFetch(task.url, { signal }, "huggingface-download");
+    response = await networkFetch(task.url, { signal, headers: hfHeaders() }, "huggingface-download");
   }
   if (existing > 0 && response.status !== 206 && response.status !== 200) {
     throw new Error(`Resume failed with HTTP ${response.status}`);
@@ -229,8 +245,10 @@ async function downloadTaskUnlocked(
     await logActivity("model", "Model installed", model.name);
   } catch (error) {
     const cancelled = error instanceof DOMException && error.name === "AbortError";
-    await db.downloads.update(task.id, { state: cancelled ? "cancelled" : "failed", error: cancelled ? undefined : error instanceof Error ? error.message : String(error), updatedAt: Date.now() });
-    await db.browserModels.update(model.id, { status: "failed", installed: false, updatedAt: Date.now() });
+    const paused = cancelled && pauseRequested.has(task.id);
+    if (paused) pauseRequested.delete(task.id);
+    await db.downloads.update(task.id, { state: paused ? "paused" : cancelled ? "cancelled" : "failed", error: cancelled ? undefined : error instanceof Error ? error.message : String(error), updatedAt: Date.now() });
+    await db.browserModels.update(model.id, { status: paused ? "downloading" : cancelled ? "available" : "failed", installed: false, updatedAt: Date.now() });
     if (!cancelled) await logError("model-download", error, model.name);
     throw error;
   }
@@ -243,7 +261,39 @@ export async function downloadTask(
 ) {
   const task = await db.downloads.get(taskId);
   if (!task) throw new Error("Download task not found.");
-  return withModelLock(task.modelId, () => downloadTaskUnlocked(taskId, onProgress, signal));
+  const controller = new AbortController();
+  activeDownloadControllers.set(taskId, controller);
+  const relayAbort = () => controller.abort();
+  signal?.addEventListener("abort", relayAbort, { once: true });
+  try {
+    return await withModelLock(task.modelId, () => downloadTaskUnlocked(taskId, onProgress, controller.signal));
+  } finally {
+    activeDownloadControllers.delete(taskId);
+    signal?.removeEventListener("abort", relayAbort);
+  }
+}
+
+export async function pauseDownload(taskId: string) {
+  pauseRequested.add(taskId);
+  activeDownloadControllers.get(taskId)?.abort();
+  if (!activeDownloadControllers.has(taskId)) {
+    pauseRequested.delete(taskId);
+    await db.downloads.update(taskId, { state: "paused", updatedAt: Date.now() });
+  }
+}
+
+export async function cancelDownload(taskId: string) {
+  pauseRequested.delete(taskId);
+  activeDownloadControllers.get(taskId)?.abort();
+  const task = await db.downloads.get(taskId);
+  if (task) {
+    await db.downloads.update(taskId, { state: "cancelled", updatedAt: Date.now() });
+    await db.browserModels.update(task.modelId, { status: "available", installed: false, updatedAt: Date.now() });
+  }
+}
+
+export async function resumeDownload(taskId: string, onProgress?: (task: DownloadTask) => void) {
+  return downloadTask(taskId, onProgress);
 }
 
 export async function removeBrowserModel(id: string) {
