@@ -90,10 +90,31 @@ export function providerRuntime(provider: Provider): RuntimeAdapter {
       capabilities: provider.capabilities,
       modelName: provider.model,
       async test() {
-        const response = await networkFetch(`${normalizeBaseUrl(provider.baseUrl)}/api/tags`, {}, "provider-test");
-        if (!response.ok) throw new Error(`Ollama returned HTTP ${response.status}`);
-        const data = (await response.json()) as { models?: Array<{ name?: string }> };
-        return (data.models ?? []).flatMap((item) => item.name ? [item.name] : []);
+        const base = normalizeBaseUrl(provider.baseUrl);
+        const endpoint = `${base}/api/tags`;
+        const parsed = new URL(base);
+        const isLoopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(parsed.hostname);
+        if (location.protocol === "https:" && parsed.protocol === "http:" && !isLoopback) {
+          throw new Error("This HTTPS page may be blocked from calling an insecure HTTP LAN endpoint. Use HTTPS for Ollama, a loopback endpoint, or a browser/setup that explicitly permits local-network access.");
+        }
+        try {
+          const response = await networkFetch(endpoint, {}, "provider-test");
+          if (response.status === 401 || response.status === 403) {
+            throw new Error("Ollama is reachable but rejected this web origin. Add the PocketLLM site origin to OLLAMA_ORIGINS, restart Ollama, then test again.");
+          }
+          if (response.status === 404) {
+            throw new Error("The host is reachable, but it does not expose Ollama /api/tags. Check the base URL and port.");
+          }
+          if (!response.ok) throw new Error(`Ollama is reachable but returned HTTP ${response.status}.`);
+          const data = (await response.json()) as { models?: Array<{ name?: string }> };
+          return (data.models ?? []).flatMap((item) => item.name ? [item.name] : []);
+        } catch (error) {
+          if (error instanceof Error && /Strict Offline|rejected this web origin|does not expose Ollama|reachable but returned/.test(error.message)) throw error;
+          if (isLoopback) {
+            throw new Error("PocketLLM could not reach Ollama on this computer. Start Ollama, confirm it is listening on the configured port, then test again.");
+          }
+          throw new Error("PocketLLM could not reach this LAN Ollama endpoint. Check the host, Ollama listen address, browser local-network permission, firewall, and OLLAMA_ORIGINS.");
+        }
       },
       async generate({ messages, signal, onToken, maxTokens, temperature, topP, topK }) {
         const response = await networkFetch(
