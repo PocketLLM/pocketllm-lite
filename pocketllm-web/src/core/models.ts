@@ -3,6 +3,7 @@ import type { BrowserModel, DownloadTask } from "./types";
 import { networkFetch } from "./network";
 import { appendOpfs, deleteOpfs, readOpfs, sha256, writeOpfs } from "./storage";
 import { withModelLock } from "./multitab";
+import { beginBusy } from "./busy";
 
 type HfModel = {
   id?: string;
@@ -261,6 +262,7 @@ export async function downloadTask(
 ) {
   const task = await db.downloads.get(taskId);
   if (!task) throw new Error("Download task not found.");
+  const releaseBusy = beginBusy("model-download");
   const controller = new AbortController();
   activeDownloadControllers.set(taskId, controller);
   const relayAbort = () => controller.abort();
@@ -268,6 +270,7 @@ export async function downloadTask(
   try {
     return await withModelLock(task.modelId, () => downloadTaskUnlocked(taskId, onProgress, controller.signal));
   } finally {
+    releaseBusy();
     activeDownloadControllers.delete(taskId);
     signal?.removeEventListener("abort", relayAbort);
   }
