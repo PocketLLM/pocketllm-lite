@@ -43,7 +43,7 @@ void main() {
         encryptedJson: encrypted,
         password: 'correct horse battery staple',
       );
-      expect(restored.schemaVersion, 3);
+      expect(restored.schemaVersion, 4);
       expect(restored.settings['theme'], 'dark');
       expect(restored.chats.single['id'], 'c1');
       expect(restored.prompts.single['id'], 'prompt-1');
