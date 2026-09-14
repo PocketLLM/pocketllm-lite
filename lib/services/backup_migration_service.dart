@@ -51,7 +51,7 @@ class BackupArchivePayload {
 
   factory BackupArchivePayload.fromJson(Map<String, dynamic> json) {
     final schemaVersion = json['schemaVersion'] as int?;
-    if (schemaVersion != 2 && schemaVersion != 3) {
+    if (schemaVersion != 2 && schemaVersion != 3 && schemaVersion != 4) {
       throw const BackupDecryptError('Unsupported backup format version.');
     }
     return BackupArchivePayload(
@@ -106,8 +106,8 @@ class BackupMigrationService {
       );
     }
     final payload = BackupArchivePayload(
-      schemaVersion: 3,
-      appVersion: '1.0.36',
+      schemaVersion: 4,
+      appVersion: '1.0.38',
       exportedAt: DateTime.now(),
       settings: settings,
       chats: chats,
@@ -127,7 +127,7 @@ class BackupMigrationService {
     );
     return jsonEncode({
       'format': 'pocketllm-backup',
-      'version': 3,
+      'version': 4,
       'kdf': {
         'name': 'PBKDF2-HMAC-SHA256',
         'iterations': _iterations,
@@ -150,7 +150,7 @@ class BackupMigrationService {
       final envelope = jsonDecode(encryptedJson) as Map<String, dynamic>;
       final envelopeVersion = envelope['version'];
       if (envelope['format'] != 'pocketllm-backup' ||
-          envelopeVersion != 2 && envelopeVersion != 3) {
+          envelopeVersion != 2 && envelopeVersion != 3 && envelopeVersion != 4) {
         throw const BackupDecryptError('Not a supported PocketLLM backup.');
       }
       final kdf = Map<String, dynamic>.from(envelope['kdf'] as Map);
