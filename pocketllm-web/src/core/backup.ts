@@ -1,5 +1,6 @@
 import { db, ensureDefaults } from "../db/db";
 import type { Chat, Message } from "./types";
+import { withExclusiveLock } from "./multitab";
 
 const ITERATIONS = 600_000;
 const encoder = new TextEncoder();
@@ -177,7 +178,7 @@ function validateMobilePayload(payload: any) {
   }
 }
 
-export async function restoreEncryptedBackup(encryptedJson: string, password: string) {
+async function restoreEncryptedBackupUnlocked(encryptedJson: string, password: string) {
   const payload = await decryptBackup(encryptedJson, password);
   validateMobilePayload(payload);
 
@@ -306,6 +307,10 @@ export async function restoreEncryptedBackup(encryptedJson: string, password: st
     skills: nextSkills.length,
     documents: nextDocuments.length,
   };
+}
+
+export async function restoreEncryptedBackup(encryptedJson: string, password: string) {
+  return withExclusiveLock("backup-restore", () => restoreEncryptedBackupUnlocked(encryptedJson, password));
 }
 
 export function downloadBackup(json: string) {
