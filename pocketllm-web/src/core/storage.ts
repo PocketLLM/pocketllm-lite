@@ -22,6 +22,13 @@ function splitPath(path: string) {
   return path.split("/").filter(Boolean);
 }
 
+function writableData(data: Blob | ArrayBuffer | Uint8Array | string): FileSystemWriteChunkType {
+  if (data instanceof Uint8Array) {
+    return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+  }
+  return data as FileSystemWriteChunkType;
+}
+
 export async function writeOpfs(path: string, data: Blob | ArrayBuffer | Uint8Array | string) {
   const parts = splitPath(path);
   const fileName = parts.pop();
@@ -29,7 +36,7 @@ export async function writeOpfs(path: string, data: Blob | ArrayBuffer | Uint8Ar
   const dir = await ensureDirectory(parts);
   const handle = await dir.getFileHandle(fileName, { create: true });
   const writable = await handle.createWritable();
-  await writable.write(data);
+  await writable.write(writableData(data));
   await writable.close();
   return path;
 }
@@ -42,7 +49,7 @@ export async function appendOpfs(path: string, data: Uint8Array, offset: number)
   const handle = await dir.getFileHandle(fileName, { create: true });
   const writable = await handle.createWritable({ keepExistingData: true });
   await writable.seek(offset);
-  await writable.write(data);
+  await writable.write(writableData(data));
   await writable.close();
 }
 
@@ -82,7 +89,7 @@ export async function sha256(data: Blob | ArrayBuffer) {
 
 async function walkDirectory(dir: FileSystemDirectoryHandle): Promise<number> {
   let total = 0;
-  for await (const [, handle] of dir.entries()) {
+  for await (const [, handle] of (dir as any).entries() as AsyncIterable<[string, FileSystemHandle]>) {
     if (handle.kind === "file") {
       total += (await (handle as FileSystemFileHandle).getFile()).size;
     } else {
