@@ -190,3 +190,39 @@ export async function deleteDocument(documentId: string) {
     await deleteOpfs(document.opfsPath).catch(() => undefined);
   }
 }
+
+
+export async function clearDocumentIndex(documentId: string) {
+  const document = await db.documents.get(documentId);
+  if (!document) throw new Error("Document not found.");
+  await db.transaction("rw", db.documents, db.documentChunks, async () => {
+    await db.documentChunks.where("documentId").equals(documentId).delete();
+    await db.documents.update(documentId, {
+      chunkCount: 0,
+      retrievalMode: "keyword",
+      embeddingModel: undefined,
+      indexedAt: undefined,
+      updatedAt: Date.now(),
+    });
+  });
+  await logActivity("knowledge", "Document index removed", document.name);
+}
+
+export async function setDocumentRetrievalMode(
+  documentId: string,
+  mode: KnowledgeDocument["retrievalMode"],
+  onProgress?: (value: number, label: string) => void,
+) {
+  const document = await db.documents.get(documentId);
+  if (!document) throw new Error("Document not found.");
+  const chunks = await db.documentChunks.where("documentId").equals(documentId).toArray();
+
+  if (mode !== "keyword" && (!chunks.length || !chunks.some((chunk) => chunk.embedding?.length))) {
+    const rebuilt = await reindexDocument(documentId, true, onProgress);
+    await db.documents.update(rebuilt.id, { retrievalMode: mode, updatedAt: Date.now() });
+    return db.documents.get(rebuilt.id);
+  }
+
+  await db.documents.update(documentId, { retrievalMode: mode, updatedAt: Date.now() });
+  return db.documents.get(documentId);
+}
