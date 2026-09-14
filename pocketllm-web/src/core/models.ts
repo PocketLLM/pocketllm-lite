@@ -1,7 +1,7 @@
 import { db, logActivity, logError, setting } from "../db/db";
 import type { BrowserModel, DownloadTask } from "./types";
 import { networkFetch } from "./network";
-import { appendOpfs, deleteOpfs, readOpfs, sha256, writeOpfs } from "./storage";
+import { appendOpfs, deleteOpfs, readOpfs, requestPersistentStorage, sha256, writeOpfs } from "./storage";
 import { withModelLock } from "./multitab";
 import { beginBusy } from "./busy";
 
@@ -106,6 +106,7 @@ export async function addBrowserModelFromFile(file: File) {
     updatedAt: now,
   };
   await db.browserModels.add(model);
+  void requestPersistentStorage().catch(() => false);
   await logActivity("model", "GGUF imported", file.name);
   return model;
 }
@@ -243,6 +244,7 @@ async function downloadTaskUnlocked(
     }
     await db.downloads.update(task.id, { state: "ready", downloadedBytes: offset, updatedAt: Date.now() });
     await db.browserModels.update(model.id, { status: "ready", installed: true, size: downloaded.size, sha256: digest, updatedAt: Date.now() });
+    void requestPersistentStorage().catch(() => false);
     await logActivity("model", "Model installed", model.name);
   } catch (error) {
     const cancelled = error instanceof DOMException && error.name === "AbortError";
