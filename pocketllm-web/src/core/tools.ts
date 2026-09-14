@@ -265,7 +265,7 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
 export function startReminderLoop() {
   let timer = 0;
   const tick = async () => {
-    const due = (await db.reminders.where("delivered").equals(0).toArray()).filter((item) => item.fireAt <= Date.now());
+    const due = (await db.reminders.filter((item) => !item.delivered).toArray()).filter((item) => item.fireAt <= Date.now());
     for (const reminder of due) {
       if ("Notification" in window) {
         if (Notification.permission === "default") await Notification.requestPermission().catch(() => undefined);
