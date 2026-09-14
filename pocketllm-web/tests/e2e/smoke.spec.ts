@@ -10,7 +10,8 @@ test("first-run setup can be skipped", async ({ page }) => {
 test("major workspaces are reachable", async ({ page }) => {
   await page.goto("/");
   const skip = page.getByRole("button", { name: /skip setup/i });
-  if (await skip.isVisible()) await skip.click();
+  await skip.waitFor({ state: "visible" });
+  await skip.click();
   if (page.viewportSize()!.width < 700) await page.getByRole("button", { name: /open navigation/i }).click();
   await page.getByRole("link", { name: "Knowledge" }).click();
   await expect(page.getByRole("heading", { name: "Knowledge" })).toBeVisible();
