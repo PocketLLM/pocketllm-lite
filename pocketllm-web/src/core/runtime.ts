@@ -105,7 +105,13 @@ export function providerRuntime(provider: Provider): RuntimeAdapter {
             body: JSON.stringify({
               model: provider.model,
               stream: true,
-              messages,
+              messages: messages.map((message) => ({
+                role: message.role,
+                content: message.content,
+                ...(message.images?.length
+                  ? { images: message.images.map((image) => image.replace(/^data:image\/[^;]+;base64,/, "")) }
+                  : {}),
+              })),
               options: {
                 ...(typeof maxTokens === "number" ? { num_predict: maxTokens } : {}),
                 ...(typeof temperature === "number" ? { temperature } : {}),
@@ -174,7 +180,15 @@ export function providerRuntime(provider: Provider): RuntimeAdapter {
           body: JSON.stringify({
             model: provider.model,
             stream: true,
-            messages,
+            messages: messages.map((message) => message.images?.length
+              ? {
+                  role: message.role,
+                  content: [
+                    { type: "text", text: message.content },
+                    ...message.images.map((url) => ({ type: "image_url", image_url: { url } })),
+                  ],
+                }
+              : { role: message.role, content: message.content }),
             ...(typeof maxTokens === "number" ? { max_tokens: maxTokens } : {}),
             ...(typeof temperature === "number" ? { temperature } : {}),
             ...(typeof topP === "number" ? { top_p: topP } : {}),
@@ -218,7 +232,7 @@ export function chromeRuntime(): RuntimeAdapter {
     modelName: "Built-in foundation model",
     capabilities: { text: true, vision: false, embeddings: false, tools: false, audio: false },
     async test() {
-      const lm = window.LanguageModel;
+      const lm = (window as any).LanguageModel;
       if (!lm) throw new Error("Chrome Prompt API is unavailable.");
       const availability = await lm.availability({
         expectedInputs: [{ type: "text", languages: ["en"] }],
@@ -230,7 +244,7 @@ export function chromeRuntime(): RuntimeAdapter {
       return [String(availability)];
     },
     async generate({ messages, signal, onToken }) {
-      const lm = window.LanguageModel;
+      const lm = (window as any).LanguageModel;
       if (!lm) throw new Error("Chrome Prompt API is unavailable.");
       const system = messages.filter((message) => message.role === "system").map((item) => item.content).join("\n\n");
       const conversation = messages.filter((message) => message.role !== "system");
@@ -301,7 +315,15 @@ export function wllamaRuntime(model: BrowserModel): RuntimeAdapter {
       signal.addEventListener("abort", abort, { once: true });
       try {
         const stream = await instance.createChatCompletion({
-          messages: messages.map(({ role, content }) => ({ role, content })),
+          messages: messages.map(({ role, content, images }) => ({
+            role,
+            content: images?.length
+              ? [
+                  { type: "text", text: content },
+                  ...images.map((url) => ({ type: "image_url", image_url: { url } })),
+                ]
+              : content,
+          })) as any,
           stream: true,
           max_tokens: maxTokens ?? 512,
           temperature: temperature ?? 0.7,
