@@ -12,11 +12,16 @@ export function NetworkPage() {
   const strictOffline = Boolean(strictRow?.value);
   const [scope, setScope] = useState<"all" | NetworkAudit["scope"]>("all");
   const [status, setStatus] = useState<"all" | "allowed" | "blocked">("all");
+  const [purpose, setPurpose] = useState("");
+  const [destination, setDestination] = useState("");
 
+  const purposes = useMemo(() => [...new Set(logs.map((item) => item.purpose))].sort(), [logs]);
   const filtered = useMemo(() => logs.filter((item) =>
     (scope === "all" || item.scope === scope) &&
-    (status === "all" || (status === "allowed" ? item.allowed : !item.allowed))
-  ), [logs, scope, status]);
+    (status === "all" || (status === "allowed" ? item.allowed : !item.allowed)) &&
+    (!purpose || item.purpose === purpose) &&
+    (!destination.trim() || item.destination.toLowerCase().includes(destination.trim().toLowerCase()))
+  ), [logs, scope, status, purpose, destination]);
 
   return (
     <section className="page">
@@ -37,6 +42,8 @@ export function NetworkPage() {
         <Filter size={16} />
         <select value={scope} onChange={(e) => setScope(e.target.value as any)}><option value="all">All scopes</option><option value="loopback">Loopback</option><option value="lan">LAN</option><option value="internet">Internet</option></select>
         <select value={status} onChange={(e) => setStatus(e.target.value as any)}><option value="all">All outcomes</option><option value="allowed">Allowed</option><option value="blocked">Blocked</option></select>
+        <select value={purpose} onChange={(e) => setPurpose(e.target.value)} aria-label="Filter network purpose"><option value="">All features</option>{purposes.map((item) => <option value={item} key={item}>{item}</option>)}</select>
+        <input className="network-filter-input" value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Destination" aria-label="Filter destination" />
         <button className="text-action danger-text" onClick={() => void clearNetworkAudit()}><Trash2 size={13} /> Clear log</button>
       </div>
 
