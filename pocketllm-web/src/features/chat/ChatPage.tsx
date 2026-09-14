@@ -59,9 +59,9 @@ export function ChatPage() {
   const personas = useLiveValue(() => db.personas.orderBy("name").toArray(), [], []);
   const prompts = useLiveValue(() => db.prompts.orderBy("title").toArray(), [], []);
   const documents = useLiveValue(() => db.documents.orderBy("updatedAt").reverse().toArray(), [], []);
-  const liveChat = useLiveValue(
-    () => chatId ? db.chats.get(chatId) : Promise.resolve(undefined),
-    undefined as Chat | undefined,
+  const liveChat = useLiveValue<Chat | undefined>(
+    async () => chatId ? await db.chats.get(chatId) : undefined,
+    undefined,
     [chatId],
   );
   const liveMessages = useLiveValue(
