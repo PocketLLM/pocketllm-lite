@@ -3,12 +3,14 @@ import {
   ArrowUp,
   BookOpenText,
   Copy,
+  Download,
   GitBranch,
   Mic,
   MoreHorizontal,
   Paperclip,
   RefreshCw,
   Settings2,
+  Share2,
   Sparkles,
   Square,
   Star,
@@ -271,7 +273,7 @@ export function ChatPage() {
     });
     setDraft("");
     setAttachments([]);
-    void maybeExtractMemories(user);
+    if (!active.noMemory && active.memoryEnabled !== false) void maybeExtractMemories(user);
     await runGeneration({ ...active, ...choicePatch(runtimeChoice) }, [...previous, user], assistant);
   }
 
@@ -402,6 +404,48 @@ export function ChatPage() {
     setEditMessage(null);
   }
 
+  function downloadText(name: string, text: string, type = "text/plain") {
+    const blob = new Blob([text], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function shareMessage(message: Message) {
+    const title = liveChat?.title ?? "PocketLLM message";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text: message.content });
+        return;
+      } catch (cause) {
+        if (cause instanceof DOMException && cause.name === "AbortError") return;
+      }
+    }
+    await navigator.clipboard.writeText(message.content);
+    toast.push("Message copied because native sharing is unavailable.", "success");
+  }
+
+  function exportMessage(message: Message) {
+    const role = roleLabel(message);
+    const filename = `pocketllm-${message.id.slice(0, 8)}.md`;
+    downloadText(filename, `# ${role}\n\n${message.content}\n`, "text/markdown");
+  }
+
+  function exportChat() {
+    if (!liveChat || !liveMessages.length) return;
+    const markdown = [
+      `# ${liveChat.title}`,
+      `Exported: ${new Date().toISOString()}`,
+      "",
+      ...liveMessages.map((message) => `## ${roleLabel(message)}\n\n${message.content}\n`),
+    ].join("\n");
+    const safe = liveChat.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "conversation";
+    downloadText(`${safe}.md`, markdown, "text/markdown");
+  }
+
   const displayMessages = liveMessages.map((message) =>
     message.id === streamingId ? { ...message, content: streamingText } : message,
   );
@@ -425,6 +469,7 @@ export function ChatPage() {
             {browserModels.map((model) => <option key={model.id} value={`model:${model.id}`}>{model.name} · Browser</option>)}
             {providers.map((provider) => <option key={provider.id} value={`provider:${provider.id}`}>{provider.name} · {provider.model || "model?"}</option>)}
           </select>
+          {liveChat && liveMessages.length > 0 && <button className="icon-button" onClick={exportChat} aria-label="Export conversation"><Download size={18} /></button>}
           <button className={`icon-button ${inspectorOpen ? "active" : ""}`} onClick={() => setInspectorOpen((value) => !value)} aria-label="Toggle context panel">
             <Settings2 size={18} />
           </button>
@@ -448,6 +493,8 @@ export function ChatPage() {
                     <span>{roleLabel(message)}</span>
                     <div className="message-actions">
                       <button className="text-action" onClick={() => void navigator.clipboard.writeText(message.content)}><Copy size={13} /> Copy</button>
+                      <button className="text-action" onClick={() => void shareMessage(message)}><Share2 size={13} /> Share</button>
+                      <button className="text-action" onClick={() => exportMessage(message)}><Download size={13} /> Export</button>
                       {message.role === "assistant" && <button className="text-action" onClick={() => void regenerate(message)}><RefreshCw size={13} /> Regenerate</button>}
                       {message.role === "user" && <button className="text-action" onClick={() => openEdit(message)}><WandSparkles size={13} /> Edit</button>}
                       <button className="text-action" onClick={() => void branchAt(message)}><GitBranch size={13} /> Branch</button>
@@ -585,7 +632,8 @@ export function ChatPage() {
             </section>
             <section className="inspector-toggles">
               <label><input type="checkbox" checked={Boolean(liveChat?.ragEnabled)} onChange={(event) => void updateChat({ ragEnabled: event.target.checked })} /> <span><BookOpenText size={15} /> Documents</span></label>
-              <label><input type="checkbox" checked={liveChat?.memoryEnabled !== false} onChange={(event) => void updateChat({ memoryEnabled: event.target.checked })} /> <span><Sparkles size={15} /> Memory</span></label>
+              <label><input type="checkbox" checked={liveChat?.memoryEnabled !== false} onChange={(event) => void updateChat({ memoryEnabled: event.target.checked })} /> <span><Sparkles size={15} /> Use memory</span></label>
+              <label><input type="checkbox" checked={Boolean(liveChat?.noMemory)} onChange={(event) => void updateChat({ noMemory: event.target.checked })} /> <span><Sparkles size={15} /> Don't save memory from this chat</span></label>
               <label><input type="checkbox" checked={Boolean(liveChat?.toolsEnabled)} onChange={(event) => void updateChat({ toolsEnabled: event.target.checked })} /> <span><MoreHorizontal size={15} /> Tools</span></label>
             </section>
             {liveChat?.ragEnabled && (
