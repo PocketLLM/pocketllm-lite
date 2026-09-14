@@ -677,3 +677,77 @@ progress { width: 100%; height: 6px; accent-color: var(--accent); }
     padding-left: 8px;
   }
 }
+
+
+/* Model lifecycle workspace */
+.model-detail-result { margin-bottom: 14px; }
+.model-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 9px;
+  margin-bottom: 14px;
+}
+.model-detail-grid > div {
+  min-height: 82px;
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 14px;
+}
+.model-detail-grid span {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.model-detail-grid strong { font-size: 11px; overflow-wrap: anywhere; }
+.model-detail-card { margin-bottom: 12px; }
+.capability-badges {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+}
+.capability-badges span {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: var(--muted);
+  font-size: 9px;
+}
+.capability-badges span.enabled {
+  border-color: rgba(52,116,74,.24);
+  color: var(--good);
+}
+.model-detail-list { display: grid; gap: 0; margin: 8px 0 0; }
+.model-detail-list > div {
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.model-detail-list dt { color: var(--muted); font-size: 9px; }
+.model-detail-list dd { margin: 0; font-size: 10px; overflow-wrap: anywhere; }
+.model-download-history { display: grid; gap: 7px; padding-top: 8px; }
+.model-download-history > div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.model-download-history strong { font-size: 10px; }
+.model-download-history span,.model-download-history small { color: var(--muted); font-size: 9px; }
+
+@media (max-width: 900px) {
+  .model-detail-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 520px) {
+  .model-detail-grid { grid-template-columns: 1fr; }
+  .model-detail-list > div { grid-template-columns: 1fr; gap: 4px; padding: 8px 0; }
+}
