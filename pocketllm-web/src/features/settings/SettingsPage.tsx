@@ -14,6 +14,7 @@ export function SettingsPage() {
   const [backupPassword, setBackupPassword] = useState("");
   const [backupBusy, setBackupBusy] = useState(false);
   const [tavilyKey, setTavilyKey] = useState(sessionStorage.getItem("tavily-key") ?? "");
+  const [hfToken, setHfToken] = useState(sessionStorage.getItem("huggingface-token") ?? "");
 
   const bool = (key: string, fallback = false) => typeof map.get(key) === "boolean" ? Boolean(map.get(key)) : fallback;
   const string = (key: string, fallback = "") => typeof map.get(key) === "string" ? String(map.get(key)) : fallback;
@@ -64,6 +65,7 @@ export function SettingsPage() {
           <Toggle label="GitHub skill installation" description="Allow explicit raw GitHub skill downloads." checked={bool("githubSkillsEnabled")} onChange={(value) => void saveSetting("githubSkillsEnabled", value)} />
           <Toggle label="Tavily web search" description="Allow the optional Tavily tool after per-call confirmation." checked={bool("tavilyEnabled")} onChange={(value) => void saveSetting("tavilyEnabled", value)} />
           <label className="inline-secret">Tavily key <input type="password" value={tavilyKey} onChange={(e) => setTavilyKey(e.target.value)} placeholder="Session only" /><button className="soft-button" onClick={() => { if (tavilyKey) sessionStorage.setItem("tavily-key", tavilyKey); else sessionStorage.removeItem("tavily-key"); toast.push("Session key updated", "success"); }}><Save size={14} /> Save session</button></label>
+          <label className="inline-secret">Hugging Face token <input type="password" value={hfToken} onChange={(e) => setHfToken(e.target.value)} placeholder="Optional · session only" /><button className="soft-button" onClick={() => { if (hfToken) sessionStorage.setItem("huggingface-token", hfToken); else sessionStorage.removeItem("huggingface-token"); toast.push("Hugging Face session token updated", "success"); }}><Save size={14} /> Save session</button></label>
           <Link className="setting-link" to="/network"><LockKeyhole size={15} /> Open Network Centre</Link>
         </SettingsSection>
 
