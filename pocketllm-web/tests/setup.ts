@@ -1,3 +1,4 @@
+import { webcrypto } from "node:crypto";
 import "fake-indexeddb/auto";
 import "@testing-library/jest-dom/vitest";
 Object.defineProperty(globalThis.navigator, "storage", {
@@ -8,3 +9,7 @@ Object.defineProperty(globalThis.navigator, "storage", {
     persist: async () => true
   }
 });
+
+if (!globalThis.crypto?.subtle) {
+  Object.defineProperty(globalThis, "crypto", { configurable: true, value: webcrypto });
+}
