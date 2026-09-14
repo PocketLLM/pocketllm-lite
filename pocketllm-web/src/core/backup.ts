@@ -6,6 +6,10 @@ const ITERATIONS = 600_000;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+function arrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
 function toBase64(bytes: Uint8Array) {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -20,7 +24,7 @@ function fromBase64(value: string) {
 async function deriveKey(password: string, salt: Uint8Array) {
   const material = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", hash: "SHA-256", iterations: ITERATIONS, salt },
+    { name: "PBKDF2", hash: "SHA-256", iterations: ITERATIONS, salt: arrayBuffer(salt) },
     material,
     { name: "AES-GCM", length: 256 },
     false,
@@ -257,18 +261,7 @@ async function restoreEncryptedBackupUnlocked(encryptedJson: string, password: s
 
   await db.transaction(
     "rw",
-    db.chats,
-    db.messages,
-    db.memories,
-    db.personas,
-    db.prompts,
-    db.skills,
-    db.documents,
-    db.documentChunks,
-    db.notes,
-    db.providers,
-    db.browserModels,
-    db.settings,
+    [db.chats, db.messages, db.memories, db.personas, db.prompts, db.skills, db.documents, db.documentChunks, db.notes, db.providers, db.browserModels, db.settings],
     async () => {
       await Promise.all([
         db.chats.clear(),
