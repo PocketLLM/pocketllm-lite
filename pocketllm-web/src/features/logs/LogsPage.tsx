@@ -23,7 +23,7 @@ export function ErrorLogPage() {
       <header className="page-header"><div><p className="eyebrow">Diagnostics</p><h1>Error log</h1><p>Safe technical errors. Secrets, prompts and document text are intentionally excluded.</p></div><button className="soft-button danger-text" onClick={async () => { if (confirm("Clear error log?")) await db.errors.clear(); }}><Trash2 size={14} /> Clear</button></header>
       <div className="error-list">
         {rows.length === 0 ? <div className="empty-state list-card"><AlertTriangle size={25} /><h2>No recorded errors</h2></div> :
-          rows.map((item) => <article key={item.id}><div className="error-head"><strong>{item.feature}</strong><span>{new Date(item.timestamp).toLocaleString()}</span></div><p>{item.safeMessage}</p>{item.runtime && <small>Runtime: {item.runtime}</small>}{item.stack && <details><summary>Stack</summary><pre>{item.stack}</pre></details>}</article>)}
+          rows.map((item) => <article key={item.id}><div className="error-head"><strong>{item.feature}</strong><span>{new Date(item.timestamp).toLocaleString()}</span></div><p>{item.safeMessage}</p><div className="error-meta-line">{item.runtime && <small>Runtime: {item.runtime}</small>}{item.appVersion && <small>App: {item.appVersion}</small>}{item.browser && <small>Browser: {item.browser}</small>}</div>{item.stack && <details><summary>Stack</summary><pre>{item.stack}</pre></details>}</article>)}
       </div>
     </section>
   );
