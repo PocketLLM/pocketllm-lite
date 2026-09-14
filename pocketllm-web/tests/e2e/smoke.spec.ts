@@ -17,5 +17,5 @@ test("major workspaces are reachable", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Knowledge" })).toBeVisible();
   if (page.viewportSize()!.width < 700) await page.getByRole("button", { name: /open navigation/i }).click();
   await page.getByRole("link", { name: "Models" }).click();
-  await expect(page.getByRole("heading", { name: "Models" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Models", exact: true })).toBeVisible();
 });
