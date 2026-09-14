@@ -1,508 +1,273 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description"
-    content="PocketLLM Lite is a local-first Android AI workspace with transparent network controls, compatible on-device models, Ollama, document RAG, memory, and confirmed tools.">
-  <meta name="keywords" content="AI, LLM, Offline AI, Privacy, Mobile AI, PocketLLM">
-  <meta name="author" content="Prashant C">
-  <meta name="robots" content="index, follow">
-
-  <!-- Open Graph -->
-  <meta property="og:title" content="PocketLLM Lite - AI in Your Pocket">
-  <meta property="og:description"
-    content="Run compatible models locally or connect an endpoint you control, with visible network policy and honest capability gates.">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="pocketllm-website/assets/logo.png">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="pocketllm-website/assets/logo.png">
-  <link rel="apple-touch-icon" href="pocketllm-website/assets/logo.png">
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
-    rel="stylesheet">
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="pocketllm-website/styles.css">
-
-  <title>PocketLLM Lite - AI in Your Pocket</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f8f1e8" />
+  <meta name="description" content="PocketLLM Lite is a local-first, open-source AI workspace for Android with local models, Ollama, private memory, document RAG, tools, and explicit network controls." />
+  <meta name="keywords" content="PocketLLM, local LLM, offline AI, Android AI, Ollama, GGUF, RAG, private AI" />
+  <meta name="author" content="PocketLLM" />
+  <meta property="og:title" content="PocketLLM Lite — Your AI, on your terms" />
+  <meta property="og:description" content="Local-first AI with visible boundaries. Run compatible models on-device or connect an endpoint you control." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="pocketllm-website/assets/hero-local-ai.webp" />
+  <link rel="icon" type="image/png" href="pocketllm-website/assets/logo.png" />
+  <link rel="apple-touch-icon" href="pocketllm-website/assets/logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="pocketllm-website/styles.css" />
+  <script defer src="pocketllm-website/site.js"></script>
+  <title>PocketLLM Lite — Your AI, on your terms</title>
 </head>
+<body data-page="home">
+  <a class="skip-link" href="#main">Skip to content</a>
 
-<body>
-  <!-- Header -->
-  <header class="header" id="header">
-    <nav class="nav container">
-      <a href="#" class="nav__logo">
-        <img src="pocketllm-website/assets/logo.png" alt="PocketLLM Lite Logo" class="nav__logo-img">
-        <span class="nav__logo-text">PocketLLM Lite</span>
+  <header class="site-header" data-header>
+    <div class="shell nav-wrap">
+      <a class="brand" href="./" aria-label="PocketLLM Lite home">
+        <img class="brand-logo" src="pocketllm-website/assets/logo.png" alt="" />
+        <span>PocketLLM Lite</span>
       </a>
-
-      <ul class="nav__links" id="navLinks">
-        <li><a href="#features" class="nav__link">Features</a></li>
-        <li><a href="#about" class="nav__link">About</a></li>
-        <li><a href="#contribute" class="nav__link">Contribute</a></li>
-        <li><a href="#download" class="nav__link">Download</a></li>
-        <li>
-          <a href="https://github.com/PocketLLM/pocketllm-lite/releases" class="nav__cta">
-            Get the App
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </a>
-        </li>
-      </ul>
-
-      <button class="nav__toggle" id="navToggle" aria-label="Toggle navigation">
-        <span></span>
-        <span></span>
-        <span></span>
+      <button class="nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-nav-toggle>
+        <span></span><span></span><span></span>
       </button>
-    </nav>
+      <nav class="nav-links" data-nav>
+        <a href="#features">Features</a>
+        <a href="#how-it-runs">Runtimes</a>
+        <a href="pocketllm-website/releases.html">Downloads</a>
+        <a href="pocketllm-website/changelog.html">Changelog</a>
+        <a href="pocketllm-website/docs.html">Docs</a>
+        <a class="nav-github" href="https://github.com/PocketLLM/pocketllm-lite" target="_blank" rel="noreferrer" aria-label="PocketLLM Lite on GitHub">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2A11.6 11.6 0 0 1 12 6.3c1 0 2 .1 3 .4 2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.9 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z"/></svg>
+        </a>
+        <a class="button button-paper button-small" href="/app/">Open Web App</a>
+        <a class="button button-pink button-small" href="pocketllm-website/releases.html" data-latest-download>Download</a>
+      </nav>
+    </div>
   </header>
 
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="container">
-      <span class="hero__badge" id="latestReleaseBadge">Latest published release on GitHub</span>
-      <p class="hero__subtitle">Local-first AI with visible boundaries.</p>
-      <h1 class="hero__title">AI That Works<br>Where You Do</h1>
-      <p class="hero__description">
-        Use a compatible model on your Android device or connect an Ollama/OpenAI-compatible endpoint you choose.
-        PocketLLM Lite is MIT-licensed open source and combines chat, memory, document retrieval, and confirmation-gated tools with a clear network audit.
-      </p>
-      <a href="https://github.com/PocketLLM/pocketllm-lite/releases" class="hero__cta" id="heroDownloadBtn">
-        View Android releases
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-        </svg>
-      </a>
-
-      <div class="hero__image-container">
-        <div class="hero__glow"></div>
-        <div class="hero__image-wrapper">
-          <img src="pocketllm-website/assets/logo.png" alt="PocketLLM Lite App" class="hero__phone-mockup"
-            style="max-width: 200px; margin: 0 auto;">
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Features Section -->
-  <section class="features" id="features">
-    <div class="container">
-      <div class="section__header">
-        <h2 class="section__title">Designed to Help You Do<br>More <em>With Less Stress</em></h2>
-        <p class="section__subtitle">
-          PocketLLM Lite is built for modern users who want intelligent assistance without compromising on privacy or
-          convenience.
-        </p>
-      </div>
-
-      <div class="features__grid">
-        <div class="feature-card">
-          <div class="feature-card__icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+  <main id="main">
+    <section class="hero section-dark-text">
+      <div class="hero-bg" role="img" aria-label="Dreamlike sunset above a city, with a developer and cat using a laptop"></div>
+      <div class="hero-wash"></div>
+      <div class="shell hero-grid">
+        <div class="hero-copy reveal">
+          <p class="script-kicker">Your Personal</p>
+          <h1>AI, on your terms.</h1>
+          <p class="hero-lede">PocketLLM Lite is a local-first AI workspace built around a simple rule: your conversations, documents, memories and models should stay under your control.</p>
+          <div class="hero-actions">
+            <a class="button button-pink" href="/app/">Open Web App <span>→</span></a>
+            <a class="button button-paper" href="pocketllm-website/releases.html" data-latest-download>Download for Android</a>
           </div>
-          <h3 class="feature-card__title">Transparent Privacy</h3>
-          <p class="feature-card__description">
-            Local chats stay in the app sandbox. When you choose a remote provider, download, search, or link,
-            PocketLLM records the destination and purpose and applies your network policy.
-          </p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-card__icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3" />
-            </svg>
+          <div class="hero-meta" aria-label="Product highlights">
+            <span>Local-first</span><span>No account</span><span>MIT licensed</span><span>Ollama ready</span>
           </div>
-          <h3 class="feature-card__title">Offline Capable</h3>
-          <p class="feature-card__description">
-            Compatible installed models, local memory, lexical retrieval, and app data can work without Internet access.
-            Remote endpoints, downloads, web search, and some platform voice engines still require a connection.
-          </p>
+        </div>
+        <div class="hero-version reveal delay-1" aria-live="polite">
+          <span class="status-dot"></span>
+          <span data-latest-version>Latest release</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="manifesto paper-grid section-pad">
+      <div class="shell narrow center reveal">
+        <div class="mini-orbit" aria-hidden="true">
+          <span title="Local GGUF Models">GGUF</span>
+          <span title="Document RAG">RAG</span>
+          <span title="Confirmed Tools">TOOLS</span>
+          <span title="Ollama Bridge">OLLAMA</span>
+        </div>
+        <p class="script-kicker pink">PocketLLM Lite</p>
+        <h2 class="display-title">It’s not another AI account.<br />It’s your own AI workspace.</h2>
+        <p class="section-lede">No cloud profile is required to chat, save history, use personas, build local memory, or work with documents. Network features are explicit, inspectable and optional.</p>
+
+        <!-- Interactive Command Bar matching the reference -->
+        <div class="command-bar-box">
+          <span class="command-orb" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </span>
+          <input type="text" class="command-input" id="commandInput" placeholder="Try searching 'photos from summer' or /notes..." aria-label="Search prompt" />
+        </div>
+        <div class="command-chips" aria-label="Quick prompts">
+          <button class="chip" type="button" onclick="setCommand('Summarize my PDF notes')">✦ Summarize notes</button>
+          <button class="chip" type="button" onclick="setCommand('Explain quantum entanglement')">✦ Explain quantum physics</button>
+          <button class="chip" type="button" onclick="setCommand('Run Phi-3 Mini GGUF on-device')">✦ Run Phi-3 GGUF</button>
+          <button class="chip" type="button" onclick="setCommand('Audit network traffic and permissions')">✦ Audit network log</button>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-card__icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
+        <a class="text-link" href="pocketllm-website/docs.html">See how local-first works <span>↗</span></a>
+      </div>
+    </section>
+
+    <div class="cloud-break" aria-hidden="true"></div>
+
+    <section class="story section-pad" id="features">
+      <div class="shell story-grid">
+        <div class="story-copy reveal">
+          <p class="script-kicker blue">Own your data</p>
+          <h2 class="display-title">The app is yours,<br />the data is yours.</h2>
+          <p>Chats, local memories, prompts, personas, skills and document indexes stay in the app sandbox. Strict Offline can block non-loopback app-managed network traffic before a request leaves the app.</p>
+          <div class="story-points">
+            <div><strong>Private by default</strong><span>No analytics or advertising SDK required for the core experience.</span></div>
+            <div><strong>Inspect the boundary</strong><span>Network destinations and purposes are visible in the audit log.</span></div>
+            <div><strong>Back it up</strong><span>Password-derived AES-256-GCM backups are portable and verifiable.</span></div>
           </div>
-          <h3 class="feature-card__title">Voice & Audio</h3>
-          <p class="feature-card__description">
-            Dictate and listen through installed platform engines, or transcribe a selected audio file locally when a compatible Cactus Whisper model is installed. Platform engine network behavior varies.
-          </p>
-        </div>
 
-        <div class="feature-card">
-          <div class="feature-card__icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-            </svg>
+          <!-- Interactive dialogue card matching reference -->
+          <div class="chat-preview-box">
+            <div class="chat-preview-head">
+              <span class="dot"></span>
+              <strong>Local Assistant · Sandbox Active</strong>
+            </div>
+            <div class="chat-bubble-u">Did you know PocketLLM runs completely offline?</div>
+            <div class="chat-bubble-a">Yes! All model weights run directly on your phone’s NPU/CPU. Chats, document indexes, and private memories remain strictly inside your device sandbox.</div>
           </div>
-          <h3 class="feature-card__title">Appearance & Theming</h3>
-          <p class="feature-card__description">
-            Material 3 Expressive design with live previews, theme presets (Ocean Breeze, Midnight Glow), and granular
-            control over colors and typography.
-          </p>
         </div>
+        <figure class="story-visual reveal delay-1">
+          <img src="pocketllm-website/assets/workspace-sunrise.webp" alt="PocketLLM-inspired local AI workspace overlooking a sunrise city" loading="lazy" decoding="async" />
+        </figure>
+      </div>
+    </section>
 
-        <div class="feature-card">
-          <div class="feature-card__icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+    <section class="feature-showcase section-pad-sm">
+      <div class="shell">
+        <div class="center narrow reveal">
+          <p class="script-kicker pink">Explore</p>
+          <h2 class="display-title">Tools for your thinking.</h2>
+          <p class="section-lede">Not a single giant magic button. A proper local workspace with composable pieces you can understand and control.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card reveal">
+            <span class="feature-no">01</span><h3>Documents & RAG</h3>
+            <p>Ingest PDF, TXT, Markdown and CSV files. Use lexical, semantic or hybrid retrieval with source-aware context.</p>
+          </article>
+          <article class="feature-card reveal delay-1">
+            <span class="feature-no">02</span><h3>Personas & skills</h3>
+            <p>Build reusable assistants, prompts and skills. PocketLLM composes them into the generation pipeline instead of hiding the prompt stack.</p>
+          </article>
+          <article class="feature-card reveal delay-2">
+            <span class="feature-no">03</span><h3>Memory, locally</h3>
+            <p>Inspect, pin, disable and supersede local memories. Retrieval falls back honestly when embeddings are unavailable.</p>
+          </article>
+          <article class="feature-card reveal">
+            <span class="feature-no">04</span><h3>Confirmed tools</h3>
+            <p>Calculator, notes, reminders, clipboard, links and web search use schema validation and visible confirmation where required.</p>
+          </article>
+          <article class="feature-card reveal delay-1">
+            <span class="feature-no">05</span><h3>Voice & audio</h3>
+            <p>Dictate, listen and transcribe through supported local or platform paths, with capabilities shown instead of guessed.</p>
+          </article>
+          <article class="feature-card reveal delay-2">
+            <span class="feature-no">06</span><h3>Honest model setup</h3>
+            <p>Browse, import and manage models with explicit source, size, license and compatibility state. Unknown stays unknown.</p>
+          </article>
+        </div>
+        <figure class="wide-art reveal">
+          <img src="pocketllm-website/assets/feature-collage.webp" alt="Illustrated PocketLLM feature workspace showing local documents, runtimes, tools, privacy and storage" loading="lazy" decoding="async" />
+        </figure>
+      </div>
+    </section>
+
+    <section class="journey section-pad" id="how-it-runs">
+      <div class="shell journey-grid">
+        <figure class="journey-art reveal">
+          <img src="pocketllm-website/assets/runtime-journey.webp" alt="A retro-futuristic aircraft flying through clouds carrying local AI runtimes" loading="lazy" decoding="async" />
+        </figure>
+        <div class="journey-copy reveal delay-1">
+          <p class="script-kicker coral">Choose your route</p>
+          <h2 class="display-title">One workspace.<br />More than one runtime.</h2>
+          <p>PocketLLM separates the product from the inference backend. Pick the route that makes sense for your device and your privacy boundary.</p>
+          <div class="runtime-list">
+            <div><span>01</span><strong>On-device GGUF</strong><small>Compatible local models through the supported mobile runtime.</small></div>
+            <div><span>02</span><strong>Ollama</strong><small>Use a loopback or trusted LAN Ollama endpoint you control.</small></div>
+            <div><span>03</span><strong>OpenAI-compatible</strong><small>Connect a configurable endpoint only when you want remote inference.</small></div>
           </div>
-          <h3 class="feature-card__title">Custom AI Personas</h3>
-          <p class="feature-card__description">
-            Design customizable assistants with specialized instructions, custom emoji avatars, and granular temperature/parameter overrides.
-          </p>
         </div>
+      </div>
+    </section>
 
-        <div class="feature-card">
-          <div class="feature-card__icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+    <section class="downloads section-pad" id="download">
+      <div class="shell">
+        <div class="center narrow reveal">
+          <p class="script-kicker pink">Download</p>
+          <h2 class="display-title">Get PocketLLM Lite.</h2>
+          <p class="section-lede">Android builds are published on GitHub with release notes and checksums. Choose the universal APK if you are unsure about your device ABI.</p>
+        </div>
+        <div class="download-panel reveal" data-home-release>
+          <div class="download-panel-main">
+            <div>
+              <span class="eyebrow">Current GitHub release</span>
+              <h3 data-home-release-name>PocketLLM Lite</h3>
+              <p data-home-release-date>Loading release information…</p>
+            </div>
+            <div class="download-panel-actions">
+              <a class="button button-pink" href="pocketllm-website/releases.html">Choose APK</a>
+              <a class="button button-outline" href="pocketllm-website/changelog.html">Read changelog</a>
+            </div>
           </div>
-          <h3 class="feature-card__title">Agentic Tools Calling</h3>
-          <p class="feature-card__description">
-            Executes strict, visible tool calls for arithmetic and measured system information. Clipboard, notes, reminders, email drafts, links, and web search require permission or confirmation as appropriate.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- About Section -->
-  <section class="about" id="about">
-    <div class="container">
-      <div class="section__header">
-        <h2 class="section__title">Why PocketLLM Lite?</h2>
-        <p class="section__subtitle">
-          We believe AI should be accessible, private, and always available when you need it.
-        </p>
-      </div>
-
-      <div class="about__content">
-        <div class="about__text">
-          <h3>Your Personal AI Assistant</h3>
-          <p>
-            PocketLLM Lite puts the power of advanced AI models directly on your device.
-            Whether you're drafting, exploring ideas, or working with your own documents,
-            the app makes its model and network requirements visible.
-          </p>
-          <ul class="about__list">
-            <li class="about__list-item">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              Strict Offline blocks non-loopback app-managed connections
-            </li>
-            <li class="about__list-item">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              Remote data flow is explicit and appears in the network audit
-            </li>
-            <li class="about__list-item">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              Use runtime-discovered Ollama models and manifest-backed local files
-            </li>
-            <li class="about__list-item">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              Offline Vector Search & Document RAG Ingestions
-            </li>
-            <li class="about__list-item">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              Standard multi-language l10n resource bundles
-            </li>
-          </ul>
-        </div>
-
-        <div class="about__image">
-          <img src="pocketllm-website/assets/logo.png" alt="PocketLLM Lite Features"
-            style="background: linear-gradient(135deg, #6750A4 0%, #EADDFF 100%); padding: 3rem; border-radius: 1.5rem;">
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Contribute Section -->
-  <section class="features" id="contribute">
-    <div class="container">
-      <div class="section__header">
-        <h2 class="section__title">Build Local AI With Us</h2>
-        <p class="section__subtitle">
-          PocketLLM Lite is MIT-licensed and welcomes focused code, device testing, translations,
-          accessibility improvements, model compatibility evidence, design, and documentation.
-        </p>
-      </div>
-      <div class="features__grid">
-        <div class="feature-card">
-          <h3 class="feature-card__title">Start with a real problem</h3>
-          <p class="feature-card__description">
-            Reproduce an issue on Android, improve a compact-screen flow, or add evidence for a model or device.
-          </p>
-        </div>
-        <div class="feature-card">
-          <h3 class="feature-card__title">Keep claims honest</h3>
-          <p class="feature-card__description">
-            Tests and measured behavior matter. The project does not accept fake downloads, canned AI output, or guessed capabilities.
-          </p>
-        </div>
-        <div class="feature-card">
-          <h3 class="feature-card__title">Make your first contribution</h3>
-          <p class="feature-card__description">
-            Read the contributor guide, browse issues, or open a focused bug report with device and model details.
-          </p>
-          <p style="margin-top: 1rem;">
-            <a href="https://github.com/PocketLLM/pocketllm-lite/blob/main/CONTRIBUTING.md"><strong>Contributor guide →</strong></a>
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Changelog Section -->
-  <section class="changelog" id="changelog" style="padding: 4rem 0;">
-    <div class="container">
-      <div class="section__header">
-        <h2 class="section__title">What's New</h2>
-        <p class="section__subtitle">Latest updates and improvements</p>
-      </div>
-
-      <div id="changelogBox"
-        style="background: var(--surface-card); padding: 2rem; border-radius: 1rem; border: 1px solid var(--border-color);">
-        <h3 id="changelogVersionHeader" style="color: var(--primary-color); margin-bottom: 1rem;">v1.0.38 engineering pre-release</h3>
-        <ul id="changelogList" style="list-style-type: disc; padding-left: 1.5rem; color: var(--text-secondary); line-height: 1.6;">
-          <li><strong>Guided prerequisites:</strong> Document embeddings and Whisper setup now show the exact model, source, size, license, and real progress before continuing the original action.</li>
-          <li><strong>Safer downloads:</strong> Resume fallbacks cannot append a full HTTP 200 body to a partial archive, and every installed GGUF header is validated.</li>
-          <li><strong>Resilient discovery:</strong> On-device and speech catalogs can fail independently without hiding the healthy source.</li>
-          <li><strong>Open-source foundation:</strong> MIT license, contributor guide, issue forms, code of conduct, pull-request template, and CI are now present.</li>
-          <li><strong>Release boundary:</strong> APKs remain engineering pre-release artifacts until production signing and physical-device verification are available.</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- Download Section -->
-  <section class="download" id="download">
-    <div class="container">
-      <div class="download__content">
-        <h2 class="download__title">Ready to Get Started?</h2>
-        <p class="download__description">
-          Review the published Android releases, checksums, known limitations, and source before installing.
-        </p>
-        <div class="download__buttons">
-          <a href="https://github.com/PocketLLM/pocketllm-lite/releases" class="download__btn" id="mainDownloadBtn">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M17.523 2c1.636 0 2.306.158 2.981.478a3.604 3.604 0 011.518 1.518c.32.675.478 1.345.478 2.981v10.046c0 1.636-.158 2.306-.478 2.981a3.604 3.604 0 01-1.518 1.518c-.675.32-1.345.478-2.981.478H6.477c-1.636 0-2.306-.158-2.981-.478a3.604 3.604 0 01-1.518-1.518C1.658 19.329 1.5 18.659 1.5 17.023V6.977c0-1.636.158-2.306.478-2.981A3.604 3.604 0 013.496 2.478C4.171 2.158 4.841 2 6.477 2h11.046zm-4.478 4.5l-6.045 7h3.545v5l6.045-7h-3.545v-5z" />
-            </svg>
-            View Android releases
-          </a>
-        </div>
-        <p class="download__note">Available now on Android devices</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer__content">
-        <div class="footer__brand">
-          <div class="footer__logo">
-            <img src="pocketllm-website/assets/logo.png" alt="PocketLLM Lite">
-            <span>PocketLLM Lite</span>
+          <div class="download-platforms">
+            <div class="platform active"><strong>Android</strong><span>Available now</span></div>
+            <div class="platform active"><strong>Web</strong><span><a href="/app/">Open the local-first web app</a></span></div>
+            <div class="platform"><strong>Source</strong><span>MIT licensed on GitHub</span></div>
           </div>
-          <p>Your personal AI assistant that respects your privacy. Run powerful AI models locally on your device.</p>
         </div>
-
-        <div class="footer__section">
-          <h4>Product</h4>
-          <ul class="footer__links">
-            <li><a href="#features" class="footer__link">Features</a></li>
-            <li><a href="#download" class="footer__link">Download</a></li>
-            <li><a href="#about" class="footer__link">About</a></li>
-            <li><a href="#contribute" class="footer__link">Contribute</a></li>
-          </ul>
-        </div>
-
-        <div class="footer__section">
-          <h4>Legal</h4>
-          <ul class="footer__links">
-            <li><a href="pocketllm-website/privacy.html" class="footer__link">Privacy Policy</a></li>
-            <li><a href="pocketllm-website/terms.html" class="footer__link">Terms of Service</a></li>
-          </ul>
-        </div>
-
-        <div class="footer__section">
-          <h4>Contact</h4>
-          <ul class="footer__links">
-            <li><a href="mailto:prashantc592114@gmail.com" class="footer__link">prashantc592114@gmail.com</a></li>
-            <li><a href="https://github.com/Mr-Dark-debug" target="_blank" rel="noopener noreferrer"
-                class="footer__link">GitHub</a></li>
-          </ul>
+        <div class="center release-links reveal">
+          <a class="text-link" href="pocketllm-website/releases.html">Browse every release and older APK <span>→</span></a>
+          <a class="text-link" href="pocketllm-website/changelog.html">Full version history <span>→</span></a>
         </div>
       </div>
+    </section>
 
-      <div class="footer__bottom">
-        <p class="footer__copyright">© 2026 Prashant C. PocketLLM Lite is open source under the MIT License.</p>
-        <div class="footer__social">
-          <a href="https://github.com/Mr-Dark-debug" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-              <path
-                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-            </svg>
-          </a>
-          <a href="mailto:prashantc592114@gmail.com" aria-label="Email">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </a>
+    <section class="open-source section-pad">
+      <div class="open-source-bg" aria-hidden="true"></div>
+      <div class="shell open-source-grid">
+        <div class="open-source-copy reveal">
+          <p class="script-kicker gold">For builders</p>
+          <h2 class="display-title light">Build it for yourself,<br />see it run everywhere.</h2>
+          <p>PocketLLM Lite is MIT licensed. Read the source, reproduce the behavior, inspect the tests and contribute focused improvements. The project prefers evidence over marketing folklore, which is refreshing in AI land.</p>
+          <div class="hero-actions">
+            <a class="button button-pink" href="https://github.com/PocketLLM/pocketllm-lite" target="_blank" rel="noreferrer">Star on GitHub <span>↗</span></a>
+            <a class="button button-ghost-light" href="https://github.com/PocketLLM/pocketllm-lite/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer">Contributor guide</a>
+          </div>
         </div>
       </div>
+    </section>
+
+    <section class="closing section-pad">
+      <div class="shell narrow center reveal">
+        <div class="closing-sky" aria-hidden="true"></div>
+        <p class="script-kicker blue">Local AI, properly</p>
+        <h2 class="display-title">A smaller app with<br />clearer boundaries.</h2>
+        <p class="section-lede">PocketLLM is being built around inspectable capabilities, portable data and runtime choice instead of tying your AI workspace to one vendor or one account.</p>
+        <a class="button button-dark" href="pocketllm-website/docs.html">Read the docs</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-sky" aria-hidden="true"></div>
+    <div class="shell footer-grid">
+      <div class="footer-brand">
+        <a class="brand brand-light" href="./"><img class="brand-logo" src="pocketllm-website/assets/logo.png" alt="" /><span>PocketLLM Lite</span></a>
+        <p>Local-first AI with visible boundaries.</p>
+      </div>
+      <div><h3>Product</h3><a href="#features">Features</a><a href="pocketllm-website/releases.html">Downloads</a><a href="pocketllm-website/changelog.html">Changelog</a></div>
+      <div><h3>Project</h3><a href="pocketllm-website/docs.html">Docs</a><a href="https://github.com/PocketLLM/pocketllm-lite" target="_blank" rel="noreferrer">GitHub</a><a href="https://github.com/PocketLLM/pocketllm-lite/issues" target="_blank" rel="noreferrer">Issues</a></div>
+      <div><h3>Legal</h3><a href="pocketllm-website/privacy.html">Privacy</a><a href="pocketllm-website/terms.html">Terms</a><a href="https://github.com/PocketLLM/pocketllm-lite/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a></div>
     </div>
+    <div class="shell footer-bottom"><span>© <span data-year>2026</span> PocketLLM Lite.</span><span>Open source, for everyone.</span></div>
   </footer>
 
-  <!-- Scripts -->
   <script>
-    // Mobile Navigation Toggle
-    const navToggle = document.getElementById('navToggle');
-    const navLinks = document.getElementById('navLinks');
-
-    navToggle.addEventListener('click', () => {
-      navLinks.classList.toggle('active');
-    });
-
-    // Close mobile menu when clicking a link
-    document.querySelectorAll('.nav__link').forEach(link => {
-      link.addEventListener('click', () => {
-        navLinks.classList.remove('active');
-      });
-    });
-
-    // Header scroll effect
-    const header = document.getElementById('header');
-
-    window.addEventListener('scroll', () => {
-      if (window.scrollY > 50) {
-        header.classList.add('scrolled');
-      } else {
-        header.classList.remove('scrolled');
-      }
-    });
-
-    // Smooth scroll for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          target.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          });
-        }
-      });
-    });
-
-    // Dynamically fetch latest release information from GitHub Releases API
-    async function fetchLatestRelease() {
-      const releaseBadge = document.getElementById('latestReleaseBadge');
-      const heroBtn = document.getElementById('heroDownloadBtn');
-      const mainBtn = document.getElementById('mainDownloadBtn');
-      const changelogHeader = document.getElementById('changelogVersionHeader');
-      const changelogList = document.getElementById('changelogList');
-
-      try {
-        const response = await fetch('https://api.github.com/repos/PocketLLM/pocketllm-lite/releases?per_page=10');
-        if (!response.ok) throw new Error('API Rate Limited or Offline');
-
-        const releases = await response.json();
-        const data = releases.find(release => !release.draft && release.assets.some(asset => asset.name.endsWith('.apk')));
-        if (!data) throw new Error('No published Android release found');
-        const version = data.tag_name;
-        const htmlUrl = data.html_url;
-        const publishDate = new Date(data.published_at).toLocaleDateString(undefined, {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-
-        // Try to find apk download asset
-        let downloadUrl = htmlUrl;
-        if (data.assets && data.assets.length > 0) {
-          const apkAsset = data.assets.find(asset => asset.name.endsWith('-android.apk'))
-            || data.assets.find(asset => asset.name.includes('arm64-v8a') && asset.name.endsWith('.apk'))
-            || data.assets.find(asset => asset.name.endsWith('.apk'));
-          if (apkAsset) {
-            downloadUrl = apkAsset.browser_download_url;
-          }
-        }
-
-        // Update elements dynamically
-        if (releaseBadge) releaseBadge.innerHTML = `✨ Latest: ${version} (Released ${publishDate})`;
-        if (heroBtn) {
-          heroBtn.href = downloadUrl;
-          heroBtn.innerHTML = `Download ${version} <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>`;
-        }
-        if (mainBtn) {
-          mainBtn.href = downloadUrl;
-          mainBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 2c1.636 0 2.306.158 2.981.478a3.604 3.604 0 011.518 1.518c.32.675.478 1.345.478 2.981v10.046c0 1.636-.158 2.306-.478 2.981a3.604 3.604 0 01-1.518 1.518c-.675.32-1.345.478-2.981.478H6.477c-1.636 0-2.306-.158-2.981-.478a3.604 3.604 0 01-1.518-1.518C1.658 19.329 1.5 18.659 1.5 17.023V6.977c0-1.636.158-2.306.478-2.981A3.604 3.604 0 013.496 2.478C4.171 2.158 4.841 2 6.477 2h11.046zm-4.478 4.5l-6.045 7h3.545v5l6.045-7h-3.545v-5z" /></svg> Download ${version}`;
-        }
-        if (changelogHeader) changelogHeader.innerText = `${version} Release Notes (${publishDate})`;
-
-        // Parse markdown logs to simple list items if available
-        if (changelogList && data.body) {
-          const lines = data.body.split('\n');
-          const listItems = [];
-          for (let line of lines) {
-            line = line.trim();
-            if (line.startsWith('- ') || line.startsWith('* ')) {
-              const cleaned = line.substring(2)
-                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-                .replace(/`([^`]+)`/g, '<code>$1</code>');
-              listItems.push(`<li>${cleaned}</li>`);
-            }
-          }
-          if (listItems.length > 0) {
-            changelogList.innerHTML = listItems.join('\n');
-          }
-        }
-      } catch (error) {
-        console.warn('Could not fetch latest release info; keeping the built-in engineering summary and releases link.');
+    function setCommand(text) {
+      const input = document.getElementById('commandInput');
+      if (input) {
+        input.value = text;
+        input.focus();
       }
     }
-
-    // Run dynamic release information fetching on load
-    window.addEventListener('DOMContentLoaded', fetchLatestRelease);
   </script>
 </body>
-
 </html>
