@@ -77,7 +77,7 @@ export function SkillsPage() {
               <button className="icon-button" onClick={() => void db.skills.update(item.id, { isEnabled: !item.isEnabled, updatedAt: Date.now() })} aria-label={item.isEnabled ? "Disable skill" : "Enable skill"}>{item.isEnabled ? <ToggleRight size={21} /> : <ToggleLeft size={21} />}</button>
             </div>
             <p>{item.description || item.body.slice(0, 220)}</p>
-            <div className="card-actions"><button className="soft-button" onClick={() => openEdit(item)}>Edit</button><button className="icon-button danger" onClick={async () => { if (confirm(`Delete ${item.title}?`)) await db.skills.delete(item.id); }}><Trash2 size={16} /></button></div>
+            <div className="card-actions"><button className="soft-button" onClick={() => exportNotes([item], `${item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "note"}.md`)}>Export</button><button className="soft-button" onClick={() => openEdit(item)}>Edit</button><button className="icon-button danger" onClick={async () => { if (confirm(`Delete ${item.title}?`)) await db.skills.delete(item.id); }}><Trash2 size={16} /></button></div>
           </article>
         ))}
       </div>
@@ -99,61 +99,108 @@ export function MemoriesPage() {
   const rows = useLiveValue(() => db.memories.orderBy("updatedAt").reverse().toArray(), [] as MemoryRecord[], []);
   const toast = useToast();
   const [query, setQuery] = useState("");
-  const [showSuperseded, setShowSuperseded] = useState(false);
+  const [view, setView] = useState<"active" | "pinned" | "recent" | "disabled" | "superseded">("active");
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<MemoryRecord | null>(null);
   const [form, setForm] = useState<{ type: MemoryType; subject: string; fact: string }>({ type: "personalFact", subject: "user", fact: "" });
-  const filtered = useMemo(() => rows.filter((item) => (showSuperseded || !item.supersededAt) && [item.subject, item.fact, item.type].join(" ").toLowerCase().includes(query.toLowerCase())), [rows, query, showSuperseded]);
 
-  async function create() {
+  const filtered = useMemo(() => {
+    const recentCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return rows.filter((item) => {
+      if (![item.subject, item.fact, item.type].join(" ").toLowerCase().includes(query.toLowerCase())) return false;
+      if (view === "active") return !item.supersededAt && item.enabled;
+      if (view === "pinned") return !item.supersededAt && item.pinned;
+      if (view === "recent") return !item.supersededAt && Boolean(item.lastUsedAt && item.lastUsedAt >= recentCutoff);
+      if (view === "disabled") return !item.supersededAt && !item.enabled;
+      return Boolean(item.supersededAt);
+    });
+  }, [rows, query, view]);
+
+  function openCreate() {
+    setEditing(null);
+    setForm({ type: "personalFact", subject: "user", fact: "" });
+    setCreating(true);
+  }
+
+  function openEdit(item: MemoryRecord) {
+    setCreating(false);
+    setEditing(item);
+    setForm({ type: item.type, subject: item.subject, fact: item.fact });
+  }
+
+  async function save() {
     if (!form.fact.trim()) return;
-    if (isSensitiveMemory(form.fact)) return toast.push("PocketLLM will not save secrets, card numbers, private keys or similar sensitive memory.", "error");
+    if (isSensitiveMemory(form.fact)) {
+      toast.push("PocketLLM will not save secrets, card numbers, private keys or similar sensitive memory.", "error");
+      return;
+    }
     const now = Date.now();
+    const target = editing;
     await saveMemory({
-      id: crypto.randomUUID(),
+      id: target?.id ?? crypto.randomUUID(),
       type: form.type,
       subject: form.subject.trim() || "user",
       fact: form.fact.trim(),
-      confidence: 1,
+      confidence: target?.confidence ?? 1,
+      sourceMessageId: target?.sourceMessageId,
       sensitive: false,
-      pinned: false,
-      enabled: true,
-      createdAt: now,
-      memoryKey: undefined,
+      pinned: target?.pinned ?? false,
+      enabled: target?.enabled ?? true,
+      createdAt: target?.createdAt ?? now,
+      lastUsedAt: target?.lastUsedAt,
+      memoryKey: target?.memoryKey,
     });
     setForm({ type: "personalFact", subject: "user", fact: "" });
     setCreating(false);
+    setEditing(null);
+    toast.push(target ? "Memory updated" : "Memory saved", "success");
   }
 
   return (
     <section className="page">
       <header className="page-header">
         <div><p className="eyebrow">Local memory</p><h1>Memories</h1><p>Review exactly what PocketLLM may reuse. Sensitive automatic memories are rejected.</p></div>
-        <div className="header-tools"><div className="search-box"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search memories" /></div><button className="primary-button" onClick={() => setCreating(true)}><Plus size={16} /> Add memory</button></div>
+        <div className="header-tools">
+          <div className="search-box"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search memories" /></div>
+          <select className="filter-select" value={view} onChange={(e) => setView(e.target.value as typeof view)} aria-label="Memory view">
+            <option value="active">Active</option>
+            <option value="pinned">Pinned</option>
+            <option value="recent">Used recently</option>
+            <option value="disabled">Disabled</option>
+            <option value="superseded">Superseded</option>
+          </select>
+          <button className="primary-button" onClick={openCreate}><Plus size={16} /> Add memory</button>
+        </div>
       </header>
-      <label className="check-pill memory-filter"><input type="checkbox" checked={showSuperseded} onChange={(e) => setShowSuperseded(e.target.checked)} /> Show superseded</label>
+
       <div className="memory-list">
         {filtered.map((item) => (
           <article className={`memory-row ${item.enabled ? "" : "disabled"}`} key={item.id}>
             <div className="memory-main">
-              <div className="memory-meta"><span>{item.type}</span><span>{item.subject}</span>{item.supersededAt && <span>superseded</span>}</div>
+              <div className="memory-meta"><span>{item.type}</span><span>{item.subject}</span>{item.pinned && <span>pinned</span>}{item.supersededAt && <span>superseded</span>}</div>
               <p>{item.fact}</p>
-              <small>Confidence {(item.confidence * 100).toFixed(0)}% · updated {new Date(item.updatedAt).toLocaleString()}</small>
+              <small>
+                Confidence {(item.confidence * 100).toFixed(0)}% · updated {new Date(item.updatedAt).toLocaleString()}
+                {item.lastUsedAt ? ` · last used ${new Date(item.lastUsedAt).toLocaleString()}` : ""}
+              </small>
             </div>
             <div className="row-actions">
+              <button className="soft-button" onClick={() => openEdit(item)}>Edit</button>
               <button className="icon-button" onClick={() => void db.memories.update(item.id, { pinned: !item.pinned, updatedAt: Date.now() })} aria-label={item.pinned ? "Unpin memory" : "Pin memory"}><Pin size={16} fill={item.pinned ? "currentColor" : "none"} /></button>
               <button className="icon-button" onClick={() => void db.memories.update(item.id, { enabled: !item.enabled, updatedAt: Date.now() })} aria-label={item.enabled ? "Disable memory" : "Enable memory"}>{item.enabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}</button>
               <button className="icon-button danger" onClick={async () => { if (confirm("Delete this memory?")) await db.memories.delete(item.id); }}><Trash2 size={16} /></button>
             </div>
           </article>
         ))}
-        {filtered.length === 0 && <div className="empty-state"><ShieldAlert size={26} /><h2>No matching memories</h2><p>Automatic extraction is opt-in from Settings.</p></div>}
+        {filtered.length === 0 && <div className="empty-state"><ShieldAlert size={26} /><h2>No matching memories</h2><p>Automatic extraction is opt-in from Settings, and each conversation can disable memory saving.</p></div>}
       </div>
-      <Modal open={creating} title="Add memory" onClose={() => setCreating(false)}>
+
+      <Modal open={creating || Boolean(editing)} title={editing ? "Edit memory" : "Add memory"} onClose={() => { setCreating(false); setEditing(null); }}>
         <div className="form-stack">
           <label>Type<select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as MemoryType })}>{["personalFact","preference","project","people","goal","writingStyle","reusableInstruction"].map((value) => <option value={value} key={value}>{value}</option>)}</select></label>
           <label>Subject<input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></label>
           <label>Fact<textarea rows={6} value={form.fact} onChange={(e) => setForm({ ...form, fact: e.target.value })} /></label>
-          <div className="modal-actions"><button className="soft-button" onClick={() => setCreating(false)}>Cancel</button><button className="primary-button" onClick={() => void create()}>Save memory</button></div>
+          <div className="modal-actions"><button className="soft-button" onClick={() => { setCreating(false); setEditing(null); }}>Cancel</button><button className="primary-button" onClick={() => void save()}>{editing ? "Update memory" : "Save memory"}</button></div>
         </div>
       </Modal>
     </section>
@@ -167,6 +214,17 @@ export function NotesPage() {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ title: "", content: "" });
   const filtered = useMemo(() => rows.filter((item) => [item.title, item.content].join(" ").toLowerCase().includes(query.toLowerCase())), [rows, query]);
+
+  function exportNotes(items: Note[], name = "pocketllm-notes.md") {
+    const markdown = items.map((item) => `# ${item.title}\n\n${item.content}\n`).join("\n");
+    const blob = new Blob([markdown], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   function openCreate() {
     setForm({ title: "", content: "" });
@@ -192,7 +250,7 @@ export function NotesPage() {
     <section className="page">
       <header className="page-header">
         <div><p className="eyebrow">Local scratchpad</p><h1>Notes</h1><p>Tool-created notes and your own notes live together here.</p></div>
-        <div className="header-tools"><div className="search-box"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search notes" /></div><button className="primary-button" onClick={openCreate}><Plus size={16} /> New note</button></div>
+        <div className="header-tools"><div className="search-box"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search notes" /></div><button className="soft-button" disabled={!filtered.length} onClick={() => exportNotes(filtered)}><Download size={15} /> Export visible</button><button className="primary-button" onClick={openCreate}><Plus size={16} /> New note</button></div>
       </header>
       <div className="notes-grid">
         {filtered.map((item) => (
