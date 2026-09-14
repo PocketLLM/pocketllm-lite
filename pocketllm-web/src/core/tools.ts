@@ -9,8 +9,12 @@ type ToolDefinition = {
   description: string;
   risk: ToolEvent["risk"];
   requiresConfirmation: boolean;
+  networkScope: "none" | "loopback" | "lan" | "internet";
+  storageScope: "none" | "read" | "write";
+  deviceScope: "none" | "clipboard" | "notifications" | "navigation";
+  timeoutMs: number;
   schema: z.ZodTypeAny;
-  execute: (args: any) => Promise<string>;
+  execute: (args: any, signal: AbortSignal) => Promise<string>;
 };
 
 class ExpressionParser {
@@ -97,6 +101,10 @@ class ExpressionParser {
 const tools: ToolDefinition[] = [
   {
     name: "calculator",
+    networkScope: "none",
+    storageScope: "none",
+    deviceScope: "none",
+    timeoutMs: 2_000,
     description: "Evaluate arithmetic with +, -, *, /, ^ and parentheses.",
     risk: "low",
     requiresConfirmation: false,
@@ -107,6 +115,10 @@ const tools: ToolDefinition[] = [
   },
   {
     name: "system_info",
+    networkScope: "none",
+    storageScope: "none",
+    deviceScope: "none",
+    timeoutMs: 5_000,
     description: "Return browser-exposed runtime capability information.",
     risk: "low",
     requiresConfirmation: false,
@@ -117,6 +129,10 @@ const tools: ToolDefinition[] = [
   },
   {
     name: "create_note",
+    networkScope: "none",
+    storageScope: "write",
+    deviceScope: "none",
+    timeoutMs: 5_000,
     description: "Create a local note in PocketLLM.",
     risk: "medium",
     requiresConfirmation: true,
@@ -129,6 +145,10 @@ const tools: ToolDefinition[] = [
   },
   {
     name: "copy_to_clipboard",
+    networkScope: "none",
+    storageScope: "none",
+    deviceScope: "clipboard",
+    timeoutMs: 5_000,
     description: "Copy text to the browser clipboard.",
     risk: "medium",
     requiresConfirmation: true,
@@ -140,6 +160,10 @@ const tools: ToolDefinition[] = [
   },
   {
     name: "create_reminder",
+    networkScope: "none",
+    storageScope: "write",
+    deviceScope: "notifications",
+    timeoutMs: 5_000,
     description: "Create a reminder. Browser-closed delivery is not guaranteed.",
     risk: "medium",
     requiresConfirmation: true,
@@ -152,6 +176,10 @@ const tools: ToolDefinition[] = [
   },
   {
     name: "draft_email",
+    networkScope: "none",
+    storageScope: "none",
+    deviceScope: "navigation",
+    timeoutMs: 5_000,
     description: "Open the user's mail client with a prepared email draft.",
     risk: "medium",
     requiresConfirmation: true,
@@ -164,6 +192,10 @@ const tools: ToolDefinition[] = [
   },
   {
     name: "open_url",
+    networkScope: "internet",
+    storageScope: "none",
+    deviceScope: "navigation",
+    timeoutMs: 5_000,
     description: "Open an HTTP(S) URL in a new browser tab.",
     risk: "high",
     requiresConfirmation: true,
@@ -179,16 +211,21 @@ const tools: ToolDefinition[] = [
   },
   {
     name: "web_search",
+    networkScope: "internet",
+    storageScope: "none",
+    deviceScope: "none",
+    timeoutMs: 30_000,
     description: "Search the web using Tavily when explicitly enabled.",
     risk: "high",
     requiresConfirmation: true,
     schema: z.object({ query: z.string().min(2).max(500) }).strict(),
-    async execute({ query }) {
+    async execute({ query }, signal) {
       if (!(await setting("tavilyEnabled", false))) throw new Error("Tavily web search is disabled.");
       const key = sessionStorage.getItem("tavily-key");
       if (!key) throw new Error("Tavily API key is not configured for this session.");
       const response = await networkFetch("https://api.tavily.com/search", {
         method: "POST",
+        signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ api_key: key, query, search_depth: "basic", max_results: 5 }),
       }, "web-search");
@@ -199,6 +236,10 @@ const tools: ToolDefinition[] = [
   },
   {
     name: "send_webhook",
+    networkScope: "internet",
+    storageScope: "none",
+    deviceScope: "none",
+    timeoutMs: 30_000,
     description: "Send an outbound HTTP webhook. Inbound webhooks are not available from a normal browser app.",
     risk: "high",
     requiresConfirmation: true,
@@ -208,9 +249,10 @@ const tools: ToolDefinition[] = [
       headers: z.record(z.string()).optional(),
       body: z.unknown().optional(),
     }).strict(),
-    async execute({ url, method, headers = {}, body }) {
+    async execute({ url, method, headers = {}, body }, signal) {
       const response = await networkFetch(url, {
         method,
+        signal,
         headers: { "Content-Type": "application/json", ...headers },
         body: body === undefined ? undefined : JSON.stringify(body),
       }, "webhook");
@@ -227,11 +269,15 @@ export function toolDefinitionsForPrompt() {
     description: tool.description,
     risk: tool.risk,
     requiresConfirmation: tool.requiresConfirmation,
+    networkScope: tool.networkScope,
+    storageScope: tool.storageScope,
+    deviceScope: tool.deviceScope,
+    timeoutMs: tool.timeoutMs,
   }));
 }
 
 export function toolSystemPrompt() {
-  const definitions = toolDefinitionsForPrompt().map((tool) => `- ${tool.name}: ${tool.description}`).join("\n");
+  const definitions = toolDefinitionsForPrompt().map((tool) => `- ${tool.name}: ${tool.description} [risk=${tool.risk}; network=${tool.networkScope}; storage=${tool.storageScope}; device=${tool.deviceScope}]`).join("\n");
   return `When a tool is required, output exactly one XML-style call and no prose before it:
 <tool_call name="tool_name" args='{"key":"value"}' />
 Available tools:
@@ -259,7 +305,16 @@ export async function executeTool(name: string, args: Record<string, unknown>) {
   const tool = tools.find((item) => item.name === name);
   if (!tool) throw new Error(`Unknown tool: ${name}`);
   const parsed = tool.schema.parse(args);
-  return tool.execute(parsed);
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), tool.timeoutMs);
+  try {
+    return await tool.execute(parsed, controller.signal);
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error(`${tool.name} timed out after ${tool.timeoutMs} ms.`);
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
 
 export function startReminderLoop() {
