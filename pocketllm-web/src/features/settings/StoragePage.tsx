@@ -1,8 +1,9 @@
 import { Database, Download, Eraser, HardDrive, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { humanBytes } from "../../core/capabilities";
-import { clearBucket, getStorageReport, requestPersistentStorage, resetPocketLLM, type StorageBucket } from "../../core/storage";
-import { db } from "../../db/db";
+import { clearBucket, clearRuntimeCaches, getStorageReport, pruneLogs, removeOrphanedFiles, requestPersistentStorage, resetPocketLLM, type StorageBucket } from "../../core/storage";
+import { db, saveSetting } from "../../db/db";
+import { useLiveValue } from "../../core/live";
 import { useToast } from "../../components/Toast";
 import { Link } from "react-router-dom";
 
@@ -11,6 +12,8 @@ type Report = Awaited<ReturnType<typeof getStorageReport>>;
 export function StoragePage() {
   const [report, setReport] = useState<Report | null>(null);
   const [busy, setBusy] = useState(false);
+  const retentionRow = useLiveValue(() => db.settings.get("logRetentionDays"), undefined, []);
+  const retention = retentionRow?.value === null ? "forever" : String(retentionRow?.value ?? 30);
   const toast = useToast();
 
   async function refresh() {
@@ -49,6 +52,52 @@ export function StoragePage() {
                 {["tmp","downloads"].includes(bucket.name) && <button className="soft-button" disabled={busy || bucket.bytes === 0} onClick={() => void clean(bucket.name)}><Eraser size={14} /> Clear</button>}
               </article>
             ))}
+          </div>
+
+          <div className="storage-maintenance">
+            <div>
+              <strong>Maintenance</strong>
+              <span>Remove unreferenced OPFS files, clear temporary files and PocketLLM runtime caches without touching chats.</span>
+            </div>
+            <div className="maintenance-actions">
+              <button className="soft-button" disabled={busy} onClick={async () => {
+                setBusy(true);
+                try {
+                  const result = await removeOrphanedFiles();
+                  toast.push(`Removed ${result.removedFiles} orphaned files · ${humanBytes(result.removedBytes)}`, "success");
+                  await refresh();
+                } finally { setBusy(false); }
+              }}><Eraser size={14} /> Clean orphans</button>
+              <button className="soft-button" disabled={busy} onClick={async () => {
+                setBusy(true);
+                try {
+                  const count = await clearRuntimeCaches();
+                  toast.push(`Cleared ${count} runtime cache${count === 1 ? "" : "s"}`, "success");
+                  await refresh();
+                } finally { setBusy(false); }
+              }}>Clear runtime caches</button>
+            </div>
+          </div>
+
+          <div className="storage-maintenance">
+            <div><strong>Log retention</strong><span>Activity, network and safe error logs can expire independently of chats.</span></div>
+            <div className="maintenance-actions">
+              <select className="filter-select" value={retention} onChange={async (event) => {
+                const value = event.target.value === "forever" ? null : Number(event.target.value);
+                await saveSetting("logRetentionDays", value);
+              }}>
+                <option value="7">7 days</option>
+                <option value="30">30 days</option>
+                <option value="90">90 days</option>
+                <option value="forever">Forever</option>
+              </select>
+              <button className="soft-button" onClick={async () => {
+                const days = retention === "forever" ? null : Number(retention);
+                const result = await pruneLogs(days);
+                toast.push(days === null ? "Logs set to keep forever" : `Removed ${result.removed} expired log entries`, "success");
+                await refresh();
+              }}>Apply cleanup</button>
+            </div>
           </div>
 
           <div className="section-heading"><h2>Structured data</h2></div>
