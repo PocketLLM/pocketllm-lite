@@ -22,6 +22,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { prepareAttachment } from "../../core/attachments";
+import { beginBusy } from "../../core/busy";
 import { approveToolAndContinue, generateWithPipeline, maybeExtractMemories, recordGenerationUsage } from "../../core/generation";
 import { useLiveValue } from "../../core/live";
 import { speak } from "../../core/audio";
@@ -175,6 +176,7 @@ export function ChatPage() {
   }
 
   async function runGeneration(chat: Chat, history: Message[], assistant: Message) {
+    const releaseBusy = beginBusy("generation");
     const controller = new AbortController();
     abortRef.current = controller;
     setStreamingId(assistant.id);
@@ -221,6 +223,7 @@ export function ChatPage() {
         setGenerationState("error");
       }
     } finally {
+      releaseBusy();
       abortRef.current = null;
       setStreamingId(undefined);
       setStreamingText("");
@@ -339,6 +342,7 @@ export function ChatPage() {
 
   async function approveTool(message: Message, event: ToolEvent) {
     if (!liveChat || event.state !== "pending") return;
+    const releaseBusy = beginBusy("generation");
     const all = await db.messages.where("chatId").equals(liveChat.id).sortBy("createdAt");
     const history = all.filter((item) => item.createdAt < message.createdAt);
     const controller = new AbortController();
@@ -373,6 +377,7 @@ export function ChatPage() {
       await db.messages.delete(assistant.id);
       toast.push(failed.error ?? "Tool failed", "error");
     } finally {
+      releaseBusy();
       abortRef.current = null;
       setStreamingId(undefined);
       setStreamingText("");
