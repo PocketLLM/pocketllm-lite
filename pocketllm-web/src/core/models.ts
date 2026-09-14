@@ -2,6 +2,7 @@ import { db, logActivity, logError, setting } from "../db/db";
 import type { BrowserModel, DownloadTask } from "./types";
 import { networkFetch } from "./network";
 import { appendOpfs, deleteOpfs, readOpfs, sha256, writeOpfs } from "./storage";
+import { withModelLock } from "./multitab";
 
 type HfModel = {
   id?: string;
@@ -150,7 +151,7 @@ export async function installHuggingFaceModel(
   return db.browserModels.get(model.id);
 }
 
-export async function downloadTask(
+async function downloadTaskUnlocked(
   taskId: string,
   onProgress?: (task: DownloadTask) => void,
   signal?: AbortSignal,
@@ -233,6 +234,16 @@ export async function downloadTask(
     if (!cancelled) await logError("model-download", error, model.name);
     throw error;
   }
+}
+
+export async function downloadTask(
+  taskId: string,
+  onProgress?: (task: DownloadTask) => void,
+  signal?: AbortSignal,
+) {
+  const task = await db.downloads.get(taskId);
+  if (!task) throw new Error("Download task not found.");
+  return withModelLock(task.modelId, () => downloadTaskUnlocked(taskId, onProgress, signal));
 }
 
 export async function removeBrowserModel(id: string) {
