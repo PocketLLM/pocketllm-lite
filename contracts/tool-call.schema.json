@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://pocketllm.dev/contracts/tool-call.schema.json","type":"object","required":["name","arguments"],"properties":{"name":{"type":"string","minLength":1},"arguments":{"type":"object"},"risk":{"enum":["low","medium","high"]},"requiresConfirmation":{"type":"boolean"}},"additionalProperties":false}
