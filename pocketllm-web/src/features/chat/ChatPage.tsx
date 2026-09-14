@@ -26,6 +26,7 @@ import { beginBusy } from "../../core/busy";
 import { approveToolAndContinue, generateWithPipeline, maybeExtractMemories, recordGenerationUsage } from "../../core/generation";
 import { useLiveValue } from "../../core/live";
 import { speak } from "../../core/audio";
+import { runtimeFromChatSelection } from "../../core/runtime";
 import type { AttachmentRef, BrowserModel, Chat, Message, Provider, RuntimeCapabilities, ToolEvent } from "../../core/types";
 import { db } from "../../db/db";
 import { Markdown } from "../../components/Markdown";
@@ -84,6 +85,11 @@ export function ChatPage() {
   const [editMessage, setEditMessage] = useState<Message | null>(null);
   const [editText, setEditText] = useState("");
   const [sourceMessage, setSourceMessage] = useState<Message | null>(null);
+  const [enhancerOpen, setEnhancerOpen] = useState(false);
+  const [enhancerRuntime, setEnhancerRuntime] = useState("");
+  const [enhancedText, setEnhancedText] = useState("");
+  const [enhancing, setEnhancing] = useState(false);
+  const enhancerAbortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -162,6 +168,63 @@ export function ChatPage() {
     await db.chats.add(chat);
     navigate(`/chat/${chat.id}`, { replace: true });
     return chat;
+  }
+
+  async function enhanceDraft() {
+    if (!draft.trim()) return;
+    const choice = enhancerRuntime || runtimeChoice;
+    if (!choice) {
+      setError("Choose a runtime before enhancing the prompt.");
+      return;
+    }
+    const providerId = choice.startsWith("provider:") ? choice.slice(9) : undefined;
+    const browserModelId = choice.startsWith("model:") ? choice.slice(6) : undefined;
+    setEnhancing(true);
+    setEnhancedText("");
+    setError("");
+    const controller = new AbortController();
+    enhancerAbortRef.current = controller;
+    const releaseBusy = beginBusy("generation");
+    try {
+      const runtime = await runtimeFromChatSelection(providerId, browserModelId);
+      let output = "";
+      await runtime.generate({
+        signal: controller.signal,
+        maxTokens: 420,
+        temperature: 0.25,
+        topP: 0.9,
+        topK: 40,
+        messages: [
+          {
+            role: "system",
+            content: "You improve user prompts without changing their underlying intent. Return only the improved prompt. Preserve constraints, named entities, required output formats, and useful context. Remove filler and ambiguity. Do not answer the prompt itself.",
+          },
+          { role: "user", content: draft.trim() },
+        ],
+        onToken(token) {
+          output += token;
+          setEnhancedText(output);
+        },
+      });
+      if (!output.trim()) throw new Error("The enhancer returned an empty prompt.");
+      setEnhancedText(output.trim());
+    } catch (cause) {
+      if (!(cause instanceof DOMException && cause.name === "AbortError")) {
+        setError(cause instanceof Error ? cause.message : "Prompt enhancement failed.");
+      }
+    } finally {
+      releaseBusy();
+      enhancerAbortRef.current = null;
+      setEnhancing(false);
+    }
+  }
+
+  function openEnhancer() {
+    if (!draft.trim()) return;
+    setEnhancerRuntime(runtimeChoice);
+    setEnhancedText("");
+    setEnhancerOpen(true);
+    void enhanceDraft();
   }
 
   async function addFiles(files: File[]) {
@@ -599,7 +662,7 @@ export function ChatPage() {
                 <div className="composer-tools">
                   <input ref={fileInputRef} hidden type="file" multiple onChange={(event) => void addFiles(Array.from(event.target.files ?? []))} />
                   <button type="button" className="icon-button" aria-label="Attach file" onClick={() => fileInputRef.current?.click()}><Paperclip size={18} /></button>
-                  <button type="button" className="soft-button" onClick={() => setDraft((text) => text ? `Improve this prompt while preserving intent:\n\n${text}` : text)} disabled={!draft.trim()}>
+                  <button type="button" className="soft-button" onClick={openEnhancer} disabled={!draft.trim() || Boolean(abortRef.current)}>
                     <Sparkles size={15} /> Enhance
                   </button>
                 </div>
@@ -677,6 +740,24 @@ export function ChatPage() {
           </aside>
         )}
       </div>
+
+      <Modal open={enhancerOpen} title="Prompt enhancer" onClose={() => { enhancerAbortRef.current?.abort(); setEnhancerOpen(false); }}>
+        <div className="form-stack">
+          <label>Enhancer runtime
+            <select value={enhancerRuntime || runtimeChoice} disabled={enhancing} onChange={(event) => setEnhancerRuntime(event.target.value)}>
+              <option value="">Choose runtime</option>
+              {browserModels.map((model) => <option key={model.id} value={`model:${model.id}`}>{model.name} · Browser</option>)}
+              {providers.map((provider) => <option key={provider.id} value={`provider:${provider.id}`}>{provider.name} · {provider.model || "model?"}</option>)}
+            </select>
+          </label>
+          <label>Original prompt<textarea rows={6} value={draft} onChange={(event) => setDraft(event.target.value)} disabled={enhancing} /></label>
+          <label>Improved prompt<textarea rows={8} value={enhancedText} onChange={(event) => setEnhancedText(event.target.value)} placeholder={enhancing ? "Improving prompt…" : "Run the enhancer to generate a revision."} /></label>
+          <div className="modal-actions">
+            {enhancing ? <button className="soft-button" onClick={() => enhancerAbortRef.current?.abort()}>Stop</button> : <button className="soft-button" onClick={() => void enhanceDraft()} disabled={!draft.trim() || !(enhancerRuntime || runtimeChoice)}>Run again</button>}
+            <button className="primary-button" disabled={!enhancedText.trim()} onClick={() => { setDraft(enhancedText.trim()); setEnhancerOpen(false); }}>Use improved prompt</button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={Boolean(editMessage)} title="Edit into a new branch" onClose={() => setEditMessage(null)}>
         <p className="modal-copy">Editing earlier history creates a branch. The original conversation remains untouched.</p>
