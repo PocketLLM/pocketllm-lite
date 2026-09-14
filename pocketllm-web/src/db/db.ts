@@ -193,5 +193,7 @@ export async function logError(feature: string, error: unknown, runtime?: string
     code,
     safeMessage: safeMessage.slice(0, 1000),
     stack: error instanceof Error ? error.stack?.slice(0, 4000) : undefined,
+    browser: navigator.userAgent.slice(0, 300),
+    appVersion: "web-0.2.0",
   });
 }
