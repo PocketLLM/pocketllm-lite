@@ -1,6 +1,7 @@
 import { db, ensureDefaults } from "../db/db";
 import type { Chat, Message } from "./types";
 import { withExclusiveLock } from "./multitab";
+import { beginBusy } from "./busy";
 
 const ITERATIONS = 600_000;
 const encoder = new TextEncoder();
@@ -303,7 +304,12 @@ async function restoreEncryptedBackupUnlocked(encryptedJson: string, password: s
 }
 
 export async function restoreEncryptedBackup(encryptedJson: string, password: string) {
-  return withExclusiveLock("backup-restore", () => restoreEncryptedBackupUnlocked(encryptedJson, password));
+  const releaseBusy = beginBusy("backup-restore");
+  try {
+    return await withExclusiveLock("backup-restore", () => restoreEncryptedBackupUnlocked(encryptedJson, password));
+  } finally {
+    releaseBusy();
+  }
 }
 
 export function downloadBackup(json: string) {
