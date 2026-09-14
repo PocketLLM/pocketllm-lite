@@ -84,17 +84,17 @@ function chunkString(text: string, maxChars = 1400, overlap = 220) {
   return chunks;
 }
 
-export async function ingestDocument(file: File, options?: { semantic?: boolean; onProgress?: (value: number, label: string) => void }) {
+export async function ingestDocument(file: File, options?: { semantic?: boolean; onProgress?: (value: number, label: string) => void; documentId?: string }) {
   const onProgress = options?.onProgress ?? (() => {});
   onProgress(0.05, "Reading file");
   const hash = await sha256(file);
-  const existing = await db.documents.where("sha256").equals(hash).first();
+  const existing = options?.documentId ? undefined : await db.documents.where("sha256").equals(hash).first();
   if (existing) return existing;
 
   const extracted = await extractDocument(file);
   onProgress(0.2, "Extracting text");
 
-  const id = crypto.randomUUID();
+  const id = options?.documentId ?? crypto.randomUUID();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
   const opfsPath = `documents/${hash}/${safeName}`;
   await writeOpfs(opfsPath, file);
@@ -168,9 +168,15 @@ export async function reindexDocument(documentId: string, semantic: boolean, onP
   const document = await db.documents.get(documentId);
   if (!document) throw new Error("Document not found.");
   const file = document.opfsPath ? await (await import("./storage")).readOpfs(document.opfsPath) : new File([document.text], document.name, { type: document.mimeType });
-  await db.documentChunks.where("documentId").equals(documentId).delete();
-  await db.documents.delete(documentId);
-  return ingestDocument(new File([file], document.name, { type: document.mimeType }), { semantic, onProgress });
+  await db.transaction("rw", db.documents, db.documentChunks, async () => {
+    await db.documentChunks.where("documentId").equals(documentId).delete();
+    await db.documents.delete(documentId);
+  });
+  return ingestDocument(new File([file], document.name, { type: document.mimeType }), {
+    semantic,
+    onProgress,
+    documentId,
+  });
 }
 
 export async function deleteDocument(documentId: string) {
