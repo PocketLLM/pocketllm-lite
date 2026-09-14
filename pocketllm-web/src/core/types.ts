@@ -333,9 +333,13 @@ export type GenerationState =
 export interface CapabilityReport {
   webgpu: boolean;
   wasm: boolean;
+  wasmSimd: boolean;
   crossOriginIsolated: boolean;
   sharedArrayBuffer: boolean;
   hardwareConcurrency: number;
+  browser: string;
+  platform: string;
+  localNetworkAccess: "granted" | "prompt" | "denied" | "unsupported" | "unknown";
   storageQuota?: number;
   storageUsage?: number;
   persistentStorage: boolean;
