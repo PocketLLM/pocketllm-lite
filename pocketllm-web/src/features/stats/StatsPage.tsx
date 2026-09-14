@@ -1,13 +1,19 @@
 import { BarChart3, BookOpenText, Bot, MessageSquareText } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLiveValue } from "../../core/live";
 import { db } from "../../db/db";
+import { humanBytes } from "../../core/capabilities";
 
 export function StatsPage() {
   const chats = useLiveValue(() => db.chats.toArray(), [], []);
   const messages = useLiveValue(() => db.messages.toArray(), [], []);
   const documents = useLiveValue(() => db.documents.toArray(), [], []);
   const usage = useLiveValue(() => db.usage.toArray(), [], []);
+  const [storageUsage, setStorageUsage] = useState(0);
+
+  useEffect(() => {
+    void navigator.storage?.estimate?.().then((estimate) => setStorageUsage(estimate.usage ?? 0));
+  }, [chats.length, messages.length, documents.length]);
 
   const runtimeCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -18,6 +24,7 @@ export function StatsPage() {
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [usage]);
   const generationCount = usage.filter((item) => item.kind === "generation").reduce((sum, item) => sum + (item.count ?? 1), 0);
+  const estimatedTokens = messages.reduce((sum, message) => sum + (message.generation?.estimatedOutputTokens ?? 0), 0);
   const thisMonth = new Date();
   const chatsThisMonth = chats.filter((chat) => {
     const date = new Date(chat.createdAt);
@@ -32,6 +39,8 @@ export function StatsPage() {
         <Stat icon={<Bot size={18} />} label="Generations" value={String(generationCount)} />
         <Stat icon={<BookOpenText size={18} />} label="Documents indexed" value={String(documents.length)} />
         <Stat icon={<BarChart3 size={18} />} label="Messages" value={String(messages.length)} />
+        <Stat icon={<BarChart3 size={18} />} label="Est. output tokens" value={estimatedTokens.toLocaleString()} />
+        <Stat icon={<BarChart3 size={18} />} label="Browser storage" value={humanBytes(storageUsage)} />
       </div>
       <div className="settings-card stats-card">
         <div className="settings-title"><BarChart3 size={19} /><div><h2>Runtime usage</h2><p>Actual generation events recorded by PocketLLM Web.</p></div></div>
