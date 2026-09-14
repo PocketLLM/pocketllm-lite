@@ -81,9 +81,50 @@ export async function opfsExists(path: string) {
   }
 }
 
+async function sha256BlobOnMainThread(blob: Blob) {
+  const { sha256: nobleSha256 } = await import("@noble/hashes/sha256");
+  const hasher = nobleSha256.create();
+  const reader = blob.stream().getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    hasher.update(value);
+  }
+  return Array.from(hasher.digest(), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256BlobInWorker(blob: Blob) {
+  if (typeof Worker === "undefined") return sha256BlobOnMainThread(blob);
+  const worker = new Worker(new URL("./hash.worker.ts", import.meta.url), { type: "module" });
+  const id = crypto.randomUUID();
+  try {
+    return await new Promise<string>((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(new Error("SHA-256 worker timed out.")), 30 * 60 * 1000);
+      worker.addEventListener("message", (event: MessageEvent<{ id: string; hex?: string; error?: string }>) => {
+        if (event.data.id !== id) return;
+        window.clearTimeout(timeout);
+        if (event.data.error) reject(new Error(event.data.error));
+        else if (event.data.hex) resolve(event.data.hex);
+        else reject(new Error("SHA-256 worker returned no digest."));
+      });
+      worker.addEventListener("error", (event) => {
+        window.clearTimeout(timeout);
+        reject(event.error ?? new Error(event.message || "SHA-256 worker failed."));
+      }, { once: true });
+      worker.postMessage({ id, blob });
+    });
+  } finally {
+    worker.terminate();
+  }
+}
+
 export async function sha256(data: Blob | ArrayBuffer) {
-  const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
-  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  if (data instanceof Blob) {
+    if (data.size > 4 * 1024 * 1024) return sha256BlobInWorker(data);
+    const digest = await crypto.subtle.digest("SHA-256", await data.arrayBuffer());
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  const digest = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
