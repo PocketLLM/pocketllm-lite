@@ -77,7 +77,7 @@ export function SkillsPage() {
               <button className="icon-button" onClick={() => void db.skills.update(item.id, { isEnabled: !item.isEnabled, updatedAt: Date.now() })} aria-label={item.isEnabled ? "Disable skill" : "Enable skill"}>{item.isEnabled ? <ToggleRight size={21} /> : <ToggleLeft size={21} />}</button>
             </div>
             <p>{item.description || item.body.slice(0, 220)}</p>
-            <div className="card-actions"><button className="soft-button" onClick={() => exportNotes([item], `${item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "note"}.md`)}>Export</button><button className="soft-button" onClick={() => openEdit(item)}>Edit</button><button className="icon-button danger" onClick={async () => { if (confirm(`Delete ${item.title}?`)) await db.skills.delete(item.id); }}><Trash2 size={16} /></button></div>
+            <div className="card-actions"><button className="soft-button" onClick={() => openEdit(item)}>Edit</button><button className="icon-button danger" onClick={async () => { if (confirm(`Delete ${item.title}?`)) await db.skills.delete(item.id); }}><Trash2 size={16} /></button></div>
           </article>
         ))}
       </div>
@@ -257,7 +257,7 @@ export function NotesPage() {
           <article className={`note-card ${item.pinned ? "pinned" : ""}`} key={item.id}>
             <div className="note-head"><strong>{item.title}</strong><button className="icon-button" onClick={() => void db.notes.update(item.id, { pinned: !item.pinned, updatedAt: Date.now() })}><Pin size={15} fill={item.pinned ? "currentColor" : "none"} /></button></div>
             <p>{item.content}</p>
-            <div className="card-actions"><button className="soft-button" onClick={() => openEdit(item)}>Edit</button><button className="icon-button danger" onClick={async () => { if (confirm("Delete this note?")) await db.notes.delete(item.id); }}><Trash2 size={15} /></button></div>
+            <div className="card-actions"><button className="soft-button" onClick={() => exportNotes([item], `${item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "note"}.md`)}>Export</button><button className="soft-button" onClick={() => openEdit(item)}>Edit</button><button className="icon-button danger" onClick={async () => { if (confirm("Delete this note?")) await db.notes.delete(item.id); }}><Trash2 size={15} /></button></div>
           </article>
         ))}
       </div>
