@@ -42,8 +42,18 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: "/app/index.html",
-        globPatterns: ["**/*.{js,css,html,svg,wasm}"],
-        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024
+        globPatterns: ["**/*.{js,css,html,svg}"],
+        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.endsWith(".wasm"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "pocketllm-runtime-wasm",
+              expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 365 }
+            }
+          }
+        ]
       }
     })
   ],
