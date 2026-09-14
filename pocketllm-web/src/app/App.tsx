@@ -8,6 +8,7 @@ import { TagsPage } from "../features/history/TagsPage";
 import { KnowledgePage } from "../features/knowledge/KnowledgePage";
 import { DocumentPage } from "../features/knowledge/DocumentPage";
 import { ModelsPage } from "../features/models/ModelsPage";
+import { ModelDetailPage } from "../features/models/ModelDetailPage";
 import { ProvidersPage } from "../features/models/ProvidersPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { StoragePage } from "../features/settings/StoragePage";
@@ -42,7 +43,7 @@ export function App() {
           <Route path="knowledge/:documentId" element={<DocumentPage />} />
           <Route path="models" element={<ModelsPage />} />
           <Route path="models/discover" element={<ModelsPage />} />
-          <Route path="models/:modelId" element={<ModelsPage />} />
+          <Route path="models/:modelId" element={<ModelDetailPage />} />
           <Route path="providers" element={<ProvidersPage />} />
           <Route path="memories" element={<MemoriesPage />} />
           <Route path="personas" element={<PersonasPage />} />
