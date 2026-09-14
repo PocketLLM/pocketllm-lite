@@ -82,7 +82,7 @@ export function HistoryPage({ mode = "active" }: { mode?: "active" | "archived" 
 
 export function StarredPage() {
   const messages = useLiveValue(
-    () => db.messages.where("starred").equals(1).reverse().sortBy("createdAt"),
+    async () => (await db.messages.filter((message) => Boolean(message.starred)).toArray()).sort((a, b) => b.createdAt - a.createdAt),
     [] as Message[],
     [],
   );
