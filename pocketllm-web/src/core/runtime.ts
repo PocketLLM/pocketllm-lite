@@ -1,6 +1,8 @@
 import { db, logActivity, logError } from "../db/db";
 import { networkFetch } from "./network";
 import { readOpfs } from "./storage";
+import { claimModelRuntimeLease, releaseModelRuntimeLease } from "./multitab";
+import { discoverRuntimeOwner, generateThroughRuntimeOwner, registerRuntimeOwner, type RemoteGenerationPayload } from "./runtimeCoordinator";
 import type { BrowserModel, Provider, RuntimeCapabilities, RuntimeKind } from "./types";
 
 export interface RuntimeMessage {
@@ -291,26 +293,112 @@ export function chromeRuntime(): RuntimeAdapter {
 }
 
 const wllamaInstances = new Map<string, any>();
+const wllamaOwnerDisposers = new Map<string, () => void>();
+
+async function unloadWllamaModel(modelId: string) {
+  const instance = wllamaInstances.get(modelId);
+  if (instance) await instance.exit().catch(() => undefined);
+  wllamaInstances.delete(modelId);
+  wllamaOwnerDisposers.get(modelId)?.();
+  wllamaOwnerDisposers.delete(modelId);
+  releaseModelRuntimeLease(modelId);
+}
+
+async function localWllamaGenerate(
+  instance: any,
+  model: BrowserModel,
+  request: {
+    messages: RuntimeMessage[];
+    signal: AbortSignal;
+    onToken: (token: string) => void;
+    maxTokens?: number;
+    temperature?: number;
+    topP?: number;
+    topK?: number;
+  },
+) {
+  const abort = () => {
+    void unloadWllamaModel(model.id);
+  };
+  request.signal.addEventListener("abort", abort, { once: true });
+  try {
+    const stream = await instance.createChatCompletion({
+      messages: request.messages.map(({ role, content, images }) => ({
+        role,
+        content: images?.length
+          ? [
+              { type: "text", text: content },
+              ...images.map((url) => ({ type: "image_url", image_url: { url } })),
+            ]
+          : content,
+      })) as any,
+      stream: true,
+      max_tokens: request.maxTokens ?? 512,
+      temperature: request.temperature ?? 0.7,
+      top_p: request.topP ?? 0.9,
+      top_k: request.topK ?? 40,
+    });
+    for await (const chunk of stream as AsyncIterable<any>) {
+      if (request.signal.aborted) throw new DOMException("Generation stopped", "AbortError");
+      const token = chunk?.choices?.[0]?.delta?.content;
+      if (token) request.onToken(token);
+    }
+  } catch (error) {
+    if (request.signal.aborted) throw new DOMException("Generation stopped", "AbortError");
+    await logError("wllama-generation", error, model.name);
+    throw error;
+  } finally {
+    request.signal.removeEventListener("abort", abort);
+  }
+}
 
 async function loadWllama(model: BrowserModel) {
   if (!model.opfsPath) throw new Error("This browser model has no installed file.");
   if (wllamaInstances.has(model.id)) return wllamaInstances.get(model.id);
-  const [{ Wllama, LoggerWithoutDebug }, file] = await Promise.all([
-    import("@wllama/wllama"),
-    readOpfs(model.opfsPath),
-  ]);
-  const instance = new Wllama({ default: `${import.meta.env.BASE_URL}wllama/wllama.wasm` }, {
-    logger: LoggerWithoutDebug,
-    allowOffline: true,
-  });
-  await instance.loadModel([file], {
-    n_ctx: model.contextLimit ?? 4096,
-    n_gpu_layers: (navigator as Navigator & { gpu?: unknown }).gpu ? 99999 : 0,
-  });
-  wllamaInstances.set(model.id, instance);
-  await db.browserModels.update(model.id, { lastUsedAt: Date.now(), status: "ready", installed: true, updatedAt: Date.now() });
-  await logActivity("model", "Browser model loaded", model.name);
-  return instance;
+  try {
+    const [{ Wllama, LoggerWithoutDebug }, file] = await Promise.all([
+      import("@wllama/wllama"),
+      readOpfs(model.opfsPath),
+    ]);
+    const instance = new Wllama({ default: `${import.meta.env.BASE_URL}wllama/wllama.wasm` }, {
+      logger: LoggerWithoutDebug,
+      allowOffline: true,
+    });
+    await instance.loadModel([file], {
+      n_ctx: model.contextLimit ?? 4096,
+      n_gpu_layers: (navigator as Navigator & { gpu?: unknown }).gpu ? 99999 : 0,
+    });
+    wllamaInstances.set(model.id, instance);
+    const unregister = registerRuntimeOwner(model.id, async (payload, signal, onToken) => {
+      await localWllamaGenerate(instance, model, {
+        messages: payload.messages,
+        signal,
+        onToken,
+        maxTokens: payload.maxTokens,
+        temperature: payload.temperature,
+        topP: payload.topP,
+        topK: payload.topK,
+      });
+    });
+    wllamaOwnerDisposers.set(model.id, unregister);
+    await db.browserModels.update(model.id, { lastUsedAt: Date.now(), status: "ready", installed: true, updatedAt: Date.now() });
+    await logActivity("model", "Browser model loaded", model.name);
+    return instance;
+  } catch (error) {
+    releaseModelRuntimeLease(model.id);
+    throw error;
+  }
+}
+
+async function remoteOrClaimedOwner(model: BrowserModel) {
+  if (wllamaInstances.has(model.id)) return { local: true as const, owner: undefined };
+  const owner = await discoverRuntimeOwner(model.id);
+  if (owner) return { local: false as const, owner };
+  const claimed = await claimModelRuntimeLease(model.id);
+  if (claimed) return { local: true as const, owner: undefined };
+  const lateOwner = await discoverRuntimeOwner(model.id, 500);
+  if (lateOwner) return { local: false as const, owner: lateOwner };
+  throw new Error("This browser model is already owned by another tab, but that tab did not answer the runtime handshake. Close the other PocketLLM tab or unload the model there, then retry.");
 }
 
 export function wllamaRuntime(model: BrowserModel): RuntimeAdapter {
@@ -320,54 +408,24 @@ export function wllamaRuntime(model: BrowserModel): RuntimeAdapter {
     modelName: model.name,
     capabilities: model.capabilities,
     async test() {
+      const ownership = await remoteOrClaimedOwner(model);
+      if (!ownership.local) return [`Ready in another PocketLLM tab · ${model.name}`];
       const instance = await loadWllama(model);
       const metadata = instance.getModelMetadata?.();
       return [metadata?.meta?.["general.name"] ?? model.name];
     },
     async generate({ messages, signal, onToken, maxTokens, temperature, topP, topK }) {
-      const instance = await loadWllama(model);
-      const abort = () => {
-        const active = wllamaInstances.get(model.id);
-        if (active) {
-          void active.exit().catch(() => undefined);
-          wllamaInstances.delete(model.id);
-        }
-      };
-      signal.addEventListener("abort", abort, { once: true });
-      try {
-        const stream = await instance.createChatCompletion({
-          messages: messages.map(({ role, content, images }) => ({
-            role,
-            content: images?.length
-              ? [
-                  { type: "text", text: content },
-                  ...images.map((url) => ({ type: "image_url", image_url: { url } })),
-                ]
-              : content,
-          })) as any,
-          stream: true,
-          max_tokens: maxTokens ?? 512,
-          temperature: temperature ?? 0.7,
-          top_p: topP ?? 0.9,
-          top_k: topK ?? 40,
-        });
-        for await (const chunk of stream as AsyncIterable<any>) {
-          if (signal.aborted) throw new DOMException("Generation stopped", "AbortError");
-          const token = chunk?.choices?.[0]?.delta?.content;
-          if (token) onToken(token);
-        }
-      } catch (error) {
-        if (signal.aborted) throw new DOMException("Generation stopped", "AbortError");
-        await logError("wllama-generation", error, model.name);
-        throw error;
-      } finally {
-        signal.removeEventListener("abort", abort);
+      const ownership = await remoteOrClaimedOwner(model);
+      if (!ownership.local && ownership.owner) {
+        const payload: RemoteGenerationPayload = { messages, maxTokens, temperature, topP, topK };
+        await generateThroughRuntimeOwner(ownership.owner, model.id, payload, signal, onToken);
+        return;
       }
+      const instance = await loadWllama(model);
+      await localWllamaGenerate(instance, model, { messages, signal, onToken, maxTokens, temperature, topP, topK });
     },
     async unload() {
-      const instance = wllamaInstances.get(model.id);
-      if (instance) await instance.exit();
-      wllamaInstances.delete(model.id);
+      await unloadWllamaModel(model.id);
     },
   };
 }
@@ -388,8 +446,7 @@ export async function runtimeFromChatSelection(providerId?: string, browserModel
 }
 
 export async function unloadAllBrowserModels() {
-  for (const instance of wllamaInstances.values()) {
-    await instance.exit().catch(() => undefined);
+  for (const modelId of [...wllamaInstances.keys()]) {
+    await unloadWllamaModel(modelId);
   }
-  wllamaInstances.clear();
 }
