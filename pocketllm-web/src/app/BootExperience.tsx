@@ -85,8 +85,11 @@ function SetupWizard() {
             <div className="capability-list">
               <Capability label="WebGPU" value={report?.webgpu ? "Available" : "Unavailable"} good={Boolean(report?.webgpu)} />
               <Capability label="WebAssembly" value={report?.wasm ? "Available" : "Unavailable"} good={Boolean(report?.wasm)} />
+              <Capability label="WASM SIMD" value={report?.wasmSimd ? "Available" : "Unavailable"} good={Boolean(report?.wasmSimd)} />
               <Capability label="Cross-origin isolation" value={report?.crossOriginIsolated ? "Active" : "Missing"} good={Boolean(report?.crossOriginIsolated)} />
               <Capability label="Chrome built-in AI" value={report?.chromeAI ?? "unknown"} good={report?.chromeAI === "available"} />
+              <Capability label="Browser / platform" value={`${report?.browser ?? "Unknown"} · ${report?.platform ?? "Unknown"}`} good={true} />
+              <Capability label="Local-network access" value={report?.localNetworkAccess ?? "unknown"} good={report?.localNetworkAccess === "granted" || report?.localNetworkAccess === "prompt"} />
               <Capability label="Storage quota" value={report?.storageQuota ? humanBytes(report.storageQuota) : "Browser did not expose it"} good={true} />
               <Capability label="CPU threads exposed" value={String(report?.hardwareConcurrency ?? 1)} good={(report?.hardwareConcurrency ?? 1) >= 4} />
             </div>
