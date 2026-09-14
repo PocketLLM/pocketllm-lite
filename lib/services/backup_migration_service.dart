@@ -150,7 +150,7 @@ class BackupMigrationService {
       final envelope = jsonDecode(encryptedJson) as Map<String, dynamic>;
       final envelopeVersion = envelope['version'];
       if (envelope['format'] != 'pocketllm-backup' ||
-          envelopeVersion != 2 && envelopeVersion != 3 && envelopeVersion != 4) {
+          !const {2, 3, 4}.contains(envelopeVersion)) {
         throw const BackupDecryptError('Not a supported PocketLLM backup.');
       }
       final kdf = Map<String, dynamic>.from(envelope['kdf'] as Map);
