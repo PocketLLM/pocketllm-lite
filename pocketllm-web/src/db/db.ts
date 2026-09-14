@@ -22,7 +22,7 @@ import type {
   UsageEvent,
 } from "../core/types";
 
-class PocketDatabase extends Dexie {
+export class PocketDatabase extends Dexie {
   chats!: EntityTable<Chat, "id">;
   messages!: EntityTable<Message, "id">;
   providers!: EntityTable<Provider, "id">;
@@ -44,8 +44,8 @@ class PocketDatabase extends Dexie {
   usage!: EntityTable<UsageEvent, "id">;
   settings!: EntityTable<AppSetting, "key">;
 
-  constructor() {
-    super("pocketllm-web");
+  constructor(name = "pocketllm-web") {
+    super(name);
     this.version(1).stores({
       chats: "id, updatedAt, createdAt, archived, pinned",
       messages: "id, chatId, createdAt, starred",
