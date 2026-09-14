@@ -1,7 +1,7 @@
 import { db, logActivity, setting } from "../db/db";
 import type { DocumentChunk, KnowledgeDocument } from "./types";
 import { embedTexts } from "./embeddings";
-import { sha256, writeOpfs } from "./storage";
+import { requestPersistentStorage, sha256, writeOpfs } from "./storage";
 
 const MAX_TEXT_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_PDF_BYTES = 60 * 1024 * 1024;
@@ -160,6 +160,7 @@ export async function ingestDocument(file: File, options?: { semantic?: boolean;
     await db.documentChunks.bulkAdd(chunks);
   });
   await logActivity("knowledge", "Document indexed", `${file.name} · ${chunks.length} chunks`);
+  void requestPersistentStorage().catch(() => false);
   onProgress(1, "Ready");
   return document;
 }
