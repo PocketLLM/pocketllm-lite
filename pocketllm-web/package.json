@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:contracts": "node scripts/validate-contracts.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
@@ -36,6 +37,7 @@
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",
     "fake-indexeddb": "^6.0.1",
+    "ajv": "^8.17.1",
     "jsdom": "^25.0.1",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
