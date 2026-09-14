@@ -99,6 +99,30 @@ async function walkDirectory(dir: FileSystemDirectoryHandle): Promise<number> {
   return total;
 }
 
+async function walkPaths(dir: FileSystemDirectoryHandle, prefix: string): Promise<Array<{ path: string; bytes: number }>> {
+  const result: Array<{ path: string; bytes: number }> = [];
+  for await (const [name, handle] of (dir as any).entries() as AsyncIterable<[string, FileSystemHandle]>) {
+    const path = prefix ? `${prefix}/${name}` : name;
+    if (handle.kind === "file") {
+      const file = await (handle as FileSystemFileHandle).getFile();
+      result.push({ path, bytes: file.size });
+    } else {
+      result.push(...await walkPaths(handle as FileSystemDirectoryHandle, path));
+    }
+  }
+  return result;
+}
+
+export async function listOpfsFiles(bucket: StorageBucket) {
+  try {
+    const root = await requireOpfs();
+    const dir = await root.getDirectoryHandle(bucket);
+    return walkPaths(dir, bucket);
+  } catch {
+    return [];
+  }
+}
+
 export async function bucketBytes(bucket: StorageBucket) {
   try {
     const root = await requireOpfs();
@@ -140,6 +164,58 @@ export async function getStorageReport() {
       logs: (await db.activity.count()) + (await db.networkAudit.count()) + (await db.errors.count()),
     },
   };
+}
+
+export async function removeOrphanedFiles() {
+  const [models, documents, messages, downloads] = await Promise.all([
+    db.browserModels.toArray(),
+    db.documents.toArray(),
+    db.messages.toArray(),
+    db.downloads.toArray(),
+  ]);
+  const referenced = new Set<string>();
+  for (const model of models) if (model.opfsPath) referenced.add(model.opfsPath);
+  for (const document of documents) if (document.opfsPath) referenced.add(document.opfsPath);
+  for (const task of downloads) if (task.opfsPath && ["queued", "downloading", "paused", "verifying", "installing"].includes(task.state)) referenced.add(task.opfsPath);
+  for (const message of messages) {
+    for (const attachment of message.attachments ?? []) if (attachment.opfsPath) referenced.add(attachment.opfsPath);
+  }
+
+  const buckets: StorageBucket[] = ["models", "documents", "attachments", "downloads", "tmp"];
+  let removedFiles = 0;
+  let removedBytes = 0;
+  for (const bucket of buckets) {
+    const files = await listOpfsFiles(bucket);
+    for (const file of files) {
+      if (bucket === "tmp" || !referenced.has(file.path)) {
+        await deleteOpfs(file.path).catch(() => undefined);
+        removedFiles += 1;
+        removedBytes += file.bytes;
+      }
+    }
+  }
+  return { removedFiles, removedBytes };
+}
+
+export async function pruneLogs(days: number | null) {
+  if (days === null) return { removed: 0 };
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const before = (await db.activity.count()) + (await db.networkAudit.count()) + (await db.errors.count());
+  await Promise.all([
+    db.activity.where("timestamp").below(cutoff).delete(),
+    db.networkAudit.where("timestamp").below(cutoff).delete(),
+    db.errors.where("timestamp").below(cutoff).delete(),
+  ]);
+  const after = (await db.activity.count()) + (await db.networkAudit.count()) + (await db.errors.count());
+  return { removed: Math.max(0, before - after) };
+}
+
+export async function clearRuntimeCaches() {
+  if (!("caches" in window)) return 0;
+  const names = await caches.keys();
+  const targets = names.filter((name) => /pocketllm|transformers|onnx|wasm/i.test(name));
+  const results = await Promise.all(targets.map((name) => caches.delete(name)));
+  return results.filter(Boolean).length;
 }
 
 export async function requestPersistentStorage() {
