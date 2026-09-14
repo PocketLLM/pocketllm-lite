@@ -77,7 +77,7 @@ export async function buildBackupPayload() {
   const messages = await db.messages.toArray();
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     appVersion: "web-0.2.0",
     exportedAt: new Date().toISOString(),
     settings: Object.fromEntries(settings.filter((row) => row.key !== "encryptedVault").map((row) => [row.key, row.value])),
@@ -122,7 +122,7 @@ export async function exportEncryptedBackup(password: string) {
   const ciphertext = encrypted.slice(0, -16);
   return JSON.stringify({
     format: "pocketllm-backup",
-    version: 3,
+    version: 4,
     kdf: {
       name: "PBKDF2-HMAC-SHA256",
       iterations: ITERATIONS,
@@ -144,7 +144,7 @@ export async function decryptBackup(encryptedJson: string, password: string): Pr
   } catch {
     throw new Error("The backup file is malformed.");
   }
-  if (envelope?.format !== "pocketllm-backup" || ![2, 3].includes(envelope?.version)) throw new Error("Not a supported PocketLLM backup.");
+  if (envelope?.format !== "pocketllm-backup" || ![2, 3, 4].includes(envelope?.version)) throw new Error("Not a supported PocketLLM backup.");
   if (envelope?.kdf?.name !== "PBKDF2-HMAC-SHA256" || envelope?.kdf?.iterations !== ITERATIONS || envelope?.cipher?.name !== "AES-256-GCM") {
     throw new Error("Unsupported backup cryptography.");
   }
@@ -159,7 +159,7 @@ export async function decryptBackup(encryptedJson: string, password: string): Pr
   try {
     const clear = await crypto.subtle.decrypt({ name: "AES-GCM", iv: nonce }, key, combined);
     const payload = JSON.parse(decoder.decode(clear));
-    if (![2, 3].includes(payload?.schemaVersion)) throw new Error("Unsupported backup payload.");
+    if (![2, 3, 4].includes(payload?.schemaVersion)) throw new Error("Unsupported backup payload.");
     return payload;
   } catch (error) {
     if (error instanceof Error && error.message === "Unsupported backup payload.") throw error;
