@@ -1,5 +1,36 @@
 import type { CapabilityReport } from "./types";
 
+function detectWasmSimd() {
+  if (typeof WebAssembly === "undefined") return false;
+  try {
+    return WebAssembly.validate(new Uint8Array([
+      0,97,115,109,1,0,0,0,1,5,1,96,0,1,123,3,2,1,0,10,10,1,8,0,65,0,253,15,11
+    ]));
+  } catch {
+    return false;
+  }
+}
+
+function browserLabel() {
+  const ua = navigator.userAgent;
+  if (/Edg\//.test(ua)) return "Edge";
+  if (/Firefox\//.test(ua)) return "Firefox";
+  if (/Chrome\//.test(ua) && !/Edg\//.test(ua)) return "Chrome";
+  if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) return "Safari";
+  return "Unknown browser";
+}
+
+async function localNetworkAccessState(): Promise<CapabilityReport["localNetworkAccess"]> {
+  const permissions = navigator.permissions as Permissions & { query(descriptor: PermissionDescriptor & { name: string }): Promise<PermissionStatus> };
+  if (!permissions?.query) return "unsupported";
+  try {
+    const status = await permissions.query({ name: "local-network-access" } as PermissionDescriptor & { name: string });
+    return status.state === "granted" ? "granted" : status.state === "prompt" ? "prompt" : "denied";
+  } catch {
+    return "unsupported";
+  }
+}
+
 export async function probeCapabilities(): Promise<CapabilityReport> {
   const estimate = await navigator.storage?.estimate?.();
   const persistentStorage = (await navigator.storage?.persisted?.()) ?? false;
@@ -32,9 +63,13 @@ export async function probeCapabilities(): Promise<CapabilityReport> {
   return {
     webgpu: Boolean((navigator as Navigator & { gpu?: unknown }).gpu),
     wasm: typeof WebAssembly !== "undefined",
+    wasmSimd: detectWasmSimd(),
     crossOriginIsolated: window.crossOriginIsolated,
     sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
     hardwareConcurrency: navigator.hardwareConcurrency || 1,
+    browser: browserLabel(),
+    platform: navigator.userAgentData?.platform ?? navigator.platform ?? "Unknown",
+    localNetworkAccess: await localNetworkAccessState(),
     storageQuota: estimate?.quota,
     storageUsage: estimate?.usage,
     persistentStorage,
