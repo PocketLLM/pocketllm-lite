@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketllm_lite/services/backup_migration_service.dart';
@@ -49,6 +50,22 @@ void main() {
       expect(restored.prompts.single['id'], 'prompt-1');
       expect(restored.skills.single['id'], 'skill-1');
       expect(restored.documentIndex['schemaVersion'], 2);
+    });
+
+    test('imports the deterministic web schema-v4 fixture', () async {
+      final encrypted =
+          await File('fixtures/backups/web-v4-fixture.pllm').readAsString();
+      final restored = await service.decryptBackup(
+        encryptedJson: encrypted,
+        password: 'fixture-web-v4',
+      );
+      expect(restored.schemaVersion, 4);
+      expect(restored.appVersion, 'web-fixture-0.2.0');
+      expect(restored.chats.single['id'], 'web-chat-1');
+      expect(
+        restored.chats.single['messages'][0]['content'],
+        'hello from web fixture',
+      );
     });
 
     test('wrong password and ciphertext corruption fail authentication',
