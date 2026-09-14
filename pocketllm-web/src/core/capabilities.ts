@@ -68,7 +68,7 @@ export async function probeCapabilities(): Promise<CapabilityReport> {
     sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
     hardwareConcurrency: navigator.hardwareConcurrency || 1,
     browser: browserLabel(),
-    platform: navigator.userAgentData?.platform ?? navigator.platform ?? "Unknown",
+    platform: (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform ?? "Unknown",
     localNetworkAccess: await localNetworkAccessState(),
     storageQuota: estimate?.quota,
     storageUsage: estimate?.usage,
