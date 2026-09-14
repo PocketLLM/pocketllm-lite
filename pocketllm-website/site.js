@@ -55,19 +55,24 @@
   const qsa = (selector, root = document) => [...root.querySelectorAll(selector)];
 
   function initNav() {
-    const header = qs('[data-header]');
-    const button = qs('[data-nav-toggle]');
-    const nav = qs('[data-nav]');
+    const header = qs('[data-header], .site-header');
+    const button = qs('[data-nav-toggle], #navToggle');
+    const nav = qs('[data-nav], #navLinks');
     const updateHeader = () => header?.classList.toggle('is-scrolled', window.scrollY > 18);
+
     updateHeader();
     addEventListener('scroll', updateHeader, { passive: true });
-    button?.addEventListener('click', () => {
+
+    if (!button || !nav) return;
+
+    button.addEventListener('click', () => {
       const open = nav.classList.toggle('is-open');
       button.setAttribute('aria-expanded', String(open));
     });
+
     qsa('a', nav).forEach(link => link.addEventListener('click', () => {
       nav.classList.remove('is-open');
-      button?.setAttribute('aria-expanded', 'false');
+      button.setAttribute('aria-expanded', 'false');
     }));
   }
 

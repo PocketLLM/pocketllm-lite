@@ -41,7 +41,7 @@
         <a class="nav-github" href="https://github.com/PocketLLM/pocketllm-lite" target="_blank" rel="noreferrer" aria-label="PocketLLM Lite on GitHub">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2A11.6 11.6 0 0 1 12 6.3c1 0 2 .1 3 .4 2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.9 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z"/></svg>
         </a>
-        <a class="button button-dark button-small" href="pocketllm-website/releases.html">Download</a>
+        <a class="button button-pink button-small" href="pocketllm-website/releases.html" data-latest-download>Download</a>
       </nav>
     </div>
   </header>
@@ -73,11 +73,29 @@
     <section class="manifesto paper-grid section-pad">
       <div class="shell narrow center reveal">
         <div class="mini-orbit" aria-hidden="true">
-          <span>GGUF</span><span>RAG</span><span>TOOLS</span><span>OLLAMA</span>
+          <span title="Local GGUF Models">GGUF</span>
+          <span title="Document RAG">RAG</span>
+          <span title="Confirmed Tools">TOOLS</span>
+          <span title="Ollama Bridge">OLLAMA</span>
         </div>
         <p class="script-kicker pink">PocketLLM Lite</p>
         <h2 class="display-title">It’s not another AI account.<br />It’s your own AI workspace.</h2>
         <p class="section-lede">No cloud profile is required to chat, save history, use personas, build local memory, or work with documents. Network features are explicit, inspectable and optional.</p>
+
+        <!-- Interactive Command Bar matching the reference -->
+        <div class="command-bar-box">
+          <span class="command-orb" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </span>
+          <input type="text" class="command-input" id="commandInput" placeholder="Try searching 'photos from summer' or /notes..." aria-label="Search prompt" />
+        </div>
+        <div class="command-chips" aria-label="Quick prompts">
+          <button class="chip" type="button" onclick="setCommand('Summarize my PDF notes')">✦ Summarize notes</button>
+          <button class="chip" type="button" onclick="setCommand('Explain quantum entanglement')">✦ Explain quantum physics</button>
+          <button class="chip" type="button" onclick="setCommand('Run Phi-3 Mini GGUF on-device')">✦ Run Phi-3 GGUF</button>
+          <button class="chip" type="button" onclick="setCommand('Audit network traffic and permissions')">✦ Audit network log</button>
+        </div>
+
         <a class="text-link" href="pocketllm-website/docs.html">See how local-first works <span>↗</span></a>
       </div>
     </section>
@@ -94,6 +112,16 @@
             <div><strong>Private by default</strong><span>No analytics or advertising SDK required for the core experience.</span></div>
             <div><strong>Inspect the boundary</strong><span>Network destinations and purposes are visible in the audit log.</span></div>
             <div><strong>Back it up</strong><span>Password-derived AES-256-GCM backups are portable and verifiable.</span></div>
+          </div>
+
+          <!-- Interactive dialogue card matching reference -->
+          <div class="chat-preview-box">
+            <div class="chat-preview-head">
+              <span class="dot"></span>
+              <strong>Local Assistant · Sandbox Active</strong>
+            </div>
+            <div class="chat-bubble-u">Did you know PocketLLM runs completely offline?</div>
+            <div class="chat-bubble-a">Yes! All model weights run directly on your phone’s NPU/CPU. Chats, document indexes, and private memories remain strictly inside your device sandbox.</div>
           </div>
         </div>
         <figure class="story-visual reveal delay-1">
@@ -174,7 +202,7 @@
               <p data-home-release-date>Loading release information…</p>
             </div>
             <div class="download-panel-actions">
-              <a class="button button-dark" href="pocketllm-website/releases.html">Choose APK</a>
+              <a class="button button-pink" href="pocketllm-website/releases.html">Choose APK</a>
               <a class="button button-outline" href="pocketllm-website/changelog.html">Read changelog</a>
             </div>
           </div>
@@ -228,7 +256,17 @@
       <div><h3>Project</h3><a href="pocketllm-website/docs.html">Docs</a><a href="https://github.com/PocketLLM/pocketllm-lite" target="_blank" rel="noreferrer">GitHub</a><a href="https://github.com/PocketLLM/pocketllm-lite/issues" target="_blank" rel="noreferrer">Issues</a></div>
       <div><h3>Legal</h3><a href="pocketllm-website/privacy.html">Privacy</a><a href="pocketllm-website/terms.html">Terms</a><a href="https://github.com/PocketLLM/pocketllm-lite/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a></div>
     </div>
-    <div class="shell footer-bottom"><span>© <span data-year></span> PocketLLM Lite.</span><span>Open source, for everyone.</span></div>
+    <div class="shell footer-bottom"><span>© <span data-year>2026</span> PocketLLM Lite.</span><span>Open source, for everyone.</span></div>
   </footer>
+
+  <script>
+    function setCommand(text) {
+      const input = document.getElementById('commandInput');
+      if (input) {
+        input.value = text;
+        input.focus();
+      }
+    }
+  </script>
 </body>
 </html>
