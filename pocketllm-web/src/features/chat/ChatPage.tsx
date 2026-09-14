@@ -686,14 +686,14 @@ export function ChatPage() {
           <aside className="chat-inspector" aria-label="Chat context">
             <section>
               <span className="inspector-label">Persona</span>
-              <select value={liveChat?.personaId ?? ""} onChange={(event) => void updateChat({ personaId: event.target.value || undefined })}>
+              <select aria-label="Persona" value={liveChat?.personaId ?? ""} onChange={(event) => void updateChat({ personaId: event.target.value || undefined })}>
                 <option value="">Default</option>
                 {personas.map((persona) => <option key={persona.id} value={persona.id}>{persona.avatarIcon} {persona.name}</option>)}
               </select>
             </section>
             <section>
               <span className="inspector-label">System prompt</span>
-              <select value={liveChat?.promptId ?? ""} onChange={(event) => void updateChat({ promptId: event.target.value || undefined })}>
+              <select aria-label="System prompt" value={liveChat?.promptId ?? ""} onChange={(event) => void updateChat({ promptId: event.target.value || undefined })}>
                 <option value="">None</option>
                 {prompts.map((prompt) => <option key={prompt.id} value={prompt.id}>{prompt.title}</option>)}
               </select>
