@@ -49,7 +49,7 @@ async function compose(chat: Chat, messages: Message[], onState?: (state: Genera
   const [persona, prompt, skills, runtime] = await Promise.all([
     chat.personaId ? db.personas.get(chat.personaId) : undefined,
     chat.promptId ? db.prompts.get(chat.promptId) : undefined,
-    db.skills.where("isEnabled").equals(1).toArray(),
+    db.skills.filter((skill) => skill.isEnabled).toArray(),
     runtimeFromChatSelection(chat.providerId, chat.browserModelId),
   ]);
 
