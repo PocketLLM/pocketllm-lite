@@ -285,6 +285,8 @@ export interface ErrorEntry {
   code?: string;
   safeMessage: string;
   stack?: string;
+  browser?: string;
+  appVersion?: string;
 }
 
 export interface LabRun {
