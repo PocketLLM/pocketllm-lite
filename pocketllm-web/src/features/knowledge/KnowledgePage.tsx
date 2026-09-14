@@ -1,71 +1,79 @@
 import { FileText, Search, Trash2, Upload } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { deleteDocument, ingestDocument } from "../../core/documents";
+import { useLiveValue } from "../../core/live";
+import { humanBytes } from "../../core/capabilities";
 import { db } from "../../db/db";
-import type { KnowledgeDocument } from "../../core/types";
+import { useToast } from "../../components/Toast";
 
 export function KnowledgePage() {
-  const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
-  const [busy, setBusy] = useState(false);
+  const documents = useLiveValue(() => db.documents.orderBy("updatedAt").reverse().toArray(), [], []);
+  const toast = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const [semantic, setSemantic] = useState(true);
+  const [progress, setProgress] = useState<{ value: number; label: string; name: string } | null>(null);
 
-  async function refresh() {
-    setDocuments(await db.documents.orderBy("updatedAt").reverse().toArray());
-  }
+  const filtered = useMemo(() => documents.filter((document) => document.name.toLowerCase().includes(query.toLowerCase())), [documents, query]);
 
-  useEffect(() => { void refresh(); }, []);
-
-  async function importFiles(files: FileList | null) {
-    if (!files?.length) return;
-    setBusy(true);
-    try {
-      for (const file of Array.from(files)) {
-        const lower = file.name.toLowerCase();
-        if (!lower.endsWith(".txt") && !lower.endsWith(".md") && !lower.endsWith(".csv")) {
-          window.alert(`${file.name}: this first web build currently indexes TXT, Markdown and CSV. PDF parsing is coming in the next implementation pass.`);
-          continue;
-        }
-        const text = await file.text();
-        const now = Date.now();
-        await db.documents.put({
-          id: crypto.randomUUID(),
-          name: file.name,
-          mimeType: file.type || "text/plain",
-          size: file.size,
-          text,
-          createdAt: now,
-          updatedAt: now,
+  async function importFiles(files: File[]) {
+    for (const file of files) {
+      try {
+        setProgress({ value: 0, label: "Starting", name: file.name });
+        const document = await ingestDocument(file, {
+          semantic,
+          onProgress(value, label) {
+            setProgress({ value, label, name: file.name });
+          },
         });
+        toast.push(`${document.name} indexed`, "success");
+      } catch (error) {
+        toast.push(error instanceof Error ? error.message : `Could not index ${file.name}`, "error");
       }
-      await refresh();
-    } finally {
-      setBusy(false);
     }
+    setProgress(null);
+    if (inputRef.current) inputRef.current.value = "";
   }
 
   return (
     <section className="page">
       <header className="page-header">
-        <div><p className="eyebrow">Local knowledge</p><h1>Knowledge</h1><p>Documents stay in this browser in this implementation.</p></div>
-        <label className="primary-button file-button">
-          <Upload size={17} /> {busy ? "Importing…" : "Import files"}
-          <input type="file" multiple accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" onChange={(event) => void importFiles(event.target.files)} />
-        </label>
+        <div><p className="eyebrow">Local knowledge</p><h1>Knowledge</h1><p>PDF, TXT, Markdown and CSV are extracted and indexed locally.</p></div>
+        <div className="header-tools">
+          <label className="check-pill"><input type="checkbox" checked={semantic} onChange={(e) => setSemantic(e.target.checked)} /> Semantic embeddings</label>
+          <button className="primary-button" onClick={() => inputRef.current?.click()}><Upload size={17} /> Import files</button>
+          <input ref={inputRef} hidden type="file" multiple accept=".pdf,.txt,.md,.markdown,.csv,text/plain,text/markdown,text/csv,application/pdf" onChange={(event) => void importFiles(Array.from(event.target.files ?? []))} />
+        </div>
       </header>
 
-      <div className="knowledge-grid">
-        <div className="drop-card">
-          <div className="drop-icon"><FileText size={25} /></div>
-          <h2>Build a private reference library</h2>
-          <p>Bring notes, Markdown and CSV data into PocketLLM. No upload account, no cloud library.</p>
+      {progress && (
+        <div className="progress-card" aria-live="polite">
+          <div><strong>{progress.name}</strong><span>{progress.label}</span></div>
+          <progress max={1} value={progress.value} />
         </div>
+      )}
+
+      <div className="search-box knowledge-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search documents" aria-label="Search documents" /></div>
+
+      <div className="knowledge-grid">
+        <div className="drop-card" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void importFiles(Array.from(event.dataTransfer.files)); }}>
+          <div className="drop-icon"><FileText size={25} /></div>
+          <h2>Drop your private reference material here</h2>
+          <p>Source bytes are stored in browser-private file storage. Extracted text and retrieval chunks live in IndexedDB.</p>
+        </div>
+
         <div className="list-card">
-          {documents.length === 0 ? <div className="empty-state"><Search size={26} /><h2>No documents indexed</h2><p>Import a file to start your local knowledge base.</p></div> :
-            documents.map((doc) => (
-              <div className="history-row" key={doc.id}>
-                <div className="history-main">
-                  <strong>{doc.name}</strong>
-                  <span>{(doc.size / 1024).toFixed(1)} KB · {doc.text.length.toLocaleString()} characters</span>
-                </div>
-                <button className="icon-button danger" aria-label={`Delete ${doc.name}`} onClick={async () => { if (window.confirm(`Delete ${doc.name}?`)) { await db.documents.delete(doc.id); await refresh(); } }}><Trash2 size={17} /></button>
+          {filtered.length === 0 ? <div className="empty-state"><Search size={26} /><h2>No documents indexed</h2><p>Import something useful. Scanned/image-only PDFs are rejected until OCR is explicitly enabled.</p></div> :
+            filtered.map((document) => (
+              <div className="history-row" key={document.id}>
+                <Link className="history-main" to={`/knowledge/${document.id}`}>
+                  <strong>{document.name}</strong>
+                  <span>{humanBytes(document.size)} · {document.chunkCount} chunks · {document.retrievalMode}{document.pageCount ? ` · ${document.pageCount} pages` : ""}</span>
+                </Link>
+                <button className="icon-button danger" aria-label={`Delete ${document.name}`} onClick={async () => {
+                  if (window.confirm(`Delete ${document.name} and its index?`)) await deleteDocument(document.id);
+                }}><Trash2 size={17} /></button>
               </div>
             ))}
         </div>
