@@ -1,5 +1,6 @@
 import { Bot, CheckCircle2, Chrome, Cpu, Download, FileUp, HardDriveDownload, Search, Trash2, XCircle } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useLiveValue } from "../../core/live";
 import { humanBytes, probeCapabilities } from "../../core/capabilities";
 import {
@@ -133,7 +134,8 @@ export function ModelsPage() {
               </dl>
               {testResult[model.id] && <p className={testResult[model.id].startsWith("Ready") ? "connection-result" : "inline-error"}>{testResult[model.id].startsWith("Ready") ? <CheckCircle2 size={15} /> : <XCircle size={15} />} {testResult[model.id]}</p>}
               <div className="card-actions">
-                <button className="soft-button" disabled={testing === model.id} onClick={() => void testModel(model.id)}>{testing === model.id ? "Testing…" : "Test"}</button>
+                <Link className="soft-button" to={`/models/${model.id}`}>Details</Link>
+                <button className="soft-button" disabled={testing === model.id || !model.installed} onClick={() => void testModel(model.id)}>{testing === model.id ? "Testing…" : "Test"}</button>
                 {model.runtime !== "chrome-ai" && <button className="icon-button danger" onClick={async () => {
                   if (window.confirm(`Delete ${model.name} from this browser?`)) await removeBrowserModel(model.id);
                 }} aria-label={`Delete ${model.name}`}><Trash2 size={16} /></button>}
