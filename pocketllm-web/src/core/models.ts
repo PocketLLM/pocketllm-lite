@@ -304,6 +304,18 @@ export async function removeBrowserModel(id: string) {
   if (!model) return;
   if (model.opfsPath) await deleteOpfs(model.opfsPath).catch(() => undefined);
   await db.downloads.where("modelId").equals(id).delete();
+
+  if (model.source === "huggingface" && model.sourceUrl) {
+    await db.browserModels.update(id, {
+      installed: false,
+      status: "available",
+      opfsPath: undefined,
+      updatedAt: Date.now(),
+    });
+    await logActivity("model", "Model bytes removed", `${model.name} · source manifest retained`);
+    return;
+  }
+
   await db.browserModels.delete(id);
   await logActivity("model", "Model removed", model.name);
 }
