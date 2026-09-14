@@ -1,11 +1,12 @@
 import { Check, ChevronRight, Cpu, HardDrive, Laptop, Server, ShieldCheck, Sparkles, X } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { probeCapabilities, humanBytes } from "../core/capabilities";
 import { requestPersistentStorage } from "../core/storage";
 import { useLiveValue } from "../core/live";
 import type { CapabilityReport } from "../core/types";
 import { db, saveSetting } from "../db/db";
 import { useRegisterSW } from "virtual:pwa-register/react";
+import { busyLabels, busySnapshot, subscribeBusy } from "../core/busy";
 
 export function BootExperience({ children }: { children: ReactNode }) {
   const onboarding = useLiveValue(() => db.settings.get("onboardingComplete"), undefined, []);
@@ -106,6 +107,8 @@ function Capability({ label, value, good }: { label: string; value: string; good
 }
 
 function UpdateBanner() {
+  const activeSnapshot = useSyncExternalStore(subscribeBusy, busySnapshot, busySnapshot);
+  const active = busyLabels(activeSnapshot);
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
@@ -116,11 +119,15 @@ function UpdateBanner() {
   });
 
   if (!needRefresh) return null;
+  const blocked = active.length > 0;
+  const detail = blocked
+    ? `Finish active ${active.map((kind) => kind.replaceAll("-", " ")).join(", ")} before reloading.`
+    : "Your current work will stay local.";
   return (
     <div className="update-banner" role="status">
-      <div><strong>New PocketLLM version ready</strong><span>Your current work will stay local.</span></div>
+      <div><strong>New PocketLLM version ready</strong><span>{detail}</span></div>
       <button className="soft-button" onClick={() => setNeedRefresh(false)}>Later</button>
-      <button className="primary-button small" onClick={() => void updateServiceWorker(true)}>Update now</button>
+      <button className="primary-button small" disabled={blocked} onClick={() => void updateServiceWorker(true)}>Update now</button>
     </div>
   );
 }
