@@ -1,16 +1,14 @@
-<p align="center">
-  <img src="assets/logo.png" alt="PocketLLM Lite logo" width="140" />
-</p>
+# PocketLLM Lite marketing website redesign
 
-# PocketLLM Lite
+This package is designed to drop into the existing `PocketLLM/pocketllm-lite` repository without changing the current static-site deployment model.
 
-**Local-first AI. Offline when you want it. Network access only when you allow it.**
+## Important: keep your existing logo
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.41-02569B?logo=flutter)](https://flutter.dev)
 [![Version](https://img.shields.io/badge/version-1.0.38-6750A4)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2E7D32.svg)](LICENSE)
 
-PocketLLM Lite is a Flutter assistant for running supported models on your device with Cactus, or connecting to an Ollama server you control. Chats, preferences, personas, skills, and memories are stored locally. Optional model discovery, downloads, updates, GitHub skill installs, and Tavily search use the network only when their privacy controls allow it.
+`pocketllm-website/assets/logo.png`
 
 ## What works in v1.0.38
 
@@ -28,62 +26,29 @@ PocketLLM Lite is a Flutter assistant for running supported models on your devic
 - Strict Offline controls and a network audit log for app-owned update, discovery, download, skill, search, and remote-inference paths.
 - Material 3 light/dark themes and six localization resource sets.
 
-## Local and optional online behavior
 
-Local inference, local files, memories, and persisted chats do not require a cloud account. These features can use the network when enabled:
-
-| Feature | Destination | Data category |
-|---|---|---|
-| Hugging Face browser/download | `huggingface.co` | Search terms, model IDs, optional access token |
-| Tavily web search | `api.tavily.com` | Search query and API key |
-| GitHub skill install | User-selected GitHub/raw URL | Skill URL |
-| Update check | GitHub Releases API | App version and HTTP metadata |
-| Ollama / remote endpoint | User-configured host | Prompts and model responses |
-
-Strict Offline blocks non-loopback requests before application-owned HTTP I/O. Loopback is allowed so a local Ollama server remains usable; review the network center before enabling LAN endpoints.
-
-## Model setup
-
-### Local GGUF with Cactus
-
-Import a local GGUF or select a GGUF file discovered through Hugging Face. PocketLLM verifies the file header, available storage, and a published SHA-256 when source metadata provides one, then records a `ModelManifest`. A successful Cactus load confirms that exact file on the current backend/device; unknown vision, tool, reasoning, and embedding capabilities remain unknown.
-
-The central Model Store also exposes the current Cactus Flutter 1.3 catalog.
-Managed bundles download into resumable partial files only when the server proves
-range support and supplies an ETag or Last-Modified validator. PocketLLM safely
-extracts the archive, validates every GGUF header, and publishes the folder
-atomically. If a server ignores a resume request and returns a full HTTP 200
-body, PocketLLM restarts from byte zero instead of appending corrupt data.
-
-### Ollama
-
-1. Start Ollama on the same device or a trusted computer.
-2. Pull a model with `ollama pull <model>`.
-3. Set the PocketLLM endpoint, normally `http://127.0.0.1:11434` for same-device use.
-4. Test the connection before starting a chat.
-
-### Custom GGUF
-
-Import a GGUF file from the model screen. PocketLLM validates the `GGUF` header before copying it into the app model directory. A valid header does not guarantee the installed backend supports that model architecture. Image input stays disabled unless the manifest or configured provider explicitly confirms vision support.
-
-## Development
-
-```bash
-flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-dart format .
-flutter analyze
-flutter test
-flutter run
+```text
+pocketllm-lite/
+├─ index.html                         ← replace
+├─ 404.html                           ← add
+├─ pocketllm-website/
+│  ├─ styles.css                      ← replace
+│  ├─ site.js                         ← add
+│  ├─ releases.html                   ← add
+│  ├─ changelog.html                  ← add
+│  ├─ docs.html                       ← add
+│  ├─ privacy.html                    ← replace
+│  ├─ terms.html                      ← replace
+│  └─ assets/
+│     ├─ logo.png                     ← KEEP your existing real logo
+│     ├─ hero-local-ai.webp           ← add
+│     ├─ workspace-sunrise.webp       ← add
+│     ├─ runtime-journey.webp         ← add
+│     ├─ cloud-transition.webp        ← add
+│     ├─ developer-night.webp         ← add
+│     ├─ footer-night.webp            ← add
+│     └─ feature-collage.webp         ← add
 ```
-
-Release APK command:
-
-```bash
-flutter build apk --split-per-abi --release
-```
-
-## Known limitations
 
 - Android OCR is implemented; iOS OCR is not enabled in this release.
 - Cactus 1.3 transcription returns text and performance metrics, but not verified word/segment timestamps or speaker diarization. PocketLLM does not invent them.

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="theme-color" content="#f8f1e8" />
+  <meta name="description" content="PocketLLM Lite setup guide: Android installation, local models, Ollama, document RAG, privacy controls and backups." />
+  <link rel="icon" type="image/png" href="assets/logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" /><script defer src="site.js"></script>
+  <title>Docs — PocketLLM Lite</title>
+</head>
+<body data-page="docs">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header is-scrolled" data-header><div class="shell nav-wrap">
+    <a class="brand" href="../index.html"><img class="brand-logo" src="assets/logo.png" alt="" /><span>PocketLLM Lite</span></a>
+    <button class="nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-nav-toggle><span></span><span></span><span></span></button>
+    <nav class="nav-links" data-nav><a href="../index.html#features">Features</a><a href="../index.html#how-it-runs">Runtimes</a><a href="releases.html">Downloads</a><a href="changelog.html">Changelog</a><a href="docs.html">Docs</a><a class="button button-dark button-small" href="releases.html">Download</a></nav>
+  </div></header>
+
+  <main id="main">
+    <section class="internal-hero"><div class="shell reveal is-visible"><p class="script-kicker blue">Getting started</p><h1 class="display-title">Local AI without<br />the mystery meat.</h1><p class="internal-lede">This page is the short path. For implementation evidence, verification and exact limitations, the repository documentation remains the source of truth.</p></div></section>
+    <section class="section-pad-sm"><div class="shell page-grid">
+      <aside class="page-aside" aria-label="Documentation sections"><a href="#install">Install</a><a href="#models">Models</a><a href="#ollama">Ollama</a><a href="#knowledge">Knowledge Base</a><a href="#privacy">Privacy</a><a href="#backup">Backup</a><a href="#evidence">Evidence</a></aside>
+      <article class="content-card">
+        <section id="install"><p class="script-kicker pink">01</p><h2>Install the Android build.</h2><p>Open the <a href="releases.html">Downloads page</a>, choose the universal APK if you are unsure about ABI, and review the signing notice for that release before installation. Current engineering prereleases may be debug-signed and can require uninstalling a differently signed build before installation.</p></section>
+        <section id="models"><p class="script-kicker blue">02</p><h2>Choose how the model runs.</h2><h3>Local GGUF / managed models</h3><p>Use the Model Store or import a GGUF file. PocketLLM validates the file header and source evidence it has, but a valid GGUF header does not guarantee that every architecture will load on every device.</p><h3>Capabilities</h3><p>Vision, tools, embeddings and other capabilities remain unknown unless the manifest, provider configuration or runtime evidence establishes them. The app intentionally fails closed when a capability is unverified.</p></section>
+        <section id="ollama"><p class="script-kicker coral">03</p><h2>Connect Ollama.</h2><p>Start Ollama on your own machine, pull the model you want, then configure PocketLLM with the endpoint. Same-device loopback is normally:</p><pre><code>http://127.0.0.1:11434</code></pre><p>Test the connection inside PocketLLM before starting a chat. LAN endpoints should only be used when you understand the network exposure and trust the host.</p></section>
+        <section id="knowledge"><p class="script-kicker pink">04</p><h2>Work with your documents.</h2><p>The Knowledge Base supports text PDFs, TXT, Markdown and CSV. Keyword retrieval can work without an embedding model; semantic and hybrid retrieval require a compatible embedding model. Source metadata is retained so retrieved context can point back to document/page/chunk evidence.</p><p>Image-only or malformed PDFs are not silently treated as successful text imports. If the current app cannot extract useful text, it reports the limitation.</p></section>
+        <section id="privacy"><p class="script-kicker blue">05</p><h2>Set the network boundary.</h2><p>Strict Offline blocks non-loopback application-managed requests before PocketLLM performs its own HTTP I/O. Loopback remains intentionally available so local Ollama can work. Optional Hugging Face discovery, Tavily search, GitHub skill installs, update checks and remote inference require network access when enabled.</p></section>
+        <section id="backup"><p class="script-kicker coral">06</p><h2>Back up what matters.</h2><p>New <code>.pllm</code> backups use password-derived authenticated encryption. Restore validates the archive before mutating live application data and attempts rollback when an application-level restore step fails.</p></section>
+        <section id="evidence"><p class="script-kicker pink">Source of truth</p><h2>Read the evidence, not the vibe.</h2><p>For the exact current release boundary, use these repository documents:</p><ul><li><a href="https://github.com/PocketLLM/pocketllm-lite/blob/main/README.md" target="_blank" rel="noreferrer">README</a></li><li><a href="https://github.com/PocketLLM/pocketllm-lite/blob/main/docs/V1_0_38_VERIFICATION.md" target="_blank" rel="noreferrer">v1.0.38 verification</a></li><li><a href="https://github.com/PocketLLM/pocketllm-lite/blob/main/docs/KNOWN_LIMITATIONS.md" target="_blank" rel="noreferrer">Known limitations</a></li><li><a href="https://github.com/PocketLLM/pocketllm-lite/blob/main/SECURITY.md" target="_blank" rel="noreferrer">Security policy</a></li><li><a href="https://github.com/PocketLLM/pocketllm-lite/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer">Contributor guide</a></li></ul></section>
+      </article>
+    </div></section>
+  </main>
+  <footer class="site-footer"><div class="footer-sky" aria-hidden="true"></div><div class="shell footer-grid"><div class="footer-brand"><a class="brand brand-light" href="../index.html"><img class="brand-logo" src="assets/logo.png" alt="" /><span>PocketLLM Lite</span></a><p>Local-first AI with visible boundaries.</p></div><div><h3>Product</h3><a href="../index.html#features">Features</a><a href="releases.html">Downloads</a><a href="changelog.html">Changelog</a></div><div><h3>Project</h3><a href="docs.html">Docs</a><a href="https://github.com/PocketLLM/pocketllm-lite" target="_blank" rel="noreferrer">GitHub</a></div><div><h3>Legal</h3><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></div></div><div class="shell footer-bottom"><span>© <span data-year></span> PocketLLM Lite.</span><span>Open source, for everyone.</span></div></footer>
+</body>
+</html>
