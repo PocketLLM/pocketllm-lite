@@ -26,3 +26,35 @@ export async function withExclusiveLock<T>(name: string, operation: () => Promis
 export async function withModelLock<T>(modelId: string, operation: () => Promise<T>): Promise<T> {
   return withExclusiveLock(`model:${modelId}`, operation);
 }
+
+
+const runtimeLeases = new Map<string, { release: () => void }>();
+
+export async function claimModelRuntimeLease(modelId: string) {
+  const name = `pocketllm:model-runtime:${modelId}`;
+  if (runtimeLeases.has(name)) return true;
+  if (!navigator.locks?.request) return true;
+
+  let resolveAcquired: (value: boolean) => void = () => undefined;
+  const acquired = new Promise<boolean>((resolve) => { resolveAcquired = resolve; });
+  let releaseLease: () => void = () => undefined;
+  const released = new Promise<void>((resolve) => { releaseLease = resolve; });
+
+  void navigator.locks.request(name, { mode: "exclusive", ifAvailable: true }, async (lock) => {
+    if (!lock) {
+      resolveAcquired(false);
+      return;
+    }
+    runtimeLeases.set(name, { release: releaseLease });
+    resolveAcquired(true);
+    await released;
+    runtimeLeases.delete(name);
+  });
+
+  return acquired;
+}
+
+export function releaseModelRuntimeLease(modelId: string) {
+  const name = `pocketllm:model-runtime:${modelId}`;
+  runtimeLeases.get(name)?.release();
+}
