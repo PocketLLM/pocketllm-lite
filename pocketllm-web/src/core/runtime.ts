@@ -1,7 +1,7 @@
 import { db, logActivity, logError } from "../db/db";
 import { networkFetch } from "./network";
 import { readOpfs } from "./storage";
-import { claimModelRuntimeLease, releaseModelRuntimeLease } from "./multitab";
+import { claimModelRuntimeLease, releaseModelRuntimeLease, withModelLock } from "./multitab";
 import { discoverRuntimeOwner, generateThroughRuntimeOwner, registerRuntimeOwner, type RemoteGenerationPayload } from "./runtimeCoordinator";
 import type { BrowserModel, Provider, RuntimeCapabilities, RuntimeKind } from "./types";
 
@@ -322,27 +322,30 @@ async function localWllamaGenerate(
   };
   request.signal.addEventListener("abort", abort, { once: true });
   try {
-    const stream = await instance.createChatCompletion({
-      messages: request.messages.map(({ role, content, images }) => ({
-        role,
-        content: images?.length
-          ? [
-              { type: "text", text: content },
-              ...images.map((url) => ({ type: "image_url", image_url: { url } })),
-            ]
-          : content,
-      })) as any,
-      stream: true,
-      max_tokens: request.maxTokens ?? 512,
-      temperature: request.temperature ?? 0.7,
-      top_p: request.topP ?? 0.9,
-      top_k: request.topK ?? 40,
-    });
-    for await (const chunk of stream as AsyncIterable<any>) {
+    await withModelLock(model.id, async () => {
       if (request.signal.aborted) throw new DOMException("Generation stopped", "AbortError");
-      const token = chunk?.choices?.[0]?.delta?.content;
-      if (token) request.onToken(token);
-    }
+      const stream = await instance.createChatCompletion({
+        messages: request.messages.map(({ role, content, images }) => ({
+          role,
+          content: images?.length
+            ? [
+                { type: "text", text: content },
+                ...images.map((url) => ({ type: "image_url", image_url: { url } })),
+              ]
+            : content,
+        })) as any,
+        stream: true,
+        max_tokens: request.maxTokens ?? 512,
+        temperature: request.temperature ?? 0.7,
+        top_p: request.topP ?? 0.9,
+        top_k: request.topK ?? 40,
+      });
+      for await (const chunk of stream as AsyncIterable<any>) {
+        if (request.signal.aborted) throw new DOMException("Generation stopped", "AbortError");
+        const token = chunk?.choices?.[0]?.delta?.content;
+        if (token) request.onToken(token);
+      }
+    });
   } catch (error) {
     if (request.signal.aborted) throw new DOMException("Generation stopped", "AbortError");
     await logError("wllama-generation", error, model.name);
