@@ -1,23 +1,11 @@
 import type { CapabilityReport } from "./types";
 
-type ChromeLanguageModel = {
-  availability(options?: unknown): Promise<string>;
-};
-
-declare global {
-  interface Window {
-    LanguageModel?: ChromeLanguageModel;
-    SpeechRecognition?: unknown;
-    webkitSpeechRecognition?: unknown;
-  }
-}
-
 export async function probeCapabilities(): Promise<CapabilityReport> {
   const estimate = await navigator.storage?.estimate?.();
   const persistentStorage = (await navigator.storage?.persisted?.()) ?? false;
 
   let chromeAI: CapabilityReport["chromeAI"] = "unknown";
-  const lm = window.LanguageModel;
+  const lm = (window as any).LanguageModel;
   if (lm?.availability) {
     try {
       const value = await lm.availability({
@@ -52,7 +40,7 @@ export async function probeCapabilities(): Promise<CapabilityReport> {
     persistentStorage,
     chromeAI,
     microphone: Boolean(navigator.mediaDevices?.getUserMedia),
-    speechRecognition: Boolean(window.SpeechRecognition || window.webkitSpeechRecognition),
+    speechRecognition: Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition),
     notifications: "Notification" in window,
   };
 }
