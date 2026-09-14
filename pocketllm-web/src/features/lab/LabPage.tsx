@@ -1,5 +1,6 @@
 import { BarChart3, FlaskConical, Gauge, Play, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useLiveValue } from "../../core/live";
 import { chromeRuntime, providerRuntime, wllamaRuntime, type RuntimeAdapter } from "../../core/runtime";
 import type { BrowserModel, LabRun, Provider, RuntimeKind } from "../../core/types";
@@ -54,6 +55,7 @@ async function runAdapter(adapter: RuntimeAdapter, prompt: string, signal: Abort
 }
 
 export function LabPage({ mode }: { mode: LabMode }) {
+  const [searchParams] = useSearchParams();
   const providers = useLiveValue(() => db.providers.toArray(), [] as Provider[], []);
   const models = useLiveValue(() => db.browserModels.toArray(), [] as BrowserModel[], []);
   const runs = useLiveValue(() => db.labRuns.where("kind").equals(mode).reverse().sortBy("startedAt"), [] as LabRun[], [mode]);
@@ -64,6 +66,15 @@ export function LabPage({ mode }: { mode: LabMode }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [liveResults, setLiveResults] = useState<Array<{ label: string; output: string; duration?: number; ttft?: number; tokensPerSecond?: number }>>([]);
+
+  useEffect(() => {
+    const requestedModel = searchParams.get("model");
+    const requestedProvider = searchParams.get("provider");
+    const requested = requestedModel ? `model:${requestedModel}` : requestedProvider ? `provider:${requestedProvider}` : "";
+    if (requested && choices.some((choice) => choice.id === requested)) {
+      setSelected((current) => current.includes(requested) ? current : mode === "compare" ? [...current, requested].slice(0, 4) : [requested]);
+    }
+  }, [searchParams, choices, mode]);
 
   async function run() {
     const ids = mode === "compare" ? selected.slice(0, 4) : selected.slice(0, 1);
