@@ -168,7 +168,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
@@ -365,11 +365,16 @@
     color: var(--brand-foreground, #192230);
   }
 
-  /* Refined keyboard focus — consistent brand ring on interactive
-     elements that opt out of the browser default. */
+  :focus,
   :focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--brand-strong) 80%, transparent);
-    outline-offset: 2px;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--border) !important;
   }
 }
 
