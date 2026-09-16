@@ -1,2 +1,0 @@
-Keep the repository's existing pocketllm-website/assets/logo.png here.
-The redesign references that original logo and does not replace it.

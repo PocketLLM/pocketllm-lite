@@ -1,0 +1,27 @@
+{
+  "name": "PocketLLM Lite — Local-first AI",
+  "short_name": "PocketLLM",
+  "description": "Local-first AI workspace. Chats, memory, documents and models stay on your device.",
+  "id": "/",
+  "start_url": "/#/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fffef5",
+  "theme_color": "#192230",
+  "orientation": "any",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
