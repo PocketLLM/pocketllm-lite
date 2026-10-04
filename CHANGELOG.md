@@ -12,6 +12,33 @@ We use a specific versioning pattern:
 - Once the 3rd number reaches 100, the next version resets it to 0 and increments the 2nd number (minor). For example: 1.0.100 becomes 1.1.0.
 - Similarly, 1.1.100 becomes 1.2.0.
 
+## [1.0.39] - 2026-10-04
+
+### Removed
+
+- Web edition: removed the hosted Z AI ("PocketLLM Assist") runtime, its eight
+  server API routes and the `z-ai-web-dev-sdk` dependency. The web app no longer
+  needs any AI backend.
+
+### Added
+
+- Web edition: chat titles, follow-up suggestions, prompt enhancement and memory
+  extraction now run on the user's own Ollama / OpenAI-compatible model, with
+  honest local fallbacks when none is connected.
+- Web edition: browser-side web search (Wikipedia, or Tavily with the user's own
+  key) routed through the Strict Offline-aware NetworkGateway.
+- Web edition: on-device speech-to-text with Whisper (Transformers.js in a Web
+  Worker, ONNX wasm self-hosted); the model downloads once, then works offline.
+- Web edition: IndexedDB schema v2 migration that moves saved chats, personas
+  and settings off the removed Assist runtime.
+
+### Fixed
+
+- Web edition: the model chosen in the chat picker, Prompt Lab, Compare and
+  Benchmark is now actually sent to Ollama / OpenAI-compatible runtimes instead
+  of always using the provider's configured model.
+- Web edition: image attachments are now sent to OpenAI-compatible endpoints.
+
 ## [1.0.38] - 2026-08-29
 
 ### Added

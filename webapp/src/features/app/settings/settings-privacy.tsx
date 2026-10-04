@@ -2,7 +2,7 @@
 
 /**
  * Privacy — the network policy switches. Strict Offline is the big
- * one: it blocks the built-in Assist runtime and the internet.
+ * one: it blocks every request that leaves your device (loopback excepted).
  */
 import { ShieldCheck, TriangleAlert } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -24,7 +24,7 @@ export function PrivacySettings() {
         <SettingRows>
           <SettingRow
             label="Strict Offline"
-            description="Block all internet access. The built-in Assist runtime stops working; the Offline Sandbox and loopback Ollama keep responding."
+            description="Block all internet access. Remote endpoints, web search and model downloads stop; the Offline Sandbox, on-device transcription (once its model is downloaded) and loopback Ollama keep working."
             control={
               <Switch
                 checked={privacy.strictOffline}
@@ -79,10 +79,10 @@ export function PrivacySettings() {
             <div>
               <h2 className="text-[15px] font-semibold">Strict Offline is on</h2>
               <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                Blocks the built-in Assist runtime and all internet access.
-                Only the Offline Sandbox and loopback Ollama can respond. New
-                chats will use whichever of those is available; web search,
-                prompt enhancement and auto-titles pause while this is on.
+                Blocks every request that leaves your device.
+                Only the Offline Sandbox and loopback Ollama can respond; web
+                search, remote endpoints and model downloads pause while this
+                is on.
               </p>
               <button
                 type="button"

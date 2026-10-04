@@ -1,7 +1,7 @@
 /**
  * MemoryService — extraction, retrieval, dedupe and supersession.
  *
- * - Extraction runs after eligible chats (via /api/memory, LLM-assisted,
+ * - Extraction runs after eligible chats (via the connected model, LLM-assisted,
  *   strictly JSON-validated) or from user-entered facts.
  * - Deduplication: exact normalized match + subject contradiction
  *   (new contradictory info supersedes rather than accumulates).
@@ -151,8 +151,8 @@ class MemoryService {
   }
 
   /**
-   * Runs LLM-assisted extraction over a finished exchange. The server
-   * returns strict JSON which is validated here; nothing is stored
+   * Runs LLM-assisted extraction over a finished exchange. The model
+   * output is parsed as strict JSON and validated; nothing is stored
    * without passing the privacy filters.
    */
   async extractFromExchange(
@@ -165,18 +165,13 @@ class MemoryService {
     if (!userMessage.content || !assistantMessage.content) return [];
 
     try {
-      const res = await gateway.request('assist-memory', '/api/memory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user: userMessage.content.slice(0, 4000),
-          assistant: assistantMessage.content.slice(0, 4000),
-        }),
-      });
-      if (!res.ok) return [];
-      const json = (await res.json()) as { memories?: ExtractedMemory[] };
+      const { utilityTasks } = await import('@/lib/services/utility-tasks');
+      const candidates = await utilityTasks.extractMemories(
+        userMessage.content,
+        assistantMessage.content
+      );
       const created: Memory[] = [];
-      for (const candidate of (json.memories ?? []).slice(0, 5)) {
+      for (const candidate of candidates) {
         if (
           !candidate?.fact ||
           typeof candidate.fact !== 'string' ||

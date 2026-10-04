@@ -13,7 +13,6 @@ import { cn } from '@/lib/utils';
 import type { Chat, RuntimeId } from '@/lib/types/domain';
 
 const RUNTIME_META: Record<RuntimeId, { label: string; hint: string; icon: React.ComponentType<{ className?: string }> }> = {
-  assist: { label: 'PocketLLM Assist', hint: 'Built-in · needs network', icon: Sparkles },
   ollama: { label: 'Ollama', hint: 'Your computer · local', icon: Server },
   openai: { label: 'OpenAI-compatible', hint: 'Your endpoint', icon: Plug },
   mock: { label: 'Offline Sandbox', hint: 'Deterministic · no network', icon: Boxes },
@@ -46,7 +45,7 @@ export function ModelSelector({ chat }: { chat: Chat }) {
   const currentMeta = RUNTIME_META[chat.runtimeId];
   const CurrentIcon = currentMeta?.icon ?? Sparkles;
 
-  const byRuntime = ['assist', 'ollama', 'openai', 'mock'] as const;
+  const byRuntime = ['ollama', 'openai', 'mock'] as const;
 
   return (
     <div className="relative" ref={ref}>

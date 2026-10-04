@@ -95,7 +95,7 @@ export class MockRuntime extends InferenceRuntime {
     lines.push('```');
     lines.push('');
     lines.push(
-      '> Switch to **PocketLLM Assist**, **Ollama** or a custom endpoint in the model picker for real answers.'
+      '> Connect **Ollama** or an OpenAI-compatible endpoint in **Providers** for real answers.'
     );
     return lines.join('\n');
   }

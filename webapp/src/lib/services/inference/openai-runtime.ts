@@ -129,7 +129,8 @@ export class OpenAICompatibleRuntime extends InferenceRuntime {
   }
 
   async generate(turns: ChatTurn[], options: GenerateOptions): Promise<GenerateResult> {
-    if (!this.baseUrl || !this.modelId) {
+    const modelId = options.modelId || this.modelId;
+    if (!this.baseUrl || !modelId) {
       throw new RuntimeUnavailableError(
         'No OpenAI-compatible provider configured yet. Add one in Providers.'
       );
@@ -139,12 +140,20 @@ export class OpenAICompatibleRuntime extends InferenceRuntime {
     let content = '';
 
     const body = {
-      model: this.modelId,
+      model: modelId,
       stream: true,
       temperature: options.settings?.temperature,
       top_p: options.settings?.topP,
       max_tokens: options.settings?.maxTokens,
-      messages: turns.map((t) => ({ role: t.role, content: t.content })),
+      messages: turns.map((t) => ({
+        role: t.role,
+        content: t.images?.length
+          ? [
+              { type: 'text', text: t.content },
+              ...t.images.map((url) => ({ type: 'image_url', image_url: { url } })),
+            ]
+          : t.content,
+      })),
     };
 
     let res: Response;

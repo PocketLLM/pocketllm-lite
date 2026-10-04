@@ -2,8 +2,8 @@
 
 /**
  * WizardView — first-run setup. Three steps: welcome + privacy
- * promise, runtime choice (Assist / Ollama / OpenAI-compatible /
- * skip with honest connection tests), then persistence + finish.
+ * promise, runtime choice (Ollama / OpenAI-compatible / Offline
+ * Sandbox / skip with honest connection tests), then persistence + finish.
  * Never a trap: Skip is available on every step.
  */
 import { useState } from 'react';
@@ -35,7 +35,7 @@ import { toast } from '@/hooks/use-toast';
 import { cn, uuid } from '@/lib/utils';
 import type { Provider, RuntimeId } from '@/lib/types/domain';
 
-type WizardChoice = 'assist' | 'ollama' | 'openai' | 'skip';
+type WizardChoice = 'ollama' | 'openai' | 'sandbox' | 'skip';
 
 const CHOICE_CARDS: Array<{
   id: WizardChoice;
@@ -43,12 +43,6 @@ const CHOICE_CARDS: Array<{
   blurb: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
-  {
-    id: 'assist',
-    title: 'PocketLLM Assist',
-    blurb: 'Built-in, works everywhere, needs network.',
-    icon: Zap,
-  },
   {
     id: 'ollama',
     title: 'Ollama',
@@ -62,6 +56,12 @@ const CHOICE_CARDS: Array<{
     icon: Plug,
   },
   {
+    id: 'sandbox',
+    title: 'Offline Sandbox',
+    blurb: 'Try the app with no model — canned replies, nothing leaves your device.',
+    icon: Zap,
+  },
+  {
     id: 'skip',
     title: 'Configure later',
     blurb: 'Pick a runtime any time in Providers.',
@@ -70,10 +70,10 @@ const CHOICE_CARDS: Array<{
 ];
 
 const CHOICE_SUMMARY: Record<WizardChoice, string> = {
-  assist: 'PocketLLM Assist — the built-in runtime. It needs the network; Strict Offline pauses it.',
+  sandbox: 'Offline Sandbox — deterministic placeholder replies so you can explore every screen. Connect Ollama or an endpoint in Providers for real answers.',
   ollama: 'Ollama — your local server on this machine. Keep Ollama running when you chat.',
   openai: 'OpenAI-compatible — an endpoint you control. Its API key stays in memory for the session.',
-  skip: 'Nothing chosen yet — the app falls back to its defaults until you pick a runtime in Providers.',
+  skip: 'Nothing chosen yet — chats use the Offline Sandbox until you connect a model in Providers.',
 };
 
 const WELCOME_BULLETS = [
@@ -117,7 +117,7 @@ export function WizardView() {
   const [step, setStep] = useState(0);
 
   /* step 2 — runtime choice + connection config */
-  const [choice, setChoice] = useState<WizardChoice>('assist');
+  const [choice, setChoice] = useState<WizardChoice>('ollama');
   const [ollamaUrl, setOllamaUrl] = useState('http://127.0.0.1:11434');
   const [ollamaModel, setOllamaModel] = useState('');
   const [openaiName, setOpenaiName] = useState('My endpoint');
@@ -223,7 +223,13 @@ export function WizardView() {
       }
     }
     const patch: Record<string, unknown> = { meta: { setupCompleted: true } };
-    if (choice !== 'skip') patch.chat = { defaultRuntimeId: choice };
+    if (choice === 'ollama') {
+      patch.chat = { defaultRuntimeId: 'ollama', defaultModelId: ollamaModel.trim() };
+    } else if (choice === 'openai') {
+      patch.chat = { defaultRuntimeId: 'openai', defaultModelId: openaiModel.trim() };
+    } else {
+      patch.chat = { defaultRuntimeId: 'mock', defaultModelId: 'mock-echo' };
+    }
     patchSettings(patch);
     router.navigate('/app');
   };
@@ -467,7 +473,7 @@ export function WizardView() {
 
               {choice === 'skip' && (
                 <p className="mt-4 rounded-xl border border-border bg-background/50 p-4 text-xs leading-relaxed text-muted-foreground">
-                  The app starts with PocketLLM Assist as its default runtime.
+                  Chats use the Offline Sandbox until you connect a model in Providers.
                   You can switch runtimes per chat and add providers any time on
                   the Providers page.
                 </p>

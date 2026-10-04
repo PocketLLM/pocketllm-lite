@@ -1,4 +1,17 @@
-# PocketLLM Lite v1.0.38 — Guided Model Setup
+# PocketLLM Lite v1.0.39 — Web Edition Without a Hosted Model
+
+## Highlights
+
+The Web Edition no longer depends on any hosted AI service. Chat, titles,
+follow-ups, prompt enhancement and memory extraction run on the Ollama or
+OpenAI-compatible model you connect. Web search runs in the browser (Wikipedia,
+or Tavily with your own key) and speech-to-text runs on-device with Whisper.
+The Android app is unchanged in this release; this version bump tracks the web
+work. Existing web data is migrated automatically.
+
+---
+
+# PocketLLM Lite v1.0.38 — Guided Model Setup (previous release)
 
 ## Highlights
 

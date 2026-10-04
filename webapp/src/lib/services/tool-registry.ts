@@ -285,22 +285,9 @@ toolRegistry.register({
   requiresConfirmation: false,
   promptSpec: '',
   async execute(args) {
-    const res = await gateway.request('assist-search', '/api/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: String(args.query) }),
-    });
-    if (!res.ok) throw new Error(`Search failed (${res.status})`);
-    const json = (await res.json()) as {
-      results?: Array<{ name: string; url: string; snippet: string }>;
-    };
-    return {
-      results: (json.results ?? []).slice(0, 6).map((r) => ({
-        name: r.name,
-        url: r.url,
-        snippet: r.snippet,
-      })),
-    };
+    const { searchService } = await import('./search-service');
+    const { provider, results } = await searchService.search(String(args.query));
+    return { source: provider, results: results.slice(0, 6) };
   },
 });
 

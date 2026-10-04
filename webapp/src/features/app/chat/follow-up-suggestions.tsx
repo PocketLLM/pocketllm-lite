@@ -4,9 +4,9 @@
  * FollowUpSuggestions — small question chips offered after the latest
  * assistant reply.
  *
- * Suggestions are generated contextually through the Assist runtime
- * (/api/suggest — a short, one-shot call). When the network is unavailable
- * or Strict Offline blocks the call, honest local template questions are
+ * Suggestions are generated contextually by the model the user connected
+ * (a short, one-shot call). When no model is connected, the endpoint is
+ * unreachable or Strict Offline blocks the call, honest local template questions are
  * used instead and quietly labelled. Clicking a chip drops it into the
  * composer for review — nothing is auto-sent.
  */
@@ -24,7 +24,7 @@ const LOCAL_SUGGESTIONS = [
 /**
  * Module-level memo: messageId → resolved suggestions. Navigating between
  * views remounts the chat (and its chips) — without this cache every
- * remount would fire a fresh /api/suggest call for the same reply.
+ * remount would fire a fresh model call for the same reply.
  */
 const suggestionCache = new Map<string, { items: string[]; source: 'network' | 'local' }>();
 
@@ -50,19 +50,9 @@ export async function fetchSuggestions(
 
   let result: { items: string[]; source: 'network' | 'local' };
   try {
-    const { gateway } = await import('@/lib/core/net/network-gateway');
-    const res = await gateway.request('assist-suggest', '/api/suggest', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user: user.slice(0, 1500), assistant: assistant.slice(0, 2500) }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = (await res.json()) as { suggestions?: string[] };
-    if (json.suggestions?.length) {
-      result = { items: json.suggestions.slice(0, 3), source: 'network' };
-    } else {
-      throw new Error('empty');
-    }
+    const { utilityTasks } = await import('@/lib/services/utility-tasks');
+    const items = await utilityTasks.suggestFollowUps(user, assistant);
+    result = { items, source: 'network' };
   } catch {
     // Transient failures are NOT cached — the next mount retries the
     // network before falling back again.

@@ -43,8 +43,8 @@ export function PromptLabView() {
   const [temperature, setTemperature] = useState(0.7);
   const [topP, setTopP] = useState(0.9);
   const [maxTokens, setMaxTokens] = useState(1024);
-  const [runtimeId, setRuntimeId] = useState('assist');
-  const [modelId, setModelId] = useState('pocketllm-assist');
+  const [runtimeId, setRuntimeId] = useState('mock');
+  const [modelId, setModelId] = useState('mock-echo');
   const [response, setResponse] = useState('');
   const [metrics, setMetrics] = useState<LabRun['results'][number]['metrics']>();
   const [running, setRunning] = useState(false);
@@ -89,6 +89,7 @@ export function PromptLabView() {
         { role: 'user' as const, content: prompt },
       ];
       const result = await inferenceRouter.generate(runtimeId as LabRun['results'][number]['runtimeId'], turns, {
+        modelId,
         signal: abort.signal,
         settings: { temperature, topP, maxTokens },
         onToken: (delta) => setResponse((v) => v + delta),
@@ -213,7 +214,6 @@ export function PromptLabView() {
                     }}
                     className="w-full rounded-lg border border-border bg-background p-2 text-sm"
                   >
-                    <option value="assist">PocketLLM Assist</option>
                     <option value="ollama">Ollama</option>
                     <option value="openai">OpenAI-compatible</option>
                     <option value="mock">Offline Sandbox</option>

@@ -474,15 +474,9 @@ export function ChatView({ chatId }: { chatId: string | null }) {
     if (!draft.trim() || enhancing) return;
     setEnhancing(true);
     try {
-      const { gateway } = await import('@/lib/core/net/network-gateway');
-      const res = await gateway.request('assist-enhance', '/api/enhance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: draft }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = (await res.json()) as { prompt?: string };
-      if (json.prompt) setDraft(json.prompt);
+      const { utilityTasks } = await import('@/lib/services/utility-tasks');
+      const improved = await utilityTasks.enhancePrompt(draft, chat?.runtimeId, chat?.modelId);
+      if (improved) setDraft(improved);
       toast({ title: 'Prompt enhanced', description: 'Original wording is preserved in history.' });
     } catch (err) {
       toast({

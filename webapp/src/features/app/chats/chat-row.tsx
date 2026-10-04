@@ -49,7 +49,6 @@ import { MetaPill } from '@/features/app/shared/ui';
 import { toast } from '@/hooks/use-toast';
 
 export const RUNTIME_LABELS: Record<Chat['runtimeId'], string> = {
-  assist: 'Assist',
   ollama: 'Ollama',
   openai: 'Endpoint',
   mock: 'Sandbox',

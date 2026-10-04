@@ -1,7 +1,7 @@
 /**
  * InferenceRuntime — the single interface the rest of PocketLLM uses
  * to talk to any model backend. The app never knows whether a
- * response came from the built-in Assist endpoint, Ollama, an
+ * response came from Ollama, an
  * OpenAI-compatible server or the offline mock.
  */
 import type { GenerationMetrics, GenerationSettings, RuntimeId } from '@/lib/types/domain';
@@ -35,6 +35,11 @@ export interface ConnectionTestResult {
 
 export interface GenerateOptions {
   settings?: GenerationSettings;
+  /**
+   * Model to use for this call. Falls back to the model configured on the
+   * provider when omitted, so a chat's model picker really selects the model.
+   */
+  modelId?: string;
   signal?: AbortSignal;
   onToken?: (delta: string) => void;
 }

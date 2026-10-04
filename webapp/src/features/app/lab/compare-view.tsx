@@ -89,6 +89,7 @@ export function CompareView() {
             lane.runtimeId,
             [{ role: 'user', content: prompt }],
             {
+              modelId: lane.modelId,
               onToken: (delta) =>
                 setResults((r) => ({
                   ...r,
@@ -219,11 +220,11 @@ export function CompareView() {
                     aria-label="Model for this lane"
                     className="w-full rounded-lg border border-border bg-background p-2 text-[13px]"
                   >
-                    {['assist', 'ollama', 'openai', 'mock'].map((rt) => {
+                    {['ollama', 'openai', 'mock'].map((rt) => {
                       const opts = availableModels.filter((m) => m.runtimeId === rt);
                       if (!opts.length) return null;
                       return (
-                        <optgroup key={rt} label={rt === 'assist' ? 'Assist' : rt === 'ollama' ? 'Ollama' : rt === 'openai' ? 'Endpoint' : 'Sandbox'}>
+                        <optgroup key={rt} label={rt === 'ollama' ? 'Ollama' : rt === 'openai' ? 'Endpoint' : 'Sandbox'}>
                           {opts.map((m) => (
                             <option key={m.id} value={`${m.runtimeId}:${m.id}`}>
                               {m.label}
