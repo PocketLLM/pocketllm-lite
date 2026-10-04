@@ -8,7 +8,7 @@
  */
 
 const DB_NAME = 'pocketllm';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 /** All object stores created at schema version 1. */
 export const STORES = [
@@ -48,7 +48,7 @@ function reqToPromise<T>(req: IDBRequest<T>): Promise<T> {
 export function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (event) => {
       const db = req.result;
       // Fresh install of every store. KeyPath is always "id".
       for (const store of STORES) {
@@ -70,6 +70,28 @@ export function openDatabase(): Promise<IDBDatabase> {
               os.createIndex('chatId', 'chatId', { unique: false });
               break;
           }
+        }
+      }
+
+      // v1 → v2: the hosted "assist" runtime was removed. Re-point saved
+      // chats and personas at the offline sandbox so nothing references a
+      // runtime that no longer exists.
+      const tx = req.transaction;
+      if (tx && event.oldVersion >= 1 && event.oldVersion < 2) {
+        for (const name of ['chats', 'personas'] as const) {
+          if (!db.objectStoreNames.contains(name)) continue;
+          const cursorReq = tx.objectStore(name).openCursor();
+          cursorReq.onsuccess = () => {
+            const cursor = cursorReq.result;
+            if (!cursor) return;
+            const value = cursor.value as { runtimeId?: string; modelId?: string };
+            if (value.runtimeId === 'assist') {
+              value.runtimeId = 'mock';
+              value.modelId = 'mock-echo';
+              cursor.update(value);
+            }
+            cursor.continue();
+          };
         }
       }
     };

@@ -325,9 +325,8 @@ export function ModelDetailView({ modelId }: { modelId: string }) {
                   Browser GGUF inference ships with the WebGPU runtime build:
                   downloads here are real and checksum-verified, but running
                   this model in-chat requires the desktop WebGPU build of
-                  PocketLLM. This Lite Web build chats through the built-in
-                  Assist runtime, or through Ollama / OpenAI-compatible
-                  endpoints you connect in Providers.
+                  PocketLLM. This Lite Web build chats through Ollama or an
+                  OpenAI-compatible endpoint you connect in Providers.
                 </p>
               </div>
             </div>

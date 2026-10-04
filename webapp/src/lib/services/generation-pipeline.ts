@@ -392,6 +392,7 @@ class GenerationPipeline {
     let snapshotBusy = false;
 
     const result = await inferenceRouter.generate(chat.runtimeId, turns, {
+      modelId: chat.modelId,
       signal: this.abortController?.signal,
       onToken: (delta) => {
         partialContent += delta;
@@ -420,19 +421,13 @@ class GenerationPipeline {
 
   private async autoTitle(chatId: UUID, firstMessage: string): Promise<void> {
     try {
-      const { gateway } = await import('@/lib/core/net/network-gateway');
-      const res = await gateway.request('assist-title', '/api/title', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: firstMessage.slice(0, 500) }),
-      });
-      if (!res.ok) return;
-      const json = (await res.json()) as { title?: string };
-      if (json.title) {
-        await chatService.updateChat(chatId, { title: json.title.slice(0, 80) });
-      }
+      const chat = await chatService.getChat(chatId);
+      const { utilityTasks } = await import('@/lib/services/utility-tasks');
+      const title = await utilityTasks.generateTitle(firstMessage.slice(0, 500), chat?.runtimeId, chat?.modelId);
+      if (title) await chatService.updateChat(chatId, { title: title.slice(0, 80) });
     } catch {
-      // Offline or blocked — title stays "New chat".
+      // No model connected, Strict Offline or unreachable — the title stays
+      // the default that was derived from the first message.
     }
   }
 }

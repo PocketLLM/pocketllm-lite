@@ -27,8 +27,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     accent: 'sandy',
   },
   chat: {
-    defaultRuntimeId: 'assist',
-    defaultModelId: 'pocketllm-assist',
+    defaultRuntimeId: 'mock',
+    defaultModelId: 'mock-echo',
     showTokenCounters: true,
     streamingEnabled: true,
     autoTitle: true,
@@ -67,14 +67,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   network: {
     allowedPurposes: [
-      'assist-inference',
-      'assist-vision',
-      'assist-enhance',
-      'assist-title',
-      'assist-memory',
-      'assist-search',
-      'assist-asr',
       'ollama-loopback',
+      'ollama-lan',
+      'remote-inference',
+      'web-search',
+      'huggingface-search',
+      'huggingface-download',
       'update-check',
     ],
   },
@@ -112,6 +110,15 @@ class SettingsService {
     } catch {
       // Corrupt JSON — fall back to defaults.
     }
+    // Migration: the hosted "Assist" runtime was removed. Saved settings that
+    // still point at it fall back to the offline sandbox until the user picks
+    // a provider (Ollama / OpenAI-compatible).
+    if ((hydrated.chat.defaultRuntimeId as string) === 'assist') {
+      hydrated.chat.defaultRuntimeId = 'mock';
+      hydrated.chat.defaultModelId = 'mock-echo';
+    }
+    // Migration: drop purposes that no longer exist and add the new ones.
+    hydrated.network.allowedPurposes = DEFAULT_SETTINGS.network.allowedPurposes.slice();
     this.cache = hydrated;
     this.syncNetworkPolicy();
     return this.cache;

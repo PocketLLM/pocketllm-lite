@@ -13,19 +13,12 @@ import { bus } from '@/lib/core/events/event-bus';
 import type { NetworkAuditEntry } from '@/lib/types/domain';
 
 export type NetworkPurpose =
-  | 'assist-inference'
-  | 'assist-vision'
-  | 'assist-enhance'
-  | 'assist-title'
-  | 'assist-memory'
-  | 'assist-search'
-  | 'assist-asr'
-  | 'assist-suggest'
   | 'ollama-loopback'
   | 'ollama-lan'
   | 'remote-inference'
   | 'huggingface-search'
   | 'huggingface-download'
+  | 'web-search'
   | 'github-skill'
   | 'update-check'
   | 'external-resource'
@@ -86,21 +79,9 @@ export class NetworkGateway {
     const policy = this.policySource.getPolicy();
     const scope = classifyScope(url);
 
-    // Same-origin API calls to this app's own backend are always fine —
-    // they carry no user payload by themselves and are how the built-in
-    // Assist runtime is reached.
-    if (url.startsWith('/')) {
-      if (policy.strictOffline) {
-        // Strict Offline: built-in Assist is a hosted model — blocked.
-        if (purpose.startsWith('assist-')) {
-          return {
-            allowed: false,
-            reason: 'Strict Offline blocks the built-in Assist runtime',
-          };
-        }
-      }
-      return { allowed: true };
-    }
+    // Same-origin requests (the app's own static assets) never leave the
+    // device, so Strict Offline does not apply to them.
+    if (url.startsWith('/')) return { allowed: true };
 
     if (policy.strictOffline) {
       if (scope === 'loopback' && policy.allowLoopback) return { allowed: true };
@@ -140,6 +121,19 @@ export class NetworkGateway {
         scope: classifyScope(destination),
       });
     });
+  }
+
+  /**
+   * Policy-checks and audits a request that will be made by code which
+   * cannot call `request()` itself (e.g. a Web Worker downloading model
+   * files). Throws NetworkBlockedError when the policy denies it.
+   */
+  authorize(purpose: NetworkPurpose, url: string): void {
+    const decision = this.check(purpose, url);
+    this.audit(purpose, url, decision.allowed, decision.reason);
+    if (!decision.allowed) {
+      throw new NetworkBlockedError(purpose, url, decision.reason);
+    }
   }
 
   /**

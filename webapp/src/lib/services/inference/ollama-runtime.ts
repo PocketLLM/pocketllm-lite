@@ -173,7 +173,8 @@ export class OllamaRuntime extends InferenceRuntime {
   }
 
   async generate(turns: ChatTurn[], options: GenerateOptions): Promise<GenerateResult> {
-    if (!this.modelId) {
+    const modelId = options.modelId || this.modelId;
+    if (!modelId) {
       throw new RuntimeUnavailableError(
         'No Ollama model selected. Pick one in Providers.'
       );
@@ -184,7 +185,7 @@ export class OllamaRuntime extends InferenceRuntime {
     let promptTokens = 0;
 
     const body = {
-      model: this.modelId,
+      model: modelId,
       stream: true,
       options: {
         temperature: options.settings?.temperature,
@@ -225,7 +226,7 @@ export class OllamaRuntime extends InferenceRuntime {
       const text = await res.text().catch(() => '');
       if (res.status === 404) {
         throw new RuntimeUnavailableError(
-          `Model "${this.modelId}" is not installed on this Ollama server. Run \`ollama pull ${this.modelId}\`.`
+          `Model "${modelId}" is not installed on this Ollama server. Run \`ollama pull ${modelId}\`.`
         );
       }
       throw new Error(`Ollama error (${res.status}): ${text.slice(0, 300)}`);

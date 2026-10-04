@@ -4,7 +4,11 @@
  * Tools — which built-in tools the assistant may call, and whether
  * risky ones ask first. All evaluation stays local.
  */
+import { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { searchKeyStore } from '@/lib/services/search-service';
 import { Switch } from '@/components/ui/switch';
 import { Section } from '@/features/app/shared/ui';
 import { Footnote, SettingRow, SettingRows } from './setting-row';
@@ -23,7 +27,7 @@ const TOOLS: ToolDef[] = [
   {
     key: 'webSearch',
     label: 'Web search',
-    description: "Search the web via the app's search endpoint.",
+    description: "Search the web from your browser — Wikipedia by default, Tavily with your own key.",
   },
   { key: 'draftEmail', label: 'Draft email', description: 'Open mailto: drafts.' },
   { key: 'openUrl', label: 'Open URL', description: 'Open links after approval.' },
@@ -38,6 +42,65 @@ const TOOLS: ToolDef[] = [
     description: 'Outbound HTTP after approval — advanced.',
   },
 ];
+
+/** Optional Tavily key for broader web search — kept out of backups and logs. */
+function SearchKeyRow() {
+  const [value, setValue] = useState('');
+  const [remember, setRemember] = useState(false);
+  const [where, setWhere] = useState(searchKeyStore.where());
+
+  const save = () => {
+    searchKeyStore.set(value, remember);
+    setValue('');
+    setWhere(searchKeyStore.where());
+  };
+  const clear = () => {
+    searchKeyStore.clear();
+    setWhere('none');
+  };
+
+  return (
+    <SettingRow
+      label="Tavily API key"
+      wide
+      htmlFor="tavily-key"
+      description={
+        where === 'none'
+          ? 'Optional. Without a key, web search uses Wikipedia. Your key is held for this browser session only unless you choose to remember it.'
+          : where === 'session'
+            ? 'A key is set for this browser session and will be forgotten when you close the tab.'
+            : 'A key is remembered on this device (stored unencrypted in this browser).'
+      }
+      control={
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+          <Input
+            id="tavily-key"
+            type="password"
+            autoComplete="off"
+            placeholder={where === 'none' ? 'tvly-…' : '••••••••••••'}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="sm:max-w-xs"
+          />
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Switch checked={remember} onCheckedChange={setRemember} aria-label="Remember key on this device" />
+            Remember on this device
+          </label>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={save} disabled={!value.trim()}>
+              Save
+            </Button>
+            {where !== 'none' && (
+              <Button size="sm" variant="outline" onClick={clear}>
+                Remove
+              </Button>
+            )}
+          </div>
+        </div>
+      }
+    />
+  );
+}
 
 export function ToolsSettings() {
   const tools = useAppStore((s) => s.settings.tools);
@@ -74,6 +137,7 @@ export function ToolsSettings() {
             }
           />
         ))}
+        <SearchKeyRow />
       </SettingRows>
 
       <Footnote>

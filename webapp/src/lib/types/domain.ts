@@ -270,7 +270,7 @@ export interface DocumentChunk {
 }
 
 /* =========================== Providers ============================ */
-export type RuntimeId = 'assist' | 'ollama' | 'openai' | 'mock';
+export type RuntimeId = 'ollama' | 'openai' | 'mock';
 export type ProviderType = 'ollama' | 'openai-compatible';
 
 export interface ProviderCapabilities {
@@ -301,8 +301,7 @@ export type ModelTier = 'tiny' | 'small' | 'medium' | 'custom';
 export type ModelRuntime =
   | 'browser-gguf'
   | 'ollama'
-  | 'openai-compatible'
-  | 'assist';
+  | 'openai-compatible';
 
 /** Catalog entry describing a downloadable GGUF model. */
 export interface ModelCatalogEntry {

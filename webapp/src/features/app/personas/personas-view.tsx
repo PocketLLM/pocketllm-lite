@@ -73,8 +73,8 @@ const EMPTY_EDITOR: EditorState = {
   instructions: '',
   temperature: null,
   useDefaultModel: true,
-  runtimeId: 'assist',
-  modelId: 'pocketllm-assist',
+  runtimeId: 'mock',
+  modelId: 'mock-echo',
 };
 
 export function PersonasView() {
@@ -102,8 +102,8 @@ export function PersonasView() {
         instructions: target.instructions,
         temperature: target.temperature ?? null,
         useDefaultModel: !target.modelId,
-        runtimeId: target.runtimeId ?? 'assist',
-        modelId: target.modelId ?? 'pocketllm-assist',
+        runtimeId: target.runtimeId ?? 'mock',
+        modelId: target.modelId ?? 'mock-echo',
       });
     }
   }, []);
@@ -132,8 +132,8 @@ export function PersonasView() {
       instructions: p.instructions,
       temperature: p.temperature ?? null,
       useDefaultModel: !p.modelId,
-      runtimeId: p.runtimeId ?? 'assist',
-      modelId: p.modelId ?? 'pocketllm-assist',
+      runtimeId: p.runtimeId ?? 'mock',
+      modelId: p.modelId ?? 'mock-echo',
     });
 
   // Live deep links: palette selections while this view is already open.
@@ -418,7 +418,6 @@ export function PersonasView() {
                       }}
                       className="w-full rounded-lg border border-border bg-background p-2 text-[13px]"
                     >
-                      <option value="assist">PocketLLM Assist</option>
                       <option value="ollama">Ollama</option>
                       <option value="openai">OpenAI-compatible</option>
                       <option value="mock">Offline Sandbox</option>

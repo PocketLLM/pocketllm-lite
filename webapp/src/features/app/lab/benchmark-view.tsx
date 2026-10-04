@@ -48,8 +48,8 @@ interface BenchRow {
 
 export function BenchmarkView() {
   const { models } = useAppStore();
-  const [runtimeId, setRuntimeId] = useState<RuntimeId>('assist');
-  const [modelId, setModelId] = useState('pocketllm-assist');
+  const [runtimeId, setRuntimeId] = useState<RuntimeId>('mock');
+  const [modelId, setModelId] = useState('mock-echo');
   const [rows, setRows] = useState<BenchRow[]>([]);
   const [running, setRunning] = useState(false);
   const [avg, setAvg] = useState<{ ttft: number; tps: number; total: number } | null>(null);
@@ -70,7 +70,7 @@ export function BenchmarkView() {
       try {
         const result = await inferenceRouter.generate(runtimeId, [
           { role: 'user', content: bench.prompt },
-        ], {});
+        ], { modelId });
         row.status = 'done';
         row.ttftMs = result.metrics.ttftMs;
         row.durationMs = result.metrics.durationMs;
@@ -150,7 +150,6 @@ export function BenchmarkView() {
                 }}
                 className="w-full rounded-lg border border-border bg-background p-2 text-sm"
               >
-                <option value="assist">PocketLLM Assist</option>
                 <option value="ollama">Ollama</option>
                 <option value="openai">OpenAI-compatible</option>
                 <option value="mock">Offline Sandbox</option>

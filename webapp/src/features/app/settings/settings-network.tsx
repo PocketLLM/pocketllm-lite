@@ -13,13 +13,7 @@ import { router } from '@/lib/core/router';
 
 /** Plain-language explanation per network purpose. */
 const PURPOSE_INFO: Record<string, string> = {
-  'assist-inference': 'Chat completions for the built-in Assist runtime.',
-  'assist-vision': 'Image understanding for the Assist runtime.',
-  'assist-enhance': 'Prompt enhancement via the Assist runtime.',
-  'assist-title': 'Automatic chat titles via the Assist runtime.',
-  'assist-memory': 'Memory extraction via the Assist runtime.',
-  'assist-search': 'Web search results delivered through the Assist runtime.',
-  'assist-asr': 'Speech-to-text via the Assist runtime.',
+  'web-search': 'Web search for the search tool (Wikipedia, or Tavily if you add a key).',
   'ollama-loopback': 'Requests to your local Ollama server on localhost.',
   'ollama-lan': 'Requests to an Ollama server on your local network.',
   'remote-inference': 'Chat completions on an OpenAI-compatible endpoint you configured.',

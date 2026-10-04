@@ -221,7 +221,7 @@ export function Sidebar() {
                       {chat.pinned && <Pin className="h-3 w-3 shrink-0 text-brand-strong" />}
                       <span className="truncate">{chat.title}</span>
                       <span className="ml-auto text-[10px] text-muted-foreground/50">
-                        {chat.runtimeId === 'assist' ? '' : chat.runtimeId === 'mock' ? 'sandbox' : chat.runtimeId}
+                        {chat.runtimeId === 'mock' ? 'sandbox' : chat.runtimeId}
                       </span>
                     </button>
                   </li>

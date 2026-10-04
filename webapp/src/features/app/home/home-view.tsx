@@ -76,7 +76,13 @@ export function HomeView() {
       const blob = await audioService.stopRecording();
       if (blob.size === 0) return;
       toast({ title: 'Transcribing…', description: 'Converting your recording to text.' });
-      const transcript = await audioService.transcribe(blob, 'recording.webm', 0);
+      let notified = false;
+      const transcript = await audioService.transcribe(blob, 'recording.webm', 0, (p) => {
+        if (p.stage === 'model' && !notified) {
+          notified = true;
+          toast({ title: 'Downloading speech model', description: 'One-time download (~40 MB); after that it works offline.' });
+        }
+      });
       if (transcript.text) {
         setValue((v) => (v ? `${v} ${transcript.text}` : transcript.text));
       }
@@ -177,7 +183,7 @@ export function HomeView() {
                   <Paperclip className="h-4 w-4" />
                 </button>
                 <span className="ml-auto text-[11px] text-muted-foreground/60">
-                  {settings.privacy.strictOffline ? 'Strict Offline · sandbox runtime only' : 'Assist runtime'}
+                  {settings.privacy.strictOffline ? 'Strict Offline · local runtimes only' : 'Runs on your connected model'}
                 </span>
                 {recording ? (
                   <button

@@ -3,8 +3,8 @@
 /**
  * AudioView — recording, transcription and speech synthesis.
  *
- * - Recording: MediaRecorder → transcribe via the app's ASR endpoint.
- * - Uploads: audio files → same transcription path.
+ * - Recording: MediaRecorder → on-device Whisper transcription.
+ * - Uploads: audio files → same on-device path (nothing is uploaded).
  * - Speech synthesis: browser SpeechSynthesis (local, offline).
  * - Every transcript is persisted locally and reusable.
  */
@@ -20,18 +20,25 @@ import {
   AudioLines,
   Clock,
 } from 'lucide-react';
-import { audioService } from '@/lib/services/audio-service';
-import { settingsService } from '@/lib/services/settings-service';
+import { audioService, type TranscribeProgress } from '@/lib/services/audio-service';
 import { PageHeader, Section, EmptyState, StatusDot, MetaPill } from '@/features/app/shared/ui';
 import { Button } from '@/components/ui/button';
 import { cn, formatDuration, formatRelativeTime } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import type { AudioTranscript } from '@/lib/types/domain';
 
+/** Human-readable status for the current transcription stage. */
+function progressLabel(p: TranscribeProgress | null): string {
+  if (!p || p.stage === 'decoding') return 'Preparing audio…';
+  if (p.stage === 'model') return `Downloading speech model (one time) ${p.percent}%`;
+  return 'Transcribing on this device…';
+}
+
 export function AudioView() {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [busy, setBusy] = useState<'record' | 'upload' | null>(null);
+  const [progress, setProgress] = useState<TranscribeProgress | null>(null);
   const [transcripts, setTranscripts] = useState<AudioTranscript[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -96,23 +103,19 @@ export function AudioView() {
         toast({ title: 'Nothing recorded' });
         return;
       }
-      const transcript = await audioService.transcribe(blob, 'recording.webm', durationMs);
+      const transcript = await audioService.transcribe(blob, 'recording.webm', durationMs, setProgress);
       await loadTranscripts();
       setExpanded(transcript.id);
       toast({ title: 'Transcribed', description: 'The recording is now searchable text.' });
     } catch (err) {
-      const blocked = settingsService.get().privacy.strictOffline;
       toast({
         title: 'Transcription failed',
-        description: blocked
-          ? 'Strict Offline blocks the transcription endpoint.'
-          : err instanceof Error
-            ? err.message
-            : 'Try again.',
+        description: err instanceof Error ? err.message : 'Try again.',
         variant: 'destructive',
       });
     } finally {
       setBusy(null);
+      setProgress(null);
     }
   };
 
@@ -128,7 +131,7 @@ export function AudioView() {
     setBusy('upload');
     try {
       // Estimate duration is unknown for uploads — 0 until playback.
-      const transcript = await audioService.transcribe(file, file.name, 0);
+      const transcript = await audioService.transcribe(file, file.name, 0, setProgress);
       await loadTranscripts();
       setExpanded(transcript.id);
       toast({ title: 'Transcribed', description: file.name });
@@ -140,6 +143,7 @@ export function AudioView() {
       });
     } finally {
       setBusy(null);
+      setProgress(null);
     }
   };
 
@@ -192,7 +196,7 @@ export function AudioView() {
               ) : busy === 'record' ? (
                 <div className="flex flex-col items-center gap-2 py-6 text-muted-foreground">
                   <Loader2 className="h-6 w-6 animate-spin" />
-                  <p className="text-sm">Transcribing…</p>
+                  <p className="text-sm" role="status">{progressLabel(progress)}</p>
                 </div>
               ) : (
                 <button
@@ -211,7 +215,7 @@ export function AudioView() {
               {busy === 'upload' ? (
                 <>
                   <Loader2 className="h-6 w-6 animate-spin" />
-                  <span className="text-sm">Transcribing…</span>
+                  <span className="text-sm" role="status">{progressLabel(progress)}</span>
                 </>
               ) : (
                 <>

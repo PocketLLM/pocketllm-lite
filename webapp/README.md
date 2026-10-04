@@ -23,7 +23,7 @@ One Next.js app, two surfaces:
 | `/` | The marketing website — hero, features, runtime journey, docs, downloads, releases, changelog, terms & privacy |
 | `#/app` | **The full product** — a local-first AI workspace: chat, knowledge (RAG), model manager, personas, lab, notes, memories, and 15 sections of settings |
 
-Everything runs from a single page — hash routing keeps the app client-side and fully static-safe, while thin API routes handle server-side AI calls.
+Everything runs from a single page — hash routing keeps the app client-side and fully static-safe, with no AI backend — the only server route is a Hugging Face search proxy (`/api/hf`).
 
 ## Run it locally (2 minutes)
 
@@ -83,12 +83,10 @@ vercel --prod   # promote to production
 
 - ✅ **Marketing site** — fully static, CDN-served, instant.
 - ✅ **The `#/app` workspace** — all views, IndexedDB persistence, model discovery via `/api/hf`, PWA offline support.
-- ⚠️ **Built-in AI proxy routes** — `/api/chat`, `/api/title`, `/api/suggest`, `/api/search`, `/api/vision`, `/api/asr`, `/api/memory`, `/api/enhance` rely on a development-environment SDK. In the cloud they fail **and the app degrades gracefully by design**:
-  - chat streaming → falls back to the runtime **you** configure in the app (Ollama endpoint or any OpenAI-compatible API — see *Models → Runtime*),
-  - chat titles → fall back to the first message line,
-  - suggestions → fall back to built-in prompts.
-
-  Want real streaming replies in the cloud? Either connect an OpenAI-compatible endpoint inside the app (no code), or port the thin pass-through routes in `src/app/api/` to your provider (each is < 80 lines).
+- ✅ **AI runs on runtimes you control** — there is no hosted model and no AI backend. Connect Ollama or any OpenAI-compatible endpoint in *Providers*. Chat, titles, follow-ups, prompt enhancement and memory extraction all call that runtime directly from the browser (through the policy-checked NetworkGateway).
+- ✅ **Web search** — runs in the browser: Wikipedia by default, Tavily if you add your own key (*Settings → Tools*).
+- ✅ **Speech-to-text** — on-device Whisper (Transformers.js in a Web Worker). A ~40 MB model downloads once from Hugging Face, then works offline.
+- ℹ️ Until a model is connected, chats use the **Offline Sandbox** (canned replies) and helper features fall back to local templates.
 
 Full guide with custom domains, DNS, and a troubleshooting table: [`docs/VERCEL_DEPLOYMENT.md`](docs/VERCEL_DEPLOYMENT.md).
 
@@ -116,7 +114,7 @@ Full guide with custom domains, DNS, and a troubleshooting table: [`docs/VERCEL_
 | Language | TypeScript 5 |
 | UI | Tailwind CSS 4 · shadcn/ui (New York) · Lucide icons · Framer Motion |
 | State | Zustand + IndexedDB repositories (client-side persistence) |
-| AI | Thin server routes (`z-ai-web-dev-sdk`) + pluggable runtimes: Ollama, OpenAI-compatible, mock |
+| AI | Client-side runtimes you connect: Ollama, OpenAI-compatible, Offline Sandbox · on-device Whisper (Transformers.js) |
 | Optional DB | Prisma + SQLite scaffold (unused by the app out of the box) |
 
 ## Project structure
@@ -124,9 +122,9 @@ Full guide with custom domains, DNS, and a troubleshooting table: [`docs/VERCEL_
 ```
 webapp/
 ├── src/
-│   ├── app/                  # the single page + 10 thin API routes
+│   ├── app/                  # the single page + the /api/hf proxy
 │   │   ├── page.tsx          # everything mounts here
-│   │   └── api/              # chat, title, suggest, search, vision, asr, memory, enhance, hf
+│   │   └── api/              # hf (Hugging Face search proxy)
 │   ├── features/
 │   │   ├── marketing/        # landing, docs, releases, legal pages
 │   │   └── app/              # the #/app workspace (25+ views)
@@ -166,7 +164,7 @@ webapp/
 No. PocketLLM Lite is local-first: your data stays in your browser, exportable as encrypted `.pllm` backups. No sign-up, no server state.
 
 **Can I chat with a real model?**
-Yes. Run [Ollama](https://ollama.com) locally and point the app to it (*Models → Runtime*), or configure any OpenAI-compatible endpoint. In the development sandbox, the built-in `/api/chat` proxy streams out of the box; on your own Vercel deploy, use your configured runtime (see the honest notes above).
+Yes. Run [Ollama](https://ollama.com) locally and point the app to it (*Models → Runtime*), or configure any OpenAI-compatible endpoint. There is no built-in hosted model, so you always bring your own runtime; until then the Offline Sandbox lets you explore the app.
 
 **I only want the static marketing site.**
 That's the separate `pocketllm-website.zip` (plain HTML/CSS, zero build step). This zip is the full web edition.
