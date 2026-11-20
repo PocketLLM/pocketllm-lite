@@ -272,11 +272,14 @@ class VectorStoreService {
     required List<double> queryEmbedding,
     int topK = 5,
     String? filterDocId,
+    @Deprecated('RRF uses rank positions instead of score weights.')
     double denseWeight = 0.6,
     double lambdaMmr = 0.75,
   }) async {
     await init();
-    if (queryText.trim().isEmpty || queryEmbedding.isEmpty) return const [];
+    if (queryText.trim().isEmpty || queryEmbedding.isEmpty || topK <= 0) {
+      return const [];
+    }
     if (denseWeight < 0 || denseWeight > 1) {
       throw ArgumentError.value(denseWeight, 'denseWeight', 'must be 0 to 1');
     }
@@ -284,22 +287,35 @@ class VectorStoreService {
       throw ArgumentError.value(lambdaMmr, 'lambdaMmr', 'must be 0 to 1');
     }
 
-    final candidates = <_DocumentCandidate>[];
+    // Keep every in-scope chunk in the candidate union. A chunk can be
+    // keyword-only, semantic-only, or present in both ranked result lists.
+    final candidatesById = <String, _DocumentCandidate>{};
     for (final key in _chunksBox.keys) {
       final chunkMap = _chunksBox.get(key);
-      final embeddingMap = _embeddingsBox.get(key);
-      if (chunkMap == null || embeddingMap == null) continue;
+      if (chunkMap == null) continue;
       final chunk = DocumentChunk.fromJson(Map<String, dynamic>.from(chunkMap));
       if (filterDocId != null && chunk.documentId != filterDocId) continue;
-      final rawVector = embeddingMap['vector'];
-      if (rawVector is! List) continue;
-      final vector =
-          rawVector.map((value) => (value as num).toDouble()).toList();
-      if (vector.length != queryEmbedding.length || vector.isEmpty) continue;
-      candidates.add(_DocumentCandidate(chunk: chunk, embedding: vector));
-    }
-    if (candidates.isEmpty) return const [];
 
+      List<double>? vector;
+      final embeddingMap = _embeddingsBox.get(key);
+      final rawVector = embeddingMap?['vector'];
+      if (rawVector is List) {
+        final parsed = rawVector
+            .whereType<num>()
+            .map((value) => value.toDouble())
+            .toList(growable: false);
+        if (parsed.length == queryEmbedding.length && parsed.isNotEmpty) {
+          vector = parsed;
+        }
+      }
+      candidatesById[chunk.id] = _DocumentCandidate(
+        chunk: chunk,
+        embedding: vector,
+      );
+    }
+    if (candidatesById.isEmpty) return const [];
+
+    final candidates = candidatesById.values.toList(growable: false);
     final queryTerms = _terms(queryText);
     final corpus = candidates
         .map((candidate) => _terms(candidate.chunk.content))
@@ -310,36 +326,68 @@ class VectorStoreService {
         ) /
         max(1, corpus.length);
 
+    // Rank the complete lexical result set by BM25 score. Stable ID ordering
+    // makes tied scores deterministic across Hive iteration order.
+    final keywordRanking = <_DocumentCandidate>[];
     for (var index = 0; index < candidates.length; index++) {
       final candidate = candidates[index];
-      final dense = max(
-        0.0,
-        _cosineSimilarity(queryEmbedding, candidate.embedding),
-      );
-      final lexical = _normalizedBm25(
+      candidate.lexical = _normalizedBm25(
         queryTerms: queryTerms,
         documentTerms: corpus[index],
         corpus: corpus,
         averageDocumentLength: averageLength,
       );
+      if (candidate.lexical > 0) keywordRanking.add(candidate);
+    }
+    keywordRanking.sort((left, right) {
+      final byScore = right.lexical.compareTo(left.lexical);
+      return byScore != 0 ? byScore : left.chunk.id.compareTo(right.chunk.id);
+    });
+    for (var index = 0; index < keywordRanking.length; index++) {
+      keywordRanking[index].keywordRank = index + 1;
+    }
+
+    // Rank every vector-bearing chunk by cosine similarity. Chunks without
+    // vectors remain eligible through the lexical list above.
+    final semanticRanking = <_DocumentCandidate>[];
+    for (final candidate in candidates) {
+      final vector = candidate.embedding;
+      if (vector == null) continue;
+      candidate.dense = max(0.0, _cosineSimilarity(queryEmbedding, vector));
+      if (candidate.dense >= 0.15) semanticRanking.add(candidate);
+    }
+    semanticRanking.sort((left, right) {
+      final byScore = right.dense.compareTo(left.dense);
+      return byScore != 0 ? byScore : left.chunk.id.compareTo(right.chunk.id);
+    });
+    for (var index = 0; index < semanticRanking.length; index++) {
+      semanticRanking[index].semanticRank = index + 1;
+    }
+
+    // Reciprocal Rank Fusion combines positions, not incomparable raw scores.
+    const rrfK = 60;
+    for (final candidate in candidates) {
+      final keywordRank = candidate.keywordRank;
+      final semanticRank = candidate.semanticRank;
       candidate.relevance =
-          (denseWeight * dense) + ((1 - denseWeight) * lexical);
-      candidate.dense = dense;
-      candidate.lexical = lexical;
+          (keywordRank == null ? 0 : 1 / (rrfK + keywordRank)) +
+              (semanticRank == null ? 0 : 1 / (rrfK + semanticRank));
     }
 
     final selected = <_DocumentCandidate>[];
-    final remaining = [...candidates];
+    final remaining =
+        candidates.where((candidate) => candidate.relevance > 0).toList();
     while (remaining.isNotEmpty && selected.length < topK) {
       remaining.sort((left, right) {
         final leftScore = _documentMmr(left, selected, lambdaMmr);
         final rightScore = _documentMmr(right, selected, lambdaMmr);
-        return rightScore.compareTo(leftScore);
+        final byScore = rightScore.compareTo(leftScore);
+        return byScore != 0 ? byScore : left.chunk.id.compareTo(right.chunk.id);
       });
       selected.add(remaining.removeAt(0));
     }
+
     return selected
-        .where((candidate) => candidate.relevance > 0)
         .map(
           (candidate) => DocumentSearchResult(
             candidate.chunk,
@@ -377,12 +425,24 @@ class VectorStoreService {
     if (selected.isEmpty) return candidate.relevance;
     var maximumSimilarity = 0.0;
     for (final existing in selected) {
-      maximumSimilarity = max(
-        maximumSimilarity,
-        _cosineSimilarity(candidate.embedding, existing.embedding).abs(),
-      );
+      final left = candidate.embedding;
+      final right = existing.embedding;
+      final similarity = left != null && right != null
+          ? _cosineSimilarity(left, right).abs()
+          : _jaccard(
+              _terms(candidate.chunk.content),
+              _terms(existing.chunk.content),
+            );
+      maximumSimilarity = max(maximumSimilarity, similarity);
     }
     return (lambda * candidate.relevance) - ((1 - lambda) * maximumSimilarity);
+  }
+
+  double _jaccard(List<String> left, List<String> right) {
+    final a = left.toSet();
+    final b = right.toSet();
+    if (a.isEmpty && b.isEmpty) return 0;
+    return a.intersection(b).length / a.union(b).length;
   }
 
   double _normalizedBm25({
@@ -421,17 +481,17 @@ class VectorStoreService {
 
 class _DocumentCandidate {
   final DocumentChunk chunk;
-  final List<double> embedding;
-  double relevance;
-  double dense;
-  double lexical;
+  final List<double>? embedding;
+  double relevance = 0;
+  double dense = 0;
+  double lexical = 0;
+  int? keywordRank;
+  int? semanticRank;
 
   _DocumentCandidate({
     required this.chunk,
     required this.embedding,
-  })  : relevance = 0,
-        dense = 0,
-        lexical = 0;
+  });
 }
 
 class DocumentSearchResult {
