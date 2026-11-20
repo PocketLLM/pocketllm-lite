@@ -18,38 +18,42 @@ void main() {
     await directory.delete(recursive: true);
   });
 
-  test('document metadata, chunks, and real vectors survive archive restore',
-      () async {
-    final store = VectorStoreService();
-    final document = IngestedDocument(
-      id: 'doc-1',
-      title: 'Evidence',
-      filename: 'Evidence.pdf',
-      totalChunks: 1,
-      sizeBytes: 42,
-      ingestedAt: DateTime.utc(2026),
-    );
-    const chunk = DocumentChunk(
-      id: 'chunk-1',
-      documentId: 'doc-1',
-      content: 'Verified evidence',
-      index: 0,
-      metadata: {'page': 4, 'filename': 'Evidence.pdf'},
-    );
-    await store.storeDocument(document, const [
-      chunk
-    ], const [
-      [1.0, 0.0],
-    ]);
-    final archive = await store.exportArchive();
-    await store.deleteDocument('doc-1');
+  test(
+    'document metadata, chunks, and real vectors survive archive restore',
+    () async {
+      final store = VectorStoreService();
+      final document = IngestedDocument(
+        id: 'doc-1',
+        title: 'Evidence',
+        filename: 'Evidence.pdf',
+        totalChunks: 1,
+        sizeBytes: 42,
+        ingestedAt: DateTime.utc(2026),
+      );
+      const chunk = DocumentChunk(
+        id: 'chunk-1',
+        documentId: 'doc-1',
+        content: 'Verified evidence',
+        index: 0,
+        metadata: {'page': 4, 'filename': 'Evidence.pdf'},
+      );
+      await store.storeDocument(
+        document,
+        const [chunk],
+        const [
+          [1.0, 0.0],
+        ],
+      );
+      final archive = await store.exportArchive();
+      await store.deleteDocument('doc-1');
 
-    await store.restoreArchiveAtomically(archive);
+      await store.restoreArchiveAtomically(archive);
 
-    expect((await store.getAllDocuments()).single.filename, 'Evidence.pdf');
-    final matches = await store.searchWithScores(const [1.0, 0.0]);
-    expect(matches.single.chunk.metadata['page'], 4);
-  });
+      expect((await store.getAllDocuments()).single.filename, 'Evidence.pdf');
+      final matches = await store.searchWithScores(const [1.0, 0.0]);
+      expect(matches.single.chunk.metadata['page'], 4);
+    },
+  );
 
   test('invalid archives are rejected before changing the index', () async {
     final store = VectorStoreService();
@@ -107,11 +111,15 @@ void main() {
         index: 2,
       ),
     ];
-    await store.storeDocument(document, chunks, const [
-      [1.0, 0.0],
-      [0.9, 0.1],
-      [0.0, 1.0],
-    ]);
+    await store.storeDocument(
+      document,
+      chunks,
+      const [
+        [1.0, 0.0],
+        [0.9, 0.1],
+        [0.0, 1.0],
+      ],
+    );
 
     final results = await store.searchHybrid(
       queryText: 'Berlin launch logistics',
@@ -127,4 +135,187 @@ void main() {
       contains('berlin-diverse'),
     );
   });
+
+  test(
+    'hybrid retrieval uses RRF ranks and includes keyword-only chunks',
+    () async {
+      final store = VectorStoreService();
+      final document = IngestedDocument(
+        id: 'doc-rrf',
+        title: 'RRF evidence',
+        filename: 'rrf.txt',
+        totalChunks: 4,
+        sizeBytes: 100,
+        ingestedAt: DateTime.utc(2026),
+      );
+      const chunks = [
+        DocumentChunk(
+          id: 'lexical-only',
+          documentId: 'doc-rrf',
+          content: 'Berlin launch logistics schedule and launch details.',
+          index: 0,
+        ),
+        DocumentChunk(
+          id: 'semantic-first',
+          documentId: 'doc-rrf',
+          content: 'Travel planning notes for the northern region.',
+          index: 1,
+        ),
+        DocumentChunk(
+          id: 'both-lists',
+          documentId: 'doc-rrf',
+          content: 'Berlin launch date and access details.',
+          index: 2,
+        ),
+        DocumentChunk(
+          id: 'unrelated',
+          documentId: 'doc-rrf',
+          content: 'A recipe for sourdough bread.',
+          index: 3,
+        ),
+      ];
+      await store.storeDocument(
+        document,
+        chunks,
+        const [
+          [0.0, 1.0],
+          [1.0, 0.0],
+          [0.9, 0.1],
+          [0.0, 0.0],
+        ],
+      );
+
+      final results = await store.searchHybrid(
+        queryText: 'Berlin launch logistics',
+        queryEmbedding: const [1.0, 0.0],
+        topK: 4,
+      );
+
+      expect(
+          results.map((result) => result.chunk.id), contains('lexical-only'));
+      expect(
+        results.map((result) => result.chunk.id),
+        contains('semantic-first'),
+      );
+      expect(results.map((result) => result.chunk.id), contains('both-lists'));
+      expect(
+        results.map((result) => result.chunk.id),
+        isNot(contains('unrelated')),
+      );
+      expect(
+        results.where((result) => result.chunk.id == 'both-lists'),
+        hasLength(1),
+      );
+      expect(
+        results
+            .firstWhere((result) => result.chunk.id == 'both-lists')
+            .fusedScore,
+        greaterThan(
+          results
+              .firstWhere((result) => result.chunk.id == 'semantic-first')
+              .fusedScore,
+        ),
+      );
+    },
+  );
+
+  test(
+    'RRF rank ties are deterministic and shared candidates are fused once',
+    () async {
+      final store = VectorStoreService();
+      final document = IngestedDocument(
+        id: 'doc-ties',
+        title: 'Tie evidence',
+        filename: 'ties.txt',
+        totalChunks: 3,
+        sizeBytes: 50,
+        ingestedAt: DateTime.utc(2026),
+      );
+      const chunks = [
+        DocumentChunk(
+          id: 'chunk-b',
+          documentId: 'doc-ties',
+          content: 'Berlin launch',
+          index: 0,
+        ),
+        DocumentChunk(
+          id: 'chunk-a',
+          documentId: 'doc-ties',
+          content: 'Berlin launch',
+          index: 1,
+        ),
+        DocumentChunk(
+          id: 'chunk-c',
+          documentId: 'doc-ties',
+          content: 'Unrelated material',
+          index: 2,
+        ),
+      ];
+      await store.storeDocument(
+        document,
+        chunks,
+        const [
+          [1.0, 0.0],
+          [1.0, 0.0],
+          [0.0, 1.0],
+        ],
+      );
+
+      final first = await store.searchHybrid(
+        queryText: 'Berlin launch',
+        queryEmbedding: const [1.0, 0.0],
+        topK: 3,
+      );
+      final second = await store.searchHybrid(
+        queryText: 'Berlin launch',
+        queryEmbedding: const [1.0, 0.0],
+        topK: 3,
+      );
+
+      expect(
+        first.map((result) => result.chunk.id).toList(),
+        second.map((result) => result.chunk.id).toList(),
+      );
+      expect(
+        first.map((result) => result.chunk.id).toSet(),
+        hasLength(first.length),
+      );
+      expect(
+        first.map((result) => result.chunk.id),
+        containsAll(['chunk-a', 'chunk-b']),
+      );
+    },
+  );
+
+  test(
+    'hybrid retrieval supports a lexical-only corpus with no embeddings',
+    () async {
+      final store = VectorStoreService();
+      final document = IngestedDocument(
+        id: 'doc-keyword',
+        title: 'Keyword-only',
+        filename: 'keyword.txt',
+        totalChunks: 1,
+        sizeBytes: 20,
+        ingestedAt: DateTime.utc(2026),
+        metadata: const {'retrievalMode': 'keyword'},
+      );
+      const chunk = DocumentChunk(
+        id: 'keyword-chunk',
+        documentId: 'doc-keyword',
+        content: 'The Berlin office opens on Tuesday.',
+        index: 0,
+      );
+      await store.storeDocument(document, const [chunk], null);
+
+      final results = await store.searchHybrid(
+        queryText: 'Berlin office',
+        queryEmbedding: const [1.0, 0.0],
+      );
+
+      expect(results.map((result) => result.chunk.id), ['keyword-chunk']);
+      expect(results.single.semanticScore, 0);
+      expect(results.single.keywordScore, greaterThan(0));
+    },
+  );
 }
