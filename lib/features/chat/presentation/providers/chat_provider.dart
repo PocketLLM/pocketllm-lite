@@ -463,6 +463,8 @@ class ChatNotifier extends Notifier<ChatState> {
       }
 
       String? documentContext;
+      List<Map<String, dynamic>>? ragCitations;
+      bool? hasRetrievedSources;
       if (state.useRag) {
         final userMessages = baseMessages
             .where((message) => message.role == 'user')
@@ -474,6 +476,31 @@ class ChatNotifier extends Notifier<ChatState> {
               .read(ragServiceProvider)
               .retrieveContext(query, topK: 4);
           documentContext = retrieved.promptContext;
+          hasRetrievedSources = !retrieved.isEmpty;
+          ragCitations = retrieved.results.asMap().entries.map((entry) {
+            final index = entry.key;
+            final result = entry.value;
+            final chunk = result.chunk;
+            final filename =
+                chunk.metadata['filename'] as String? ?? 'document';
+            final page = chunk.metadata['page'] as int?;
+            final section = chunk.metadata['section'] as int?;
+            final label = page != null
+                ? '[$filename, page $page]'
+                : section != null
+                    ? '[$filename, section $section]'
+                    : '[$filename]';
+            return <String, dynamic>{
+              'chunkId': chunk.id,
+              'documentId': chunk.documentId,
+              'label': '[Source ${index + 1}]',
+              'sourceLabel': label,
+              'filename': filename,
+              'page': page,
+              'section': section,
+              'snippet': chunk.content,
+            };
+          }).toList(growable: false);
         }
       }
 
@@ -632,6 +659,8 @@ class ChatNotifier extends Notifier<ChatState> {
         content: finalMainContent,
         timestamp: DateTime.now(),
         thinkingContent: finalThinking.isNotEmpty ? finalThinking : null,
+        citations: ragCitations,
+        hasRetrievedSources: hasRetrievedSources,
       );
 
       state = state.copyWith(

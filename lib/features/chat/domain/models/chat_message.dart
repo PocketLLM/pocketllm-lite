@@ -24,6 +24,12 @@ class ChatMessage {
   @HiveField(5)
   final String? thinkingContent;
 
+  @HiveField(6)
+  final List<Map<String, dynamic>>? citations;
+
+  @HiveField(7)
+  final bool? hasRetrievedSources;
+
   // Cache hashCode to avoid expensive re-calculation, especially for messages with images.
   // This is safe because the images list is made unmodifiable in the constructor.
   // ignore: prefer_final_fields
@@ -36,7 +42,16 @@ class ChatMessage {
     List<String>? images,
     List<TextFileAttachment>? attachments,
     this.thinkingContent,
-  })  : images = images != null ? List.unmodifiable(images) : null,
+    List<Map<String, dynamic>>? citations,
+    this.hasRetrievedSources,
+  })  : citations = citations == null
+            ? null
+            : List.unmodifiable(
+                citations.map(
+                  (citation) => Map<String, dynamic>.unmodifiable(citation),
+                ),
+              ),
+        images = images != null ? List.unmodifiable(images) : null,
         attachments =
             attachments != null ? List.unmodifiable(attachments) : null;
 
@@ -47,6 +62,8 @@ class ChatMessage {
     List<String>? images,
     List<TextFileAttachment>? attachments,
     String? thinkingContent,
+    List<Map<String, dynamic>>? citations,
+    bool? hasRetrievedSources,
   }) {
     return ChatMessage(
       role: role ?? this.role,
@@ -55,6 +72,8 @@ class ChatMessage {
       images: images ?? this.images,
       attachments: attachments ?? this.attachments,
       thinkingContent: thinkingContent ?? this.thinkingContent,
+      citations: citations ?? this.citations,
+      hasRetrievedSources: hasRetrievedSources ?? this.hasRetrievedSources,
     );
   }
 
@@ -68,7 +87,22 @@ class ChatMessage {
         other.timestamp == timestamp &&
         listEquals(other.images, images) &&
         listEquals(other.attachments, attachments) &&
-        other.thinkingContent == thinkingContent;
+        other.thinkingContent == thinkingContent &&
+        _sameCitations(other.citations) &&
+        other.hasRetrievedSources == hasRetrievedSources;
+  }
+
+  bool _sameCitations(List<Map<String, dynamic>>? other) {
+    if (identical(citations, other)) return true;
+    if (citations == null ||
+        other == null ||
+        citations!.length != other.length) {
+      return false;
+    }
+    for (var index = 0; index < citations!.length; index++) {
+      if (!mapEquals(citations![index], other[index])) return false;
+    }
+    return true;
   }
 
   @override
@@ -81,6 +115,18 @@ class ChatMessage {
       images != null ? Object.hashAll(images!) : null,
       attachments != null ? Object.hashAll(attachments!) : null,
       thinkingContent,
+      citations == null
+          ? null
+          : Object.hashAll(
+              citations!.map((item) {
+                final entries = item.entries.toList()
+                  ..sort((left, right) => left.key.compareTo(right.key));
+                return Object.hashAll(
+                  entries.map((entry) => Object.hash(entry.key, entry.value)),
+                );
+              }),
+            ),
+      hasRetrievedSources,
     );
     return _cachedHashCode!;
   }

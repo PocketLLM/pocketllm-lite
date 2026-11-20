@@ -23,13 +23,17 @@ class ChatMessageAdapter extends TypeAdapter<ChatMessage> {
       images: (fields[3] as List?)?.cast<String>(),
       attachments: (fields[4] as List?)?.cast<TextFileAttachment>(),
       thinkingContent: fields[5] as String?,
+      citations: (fields[6] as List?)
+          ?.map((item) => Map<String, dynamic>.from(item as Map))
+          .toList(),
+      hasRetrievedSources: fields[7] as bool?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ChatMessage obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.role)
       ..writeByte(1)
@@ -41,7 +45,11 @@ class ChatMessageAdapter extends TypeAdapter<ChatMessage> {
       ..writeByte(4)
       ..write(obj.attachments)
       ..writeByte(5)
-      ..write(obj.thinkingContent);
+      ..write(obj.thinkingContent)
+      ..writeByte(6)
+      ..write(obj.citations)
+      ..writeByte(7)
+      ..write(obj.hasRetrievedSources);
   }
 
   @override

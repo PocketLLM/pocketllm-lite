@@ -19,6 +19,7 @@ import '../providers/draft_message_provider.dart';
 import '../providers/editing_message_provider.dart';
 import '../../../../core/providers.dart';
 import 'three_dot_loading_indicator.dart';
+import 'rag_citation_evidence.dart';
 import '../providers/audio_provider.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -231,6 +232,22 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     for (final id in sortedIds) {
       final pattern = RegExp(r'\/' + RegExp.escape(id) + r'\b');
       result = result.replaceAll(pattern, '[/$id](skill://$id)');
+    }
+    return result;
+  }
+
+  String _preprocessCitationContent(
+    String content,
+    List<Map<String, dynamic>> citations,
+  ) {
+    var result = content;
+    for (var index = 0; index < citations.length; index++) {
+      final label = citations[index]['label'] as String?;
+      if (label == null || label.isEmpty) continue;
+      result = result.replaceAll(
+        label,
+        '[Source ${index + 1}](citation://$index)',
+      );
     }
     return result;
   }
@@ -558,7 +575,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                       .map((s) => s.id)
                                       .toList();
                                   final processed = _preprocessContent(
-                                      message.content, skillIds);
+                                    message.content,
+                                    skillIds,
+                                  );
                                   final hasSkillLink =
                                       processed != message.content;
                                   if (hasSkillLink) {
@@ -567,10 +586,13 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                       onTapLink: (text, href, title) {
                                         if (href != null &&
                                             href.startsWith('skill://')) {
-                                          final skillId =
-                                              href.replaceFirst('skill://', '');
+                                          final skillId = href.replaceFirst(
+                                            'skill://',
+                                            '',
+                                          );
                                           context.push(
-                                              '/settings/skills/details/$skillId');
+                                            '/settings/skills/details/$skillId',
+                                          );
                                         }
                                       },
                                       styleSheet: _getStyleSheet(
@@ -597,53 +619,99 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
                                       .getSkills()
                                       .map((s) => s.id)
                                       .toList();
-                                  final processed = _preprocessContent(
-                                      message.content, skillIds);
-                                  return MarkdownBody(
-                                    data: processed,
-                                    // ignore: deprecated_member_use
-                                    imageBuilder: MarkdownHandlers.imageBuilder,
-                                    onTapLink: (text, href, title) async {
-                                      if (href != null) {
-                                        if (href.startsWith('skill://')) {
-                                          final skillId =
-                                              href.replaceFirst('skill://', '');
-                                          context.push(
-                                              '/settings/skills/details/$skillId');
-                                          return;
-                                        }
-                                        final uri = Uri.tryParse(href);
-                                        if (uri != null &&
-                                            UrlValidator.isSecureUrl(uri)) {
-                                          try {
-                                            await ref
-                                                .read(
-                                                  externalNavigationServiceProvider,
-                                                )
-                                                .openHttpUrl(
-                                                  uri,
-                                                  trigger: 'chat_message_link',
-                                                );
-                                          } catch (error) {
-                                            if (!context.mounted) return;
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  error.toString(),
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      }
-                                    },
-                                    styleSheet: _getStyleSheet(
-                                      theme,
-                                      fontSize,
-                                      textColor,
+                                  final processed = _preprocessCitationContent(
+                                    _preprocessContent(
+                                      message.content,
+                                      skillIds,
                                     ),
+                                    message.citations ?? const [],
+                                  );
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      MarkdownBody(
+                                        data: processed,
+                                        // ignore: deprecated_member_use
+                                        imageBuilder:
+                                            MarkdownHandlers.imageBuilder,
+                                        onTapLink: (text, href, title) async {
+                                          if (href != null) {
+                                            if (href.startsWith(
+                                              'citation://',
+                                            )) {
+                                              final index = int.tryParse(
+                                                href.replaceFirst(
+                                                  'citation://',
+                                                  '',
+                                                ),
+                                              );
+                                              final citations =
+                                                  message.citations ?? const [];
+                                              if (index != null &&
+                                                  index >= 0 &&
+                                                  index < citations.length) {
+                                                RagCitationPreview.show(
+                                                  context,
+                                                  citations[index],
+                                                );
+                                              }
+                                              return;
+                                            }
+                                            if (href.startsWith(
+                                              'skill://',
+                                            )) {
+                                              final skillId = href.replaceFirst(
+                                                'skill://',
+                                                '',
+                                              );
+                                              context.push(
+                                                '/settings/skills/details/$skillId',
+                                              );
+                                              return;
+                                            }
+                                            final uri = Uri.tryParse(href);
+                                            if (uri != null &&
+                                                UrlValidator.isSecureUrl(uri)) {
+                                              try {
+                                                await ref
+                                                    .read(
+                                                      externalNavigationServiceProvider,
+                                                    )
+                                                    .openHttpUrl(
+                                                      uri,
+                                                      trigger:
+                                                          'chat_message_link',
+                                                    );
+                                              } catch (error) {
+                                                if (!context.mounted) return;
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      error.toString(),
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          }
+                                        },
+                                        styleSheet: _getStyleSheet(
+                                          theme,
+                                          fontSize,
+                                          textColor,
+                                        ),
+                                      ),
+                                      RagCitationEvidence(
+                                        citations:
+                                            message.citations ?? const [],
+                                        hasRetrievedSources:
+                                            message.hasRetrievedSources,
+                                      ),
+                                    ],
                                   );
                                 },
                               ),

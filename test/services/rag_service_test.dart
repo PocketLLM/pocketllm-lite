@@ -18,6 +18,10 @@ void main() {
 
     expect(context.promptContext, contains('[Evidence.pdf, page 7]'));
     expect(context.promptContext, contains('The verified passage text.'));
+    expect(
+      context.promptContext,
+      contains('[Source 1] [Evidence.pdf, page 7]'),
+    );
     expect(context.promptContext, contains('do not contain the answer'));
   });
 
