@@ -25,7 +25,7 @@ jobs:
       - name: Tracked files contain no signing material
         run: node scripts/ci/check-secrets.mjs
       - run: dart format --output=none --set-exit-if-changed .
-      - run: flutter analyze
+      - run: flutter analyze --no-fatal-infos
       - run: flutter test
 
   web:

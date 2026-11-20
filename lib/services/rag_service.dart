@@ -35,10 +35,11 @@ class RetrievedDocumentContext {
     if (results.isEmpty) return '';
     final buffer = StringBuffer(
       'Use only the retrieved excerpts below for document-specific claims. '
-      'Cite the bracketed source label exactly. If the excerpts do not answer '
+      'Cite the numbered source label exactly. If the excerpts do not answer '
       'the question, say that the indexed documents do not contain the answer.\n',
     );
-    for (final result in results) {
+    for (var index = 0; index < results.length; index++) {
+      final result = results[index];
       final chunk = result.chunk;
       final page = chunk.metadata['page'] as int?;
       final filename = chunk.metadata['filename'] as String? ?? 'document';
@@ -48,7 +49,7 @@ class RetrievedDocumentContext {
           : section != null
               ? '[$filename, section $section]'
               : '[$filename]';
-      buffer.writeln('\n$citation\n${chunk.content}');
+      buffer.writeln('\n[Source ${index + 1}] $citation\n${chunk.content}');
     }
     return buffer.toString().trim();
   }
